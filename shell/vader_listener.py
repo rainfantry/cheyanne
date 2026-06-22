@@ -200,20 +200,27 @@ def main():
             return default
 
     # ── IP SELECTION ──
-    choice = clean_input("  [?] Select interface [{1}]: ", "1")
-    try:
-        idx = int(choice) - 1
-        if 0 <= idx < len(ips):
-            listen_ip = ips[idx][0]
-        else:
-            listen_ip = ips[0][0]
-    except ValueError:
-        listen_ip = choice
+    if gen_only and not sys.stdin.isatty():
+        listen_ip = ips[0][0] if ips else "0.0.0.0"
+        print(f"  [*] Auto-selected: {listen_ip} (non-interactive)")
+    else:
+        choice = clean_input("  [?] Select interface [{1}]: ", "1")
+        try:
+            idx = int(choice) - 1
+            if 0 <= idx < len(ips):
+                listen_ip = ips[idx][0]
+            else:
+                listen_ip = ips[0][0]
+        except ValueError:
+            listen_ip = choice
 
     # ── PORT SELECTION ──
     if quick_port:
         listen_port = quick_port
         print(f"  [*] Port: {listen_port} (from argv)")
+    elif gen_only and not sys.stdin.isatty():
+        listen_port = 4443
+        print(f"  [*] Port: {listen_port} (default, non-interactive)")
     else:
         port_raw = clean_input("  [?] Port [4443]: ", "4443")
         try:
