@@ -12,3 +12,5 @@ agent/dist/
 *.dll
 reporting/
 venv/
+.cheyanne/
+screenshots/
