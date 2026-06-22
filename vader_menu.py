@@ -631,16 +631,23 @@ def run_op(choice):
 
 def main():
     while True:
-        render()
-        choice = input(f"  {GREEN}CHEYANNE >{RST} ").strip()
-        if choice == "0" or choice.lower() in ("q", "quit", "exit"):
-            print(f"\n  {DIM}The hunt never ends.{RST}\n")
-            break
-        if not run_op(choice.strip("﻿")):
-            if choice.strip("﻿"):
-                print(f"\n  {RED}[!] Unknown command: {choice}{RST}")
-                input(f"  {DIM}Press Enter...{RST}")
+        try:
+            render()
+            choice = input(f"  {GREEN}CHEYANNE >{RST} ").strip()
+            if choice == "0" or choice.lower() in ("q", "quit", "exit"):
+                print(f"\n  {DIM}The hunt never ends.{RST}\n")
+                break
+            if not run_op(choice.strip("﻿")):
+                if choice.strip("﻿"):
+                    print(f"\n  {RED}[!] Unknown command: {choice}{RST}")
+                    input(f"  {DIM}Press Enter...{RST}")
+        except KeyboardInterrupt:
+            print(f"\n  {DIM}[*] Interrupted — back to menu{RST}")
+            continue
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except KeyboardInterrupt:
+        print(f"\n  {DIM}The hunt never ends.{RST}\n")
