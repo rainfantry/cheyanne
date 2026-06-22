@@ -691,6 +691,42 @@ footer {
 ::-webkit-scrollbar-track { background: var(--bg); }
 ::-webkit-scrollbar-thumb { background: var(--dim); border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+
+.mobile-toggle {
+    display: none;
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    color: var(--green);
+    font-family: inherit;
+    font-size: 12px;
+    padding: 6px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+@media (max-width: 768px) {
+    .layout {
+        grid-template-columns: 1fr;
+        grid-template-rows: auto auto 1fr auto;
+    }
+    .sidebar {
+        border-right: none;
+        border-bottom: 1px solid var(--border);
+        max-height: 0;
+        overflow: hidden;
+        transition: max-height 0.3s;
+    }
+    .sidebar.open { max-height: 80vh; overflow-y: auto; }
+    .mobile-toggle { display: inline-block; }
+    header { flex-wrap: wrap; padding: 8px 12px; gap: 8px; }
+    .header-info { width: 100%; justify-content: space-between; }
+    .logo { font-size: 15px; }
+    .op-btn { padding: 12px 6px; font-size: 12px; }
+    .console { font-size: 11px; padding: 8px; }
+    .chain-item { padding: 6px 10px; }
+    .tool-item { padding: 6px 10px; }
+    footer { padding: 4px 10px; font-size: 10px; flex-wrap: wrap; gap: 8px; }
+}
 </style>
 </head>
 <body>
@@ -702,6 +738,7 @@ footer {
         </div>
         <span class="logo-sub">22DIV / george wu</span>
         <div class="header-info">
+            <button class="mobile-toggle" onclick="document.querySelector('.sidebar').classList.toggle('open');this.textContent=this.textContent==='MENU'?'CLOSE':'MENU'">MENU</button>
             <span class="tag tag-green" id="statusTag">OPERATIONAL</span>
             <span style="color:var(--dim)">CALLSIGN: <span style="color:var(--white)">CHEYANNE</span></span>
         </div>
