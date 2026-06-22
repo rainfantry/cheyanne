@@ -481,6 +481,7 @@ class KimiBackend:
         payload = {
             "model": self.model,
             "messages": self.messages,
+            "max_tokens": 4096,
         }
         data = json.dumps(payload).encode("utf-8")
         req = urllib.request.Request(
@@ -490,9 +491,13 @@ class KimiBackend:
                 "Authorization": f"Bearer {self.api_key}",
             }
         )
-        resp = urllib.request.urlopen(req, timeout=60)
+        resp = urllib.request.urlopen(req, timeout=120)
         result = json.loads(resp.read().decode("utf-8"))
-        return result.get("choices", [{}])[0].get("message", {}).get("content", "")
+        msg = result.get("choices", [{}])[0].get("message", {})
+        content = msg.get("content") or ""
+        if not content and msg.get("reasoning"):
+            content = msg["reasoning"]
+        return content
 
     def _parse_tools(self, text):
         import re
