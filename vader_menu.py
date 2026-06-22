@@ -539,6 +539,11 @@ def run_op(choice):
         run_ghost()
     elif choice.lower() == "w":
         ui_script = os.path.join(ROOT, "vader_ui.py")
+        if HAS_OPS:
+            from cheyanne_ops import port_ensure
+            if not port_ensure(8666):
+                input(f"\n  {DIM}Press Enter to continue...{RST}")
+                return True
         print(f"\n  {BLUE}[*] Launching web dashboard on http://0.0.0.0:8666{RST}")
         subprocess.Popen([sys.executable, ui_script], cwd=ROOT)
         import webbrowser
@@ -547,6 +552,11 @@ def run_op(choice):
         webbrowser.open("http://127.0.0.1:8666")
     elif choice.lower() == "d":
         c2_v2 = os.path.join(ROOT, "shell", "vader_c2_v2.py")
+        if HAS_OPS:
+            from cheyanne_ops import port_ensure
+            if not port_ensure(4443):
+                input(f"\n  {DIM}Press Enter to continue...{RST}")
+                return True
         print(f"\n  {GREEN}[*] Launching CHEYANNE C2 — Dual Channel (TCP + Discord){RST}")
         subprocess.run([sys.executable, c2_v2], cwd=ROOT)
     elif choice.lower() == "b":

