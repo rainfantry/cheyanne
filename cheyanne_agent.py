@@ -459,6 +459,82 @@ class OllamaBackend:
 
 
 # ══════════════════════════════════════════════════════════════
+# KIMI / OPENROUTER BACKEND (OpenAI-compatible, fast API)
+# ══════════════════════════════════════════════════════════════
+
+class KimiBackend:
+    def __init__(self, model="moonshotai/kimi-k2.5"):
+        self.model = model
+        self.api_key = os.environ.get("OPENROUTER_API_KEY", "")
+        if not self.api_key:
+            dotenv = os.path.join(os.environ.get("LOCALAPPDATA", ""), "hermes", ".env")
+            if os.path.exists(dotenv):
+                with open(dotenv, "r") as f:
+                    for line in f:
+                        if line.startswith("OPENROUTER_API_KEY="):
+                            self.api_key = line.split("=", 1)[1].strip().strip('"').strip("'")
+                            break
+        self.base = "https://openrouter.ai/api/v1"
+        self.messages = [{"role": "system", "content": SYSTEM_PROMPT + TOOL_PROMPT_SUFFIX}]
+
+    def _call_api(self):
+        payload = {
+            "model": self.model,
+            "messages": self.messages,
+        }
+        data = json.dumps(payload).encode("utf-8")
+        req = urllib.request.Request(
+            f"{self.base}/chat/completions", data=data,
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {self.api_key}",
+            }
+        )
+        resp = urllib.request.urlopen(req, timeout=60)
+        result = json.loads(resp.read().decode("utf-8"))
+        return result.get("choices", [{}])[0].get("message", {}).get("content", "")
+
+    def _parse_tools(self, text):
+        import re
+        tool_blocks = re.findall(r'<tool>\s*(.*?)\s*</tool>', text, re.DOTALL)
+        calls = []
+        for block in tool_blocks:
+            try:
+                data = json.loads(block)
+                calls.append((data.get("name", ""), data.get("args", {})))
+            except json.JSONDecodeError:
+                pass
+        clean = re.sub(r'<tool>.*?</tool>', '', text, flags=re.DOTALL).strip()
+        return calls, clean
+
+    def chat(self, user_msg):
+        self.messages.append({"role": "user", "content": user_msg})
+
+        for _round in range(3):
+            try:
+                content = self._call_api()
+            except Exception as e:
+                return f"[API ERROR] {e}"
+
+            tool_calls, text = self._parse_tools(content)
+
+            if not tool_calls:
+                self.messages.append({"role": "assistant", "content": content})
+                return content
+
+            results = []
+            for name, args in tool_calls:
+                result = exec_tool(name, args)
+                print(f"  {DIM}  → {result[:300]}{RST}")
+                results.append(f"[{name}] {result}")
+
+            self.messages.append({"role": "assistant", "content": content})
+            self.messages.append({"role": "user", "content": "Tool results:\n" + "\n".join(results) + "\n\nAnalyze the results and respond."})
+
+        return text or content
+
+
+# ══════════════════════════════════════════════════════════════
 # CLAUDE BACKEND
 # ══════════════════════════════════════════════════════════════
 
@@ -558,11 +634,13 @@ def banner():
 
 def main():
     model = "krith/mistral-nemo-instruct-2407-abliterated:IQ4_XS"
-    use_claude = False
+    backend_type = "ollama"
 
     for i, arg in enumerate(sys.argv[1:]):
         if arg == "--claude":
-            use_claude = True
+            backend_type = "claude"
+        elif arg == "--kimi":
+            backend_type = "kimi"
         elif arg == "--model" and i + 1 < len(sys.argv[1:]):
             model = sys.argv[i + 2]
         elif not arg.startswith("--"):
@@ -570,7 +648,7 @@ def main():
 
     banner()
 
-    if use_claude:
+    if backend_type == "claude":
         api_key = os.environ.get("ANTHROPIC_API_KEY", "")
         if not api_key:
             print(f"  {RED}  [!] ANTHROPIC_API_KEY not set{RST}")
@@ -578,10 +656,17 @@ def main():
             return
         backend = ClaudeBackend()
         print(f"  {GRN}  [+] Backend: Claude API (sonnet-4-6){RST}\n")
+    elif backend_type == "kimi":
+        backend = KimiBackend()
+        if not backend.api_key:
+            print(f"  {RED}  [!] OPENROUTER_API_KEY not set{RST}")
+            print(f"  {DIM}  Set env var or add to %LOCALAPPDATA%\\hermes\\.env{RST}")
+            return
+        print(f"  {GRN}  [+] Backend: Kimi K2.5 via OpenRouter{RST}")
+        print(f"  {DIM}  Key: ...{backend.api_key[-8:]}{RST}\n")
     else:
         backend = OllamaBackend(model)
         print(f"  {GRN}  [+] Backend: Ollama ({model}){RST}")
-        # verify ollama is running
         try:
             urllib.request.urlopen(f"{backend.base}/api/tags", timeout=5)
             print(f"  {GRN}  [+] Ollama: connected ({backend.base}){RST}\n")

@@ -574,9 +574,11 @@ def run_op(choice):
         agent_script = os.path.join(ROOT, "cheyanne_agent.py")
         if os.path.exists(agent_script):
             model_arg = ""
-            use_claude = input(f"\n  {PINK}  Backend? [o]llama / [c]laude (default: ollama): {RST}").strip().lower()
-            if use_claude == "c":
+            choice_b = input(f"\n  {PINK}  Backend? [o]llama / [k]imi / [c]laude (default: ollama): {RST}").strip().lower()
+            if choice_b == "c":
                 subprocess.run([sys.executable, agent_script, "--claude"], cwd=ROOT)
+            elif choice_b == "k":
+                subprocess.run([sys.executable, agent_script, "--kimi"], cwd=ROOT)
             else:
                 subprocess.run([sys.executable, agent_script], cwd=ROOT)
         else:
