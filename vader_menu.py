@@ -257,6 +257,7 @@ def render():
     print(f"  {BLUE}{BOLD}  TOOLKIT{RST}")
     print(hline("─"))
     toolkit_ops = [
+        ("H", "HANDLER",        "AI operator — chat + tools",       PINK),
         ("G", "Ghost Encode",   "Steganographic payload",            CYAN),
         ("5", "Pentest Chain",  "Full automated kill chain",         RED),
         ("W", "Web Dashboard",  "Browser C2 UI",                     BLUE),
@@ -559,6 +560,17 @@ def run_op(choice):
             print(f"\n  {RED}[!] auto_screenshot_test.py not found{RST}")
     elif choice.lower() == "x":
         convert_image()
+    elif choice.lower() == "h":
+        agent_script = os.path.join(ROOT, "cheyanne_agent.py")
+        if os.path.exists(agent_script):
+            model_arg = ""
+            use_claude = input(f"\n  {PINK}  Backend? [o]llama / [c]laude (default: ollama): {RST}").strip().lower()
+            if use_claude == "c":
+                subprocess.run([sys.executable, agent_script, "--claude"], cwd=ROOT)
+            else:
+                subprocess.run([sys.executable, agent_script], cwd=ROOT)
+        else:
+            print(f"\n  {RED}[!] cheyanne_agent.py not found{RST}")
 
     # ── PHASE 4: OPERATE ──
     elif choice.lower() == "s" and HAS_OPS:
