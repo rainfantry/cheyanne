@@ -123,6 +123,40 @@ VALIDATION:      Every binary built from first principles — no Metasploit,
 | 10 | NOVEMBER | Metamorphic Engine | **OPERATIONAL** | Dead code injection, opaque predicates, junk API, constant splitting, identifier mutation |
 | Meta | — | Auto-Mutation | **BUILT** | XOR key rotation + recompile + Defender rescan loop |
 | Meta-2 | — | Evolution Pipeline | **BUILT** | metamorph + mutate + compile + scan in one command, multi-cycle support |
+| 11 | OSCAR | Discord C2 Implant | **OPERATIONAL** | Python implant via PyInstaller, Discord webhook+bot C2, GDI screenshot, persistence via registry |
+| 12 | PAPA | AI Operator (HANDLER) | **OPERATIONAL** | Natural language C2 via Ollama/Claude, 8 tools, prompt-based tool calling |
+| Meta-3 | — | Auto-Deploy Pipeline | **BUILT** | compile → serve → deploy → screenshot, fully automated |
+
+### Discord C2 (CHEYANNE)
+
+```
+  Operator                    Discord                    Target
+  ┌──────────────┐          ┌──────────┐          ┌──────────────┐
+  │ vader_menu   │          │  #c2     │          │ svchost_     │
+  │ cheyanne_ops │──cmd──>  │ channel  │ ──cmd──> │ update.exe   │
+  │ HANDLER      │<─result─ │          │ <─result─│ (implant)    │
+  └──────────────┘          └──────────┘          └──────────────┘
+
+  Commands: SCREENSHOT, RECON, UPLOAD, DOWNLOAD, PERSIST, shell passthrough
+  Transport: Webhook (operator→Discord), Bot token (polling)
+  Implant: discord_implant.py → PyInstaller → svchost_update.exe (9.4MB)
+  Screenshot: GDI ctypes → BMP → Discord attachment → operator downloads + converts PNG
+```
+
+### HANDLER — AI-Powered C2
+
+```
+  "take a screenshot of radon"
+         │
+  ┌──────┴──────┐
+  │   HANDLER   │ ← Ollama (local) or Claude API
+  │   LLM       │
+  └──────┬──────┘
+         │ <tool> blocks
+  ┌──────┴──────┐
+  │  exec_tool  │ → 8 tools: sessions, screenshot, browse,
+  └─────────────┘   exfil, upload, run_cmd, recon, local_cmd
+```
 
 ### XOR Signature Isolation
 
@@ -157,14 +191,22 @@ vader-rootkit/
 ├── cloak/              PHASE 7: User-mode rootkit (proc/file/conn hiding)
 ├── byovd/              PHASE 8: BYOVD kernel persistence (RTCore64/dbutil_2_3)
 ├── recon/              17-section automated recon scanner
-├── docs/               EVC website + field manual
+├── docs/               EVC website + field manual + build guide
+├── agent/              PHASE 11: Discord implant + PyInstaller output
+│   ├── discord_implant.py    Discord C2 implant (Python → svchost_update.exe)
+│   └── dist_py/              PyInstaller output directory
+├── screenshots/        Downloaded screenshots from target
+├── exfil/              Exfiltrated files from target
 ├── deploy.py           Build + scan + deploy automation
 ├── mutate.py           XOR key mutation pipeline
 ├── metamorph.py        Metamorphic source transformer (Phase 10)
 ├── vader_evolve.py     Evolution pipeline (metamorph + mutate + compile + scan)
-├── vader_menu.py       Terminal dashboard (ANSI art)
+├── vader_menu.py       Terminal dashboard — Phase 1-4 + Toolkit
 ├── vader_ui.py         Web C2 dashboard (browser UI) + agent listener
-└── vader_agent.py      Remote agent (deploy on target, connects back)
+├── vader_agent.py      Remote agent (deploy on target, connects back)
+├── cheyanne_ops.py     Discord C2 operations module (API layer)
+├── cheyanne_agent.py   HANDLER — AI-powered C2 operator (Ollama/Claude)
+└── auto_screenshot_test.py   Automated deploy + screenshot pipeline
 ```
 
 ### Stealth Profile
@@ -253,6 +295,17 @@ Linker:    ws2_32.lib (shell), ntdll.lib (ETW/AMSI patches)
 | `vader_evolve.py` | `python vader_evolve.py` | Full pipeline: metamorph → mutate → compile → scan |
 | `vader_evolve.py` | `python vader_evolve.py --cycles 3` | Run 3 evolution cycles |
 | `vader_evolve.py` | `python vader_evolve.py --scan-only` | Scan all existing binaries |
+| `cheyanne_agent.py` | `python cheyanne_agent.py` | HANDLER AI operator (Ollama backend) |
+| `cheyanne_agent.py` | `python cheyanne_agent.py --claude` | HANDLER AI operator (Claude API backend) |
+| `auto_screenshot_test.py` | `python auto_screenshot_test.py` | Auto deploy + screenshot pipeline |
+
+### Encrypted Backup
+
+```cmd
+7z a -p668340 -mhe=on "cheyanne-FULL-YYYYMMDD.7z" . -xr!.git -xr!__pycache__ -xr!build -xr!dist
+```
+
+Password: **668340** | Headers encrypted (filenames hidden) | Excludes .git, pycache, build artifacts.
 
 ### Related Repos
 
