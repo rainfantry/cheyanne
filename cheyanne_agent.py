@@ -465,15 +465,16 @@ class OllamaBackend:
 class KimiBackend:
     def __init__(self, model="moonshotai/kimi-k2.5"):
         self.model = model
-        self.api_key = os.environ.get("OPENROUTER_API_KEY", "")
+        self.api_key = ""
+        dotenv = os.path.join(os.environ.get("LOCALAPPDATA", ""), "hermes", ".env")
+        if os.path.exists(dotenv):
+            with open(dotenv, "r") as f:
+                for line in f:
+                    line = line.strip()
+                    if line.startswith("OPENROUTER_API_KEY="):
+                        self.api_key = line.split("=", 1)[1].strip().strip('"').strip("'")
         if not self.api_key:
-            dotenv = os.path.join(os.environ.get("LOCALAPPDATA", ""), "hermes", ".env")
-            if os.path.exists(dotenv):
-                with open(dotenv, "r") as f:
-                    for line in f:
-                        if line.startswith("OPENROUTER_API_KEY="):
-                            self.api_key = line.split("=", 1)[1].strip().strip('"').strip("'")
-                            break
+            self.api_key = os.environ.get("OPENROUTER_API_KEY", "")
         self.base = "https://openrouter.ai/api/v1"
         self.messages = [{"role": "system", "content": SYSTEM_PROMPT + TOOL_PROMPT_SUFFIX}]
 
