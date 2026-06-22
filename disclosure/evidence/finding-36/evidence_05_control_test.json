@@ -1,0 +1,7 @@
+﻿{
+    "KnownDetectionName":  "Behavior:Win32/AMSI_Patch_T.B12",
+    "Conclusion":  "Tamper Protection catches memory patches but NOT hardware debug register manipulation",
+    "Description":  "Memory-patch AMSI bypass IS detected by Defender (Behavior:Win32/AMSI_Patch_T.B12)",
+    "Note":  "This proves Tamper Protection is active and monitoring AMSI",
+    "HWBPDetectionName":  "NONE"
+}

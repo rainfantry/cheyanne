@@ -1,0 +1,5 @@
+﻿C:\Users\gwu07\AppData\Local\Muse Hub\lib NT AUTHORITY\SYSTEM:(I)(OI)(CI)(F)
+                                          BUILTIN\Administrators:(I)(OI)(CI)(F)
+                                          LAPTOP-R32M8MLI\gwu07:(I)(OI)(CI)(F)
+
+Successfully processed 1 files; Failed processing 0 files
