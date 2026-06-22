@@ -29,7 +29,7 @@
 
 ### What This Is
 
-A complete rootkit kill chain — 11 phases, 19 engagements, 70 findings — built from first principles against live Windows Defender on my own hardware. Not downloaded. Not forked. Not copied from a blog post. Every line written, tested, and documented by hand.
+A complete rootkit kill chain — 13 phases, 19 engagements, 70 findings — built from first principles against live Windows Defender on my own hardware. Not downloaded. Not forked. Not copied from a blog post. Every line written, tested, and documented by hand.
 
 Started as a TOCTOU race condition study against Defender's quarantine pipeline (`vader-toctou`). Six engagements. Thirty findings. The deletion primitive was defeated by Microsoft's defense-in-depth. The wall held — but the wall taught me how it was built.
 
@@ -141,6 +141,14 @@ VALIDATION:      Every binary built from first principles — no Metasploit,
   Transport: Webhook (operator→Discord), Bot token (polling)
   Implant: discord_implant.py → PyInstaller → svchost_update.exe (9.4MB)
   Screenshot: GDI ctypes → BMP → Discord attachment → operator downloads + converts PNG
+
+  TCP C2 Shortcuts (chey> prompt — no 'interact' needed):
+    deploy [sid]        — Kill old implant + download fresh + launch
+    screenshot [sid]    — Capture screen → HTTP POST back → save + open
+    watch [sec] [sid]   — Live screen stream in browser (auto-refresh)
+    kill <proc> [sid]   — taskkill /F /IM on target
+    recon [sid]         — systeminfo + ipconfig + whoami + tasklist
+    persist [sid]       — Set HKCU\Run registry persistence
 ```
 
 ### HANDLER — AI-Powered C2
@@ -149,7 +157,7 @@ VALIDATION:      Every binary built from first principles — no Metasploit,
   "take a screenshot of radon"
          │
   ┌──────┴──────┐
-  │   HANDLER   │ ← Ollama (local) or Claude API
+  │   HANDLER   │ ← Ollama (local) / Kimi K2.5 (OpenRouter) / Claude API
   │   LLM       │
   └──────┬──────┘
          │ <tool> blocks
@@ -204,9 +212,12 @@ vader-rootkit/
 ├── vader_menu.py       Terminal dashboard — Phase 1-4 + Toolkit
 ├── vader_ui.py         Web C2 dashboard (browser UI) + agent listener
 ├── vader_agent.py      Remote agent (deploy on target, connects back)
-├── cheyanne_ops.py     Discord C2 operations module (API layer)
-├── cheyanne_agent.py   HANDLER — AI-powered C2 operator (Ollama/Claude)
-└── auto_screenshot_test.py   Automated deploy + screenshot pipeline
+├── cheyanne_ops.py     Discord C2 operations module (API layer + port conflict handler)
+├── cheyanne_agent.py   HANDLER — AI-powered C2 operator (Ollama/Kimi/Claude)
+├── auto_screenshot_test.py   Automated deploy + screenshot pipeline
+├── test_verify.py      26-test automated + human verification suite
+├── ROADMAP.md          Future work: DNS tunneling, CVE submission, API fuzzing
+└── TEST_FINAL.md       24-step manual test checklist
 ```
 
 ### Stealth Profile
@@ -214,7 +225,7 @@ vader-rootkit/
 ```
   TEST                           RESULT
   ──────────────────────────────────────────
-  Static scan (28 binaries)      0 DETECTED
+  Static scan (90 binaries)      0 DETECTED
   Runtime behavioural            0 DETECTED
   Memory integrity               ZERO bytes modified
   VirtualProtect calls           NONE
@@ -225,7 +236,7 @@ vader-rootkit/
   Fuzzing campaign (100K iter)   0 crashes, 0 hangs
 ```
 
-**70 findings across 19 engagements. 11 operational phases. 80 clean binaries. Kernel persistence survives restart. Metamorphic obfuscation produces unique binary identity per evolution cycle.** Standard user → LocalSystem confirmed via service binary replacement (CWE-732) and phantom DLL plant (CWE-427). AMSI + ETW simultaneously bypassed via hardware breakpoints, zero memory modification. Finding #36 (HWBP bypass) submitted to MSRC as VULN-195458 — **rejected**, detection bypasses out of scope. Technique published openly.
+**70 findings across 19 engagements. 13 operational phases. 90 clean binaries. Kernel persistence survives restart. Metamorphic obfuscation produces unique binary identity per evolution cycle.** Standard user → LocalSystem confirmed via service binary replacement (CWE-732) and phantom DLL plant (CWE-427). AMSI + ETW simultaneously bypassed via hardware breakpoints, zero memory modification. Finding #36 (HWBP bypass) submitted to MSRC as VULN-195458 — **rejected**, detection bypasses out of scope. Technique published openly.
 
 ### What Carries Forward From vader-toctou
 
@@ -296,8 +307,10 @@ Linker:    ws2_32.lib (shell), ntdll.lib (ETW/AMSI patches)
 | `vader_evolve.py` | `python vader_evolve.py --cycles 3` | Run 3 evolution cycles |
 | `vader_evolve.py` | `python vader_evolve.py --scan-only` | Scan all existing binaries |
 | `cheyanne_agent.py` | `python cheyanne_agent.py` | HANDLER AI operator (Ollama backend) |
+| `cheyanne_agent.py` | `python cheyanne_agent.py --kimi` | HANDLER AI operator (Kimi K2.5 via OpenRouter) |
 | `cheyanne_agent.py` | `python cheyanne_agent.py --claude` | HANDLER AI operator (Claude API backend) |
 | `auto_screenshot_test.py` | `python auto_screenshot_test.py` | Auto deploy + screenshot pipeline |
+| `test_verify.py` | `python test_verify.py` | 26-test automated + human verification suite |
 
 ### Encrypted Backup
 
