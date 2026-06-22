@@ -58,14 +58,26 @@ typedef NTSTATUS (NTAPI *pfnNtQuerySystemInformation)(
 
 static int count_process_direct(pfnNtQuerySystemInformation fn, const wchar_t *target) {
     ULONG bufSize = 1024 * 1024;
-    BYTE *buf = (BYTE *)malloc(bufSize);
-    if (!buf) return -2;
-
+    BYTE *buf = NULL;
     ULONG retLen = 0;
-    NTSTATUS st = fn(SPI_CLASS, buf, bufSize, &retLen);
+    NTSTATUS st;
+
+    for (int attempt = 0; attempt < 6; attempt++) {
+        buf = (BYTE *)malloc(bufSize);
+        if (!buf) return -2;
+
+        retLen = 0;
+        st = fn(SPI_CLASS, buf, bufSize, &retLen);
+        if (st != 0xC0000004L) break;
+
+        free(buf);
+        buf = NULL;
+        bufSize = (retLen > bufSize) ? retLen + 65536 : bufSize * 2;
+    }
+
     if (st != 0) {
         printf("    NtQuerySystemInformation returned 0x%08lX\n", st);
-        free(buf);
+        if (buf) free(buf);
         return -1;
     }
 

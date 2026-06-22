@@ -205,6 +205,7 @@ def render():
         ("A", "Agent (local)",       "Run agent connecting to localhost",GREEN),
         ("D", "C2 SHELL",            "TCP shell + Discord beacon",       GREEN),
         ("B", "Build Implant",      "Sync token → rebuild → serve",    CYAN),
+        ("X", "Convert Image",      "BMP/PNG/JPG auto-convert",        WHITE),
         ("0", "Exit",                "",                                DIM),
     ]
     for key, name, desc, color in ops:
@@ -219,6 +220,60 @@ def render():
     print(f"  {DIM}  Defender: {GREEN}ZERO{DIM} │ Cloak: {cloak_str} │ Ghost: {ghost_str}{RST}")
     print(hline())
     print()
+
+
+def convert_image():
+    """Auto-detect and convert image formats (BMP↔PNG↔JPG)."""
+    print(f"\n  {WHITE}{BOLD}  IMAGE CONVERTER{RST}")
+    print(f"  {DIM}  Drag file or paste path. Output goes next to source.{RST}\n")
+    src = input(f"  {WHITE}  File: {RST}").strip().strip('"').strip("'")
+    if not src or not os.path.isfile(src):
+        print(f"  {RED}  [!] File not found: {src}{RST}")
+        return
+
+    ext = os.path.splitext(src)[1].lower()
+    base = os.path.splitext(src)[0]
+
+    fmt_map = {".bmp": ".png", ".png": ".jpg", ".jpg": ".png", ".jpeg": ".png"}
+    default_out = fmt_map.get(ext, ".png")
+
+    print(f"  {DIM}  Detected: {ext.upper()} → default output: {default_out.upper()}{RST}")
+    out_choice = input(f"  {WHITE}  Output format [png/jpg/bmp] (enter = {default_out[1:]}): {RST}").strip().lower()
+    if not out_choice:
+        out_ext = default_out
+    elif out_choice in ("png", "jpg", "jpeg", "bmp"):
+        out_ext = f".{out_choice}"
+    else:
+        print(f"  {RED}  [!] Unknown format: {out_choice}{RST}")
+        return
+
+    dst = base + out_ext
+    if os.path.exists(dst):
+        dst = base + f"_converted{out_ext}"
+
+    try:
+        cmd = (
+            f'powershell -c "Add-Type -AssemblyName System.Drawing; '
+            f"$img = [System.Drawing.Image]::FromFile('{src}'); "
+        )
+        if out_ext == ".png":
+            cmd += f"$img.Save('{dst}', [System.Drawing.Imaging.ImageFormat]::Png); "
+        elif out_ext in (".jpg", ".jpeg"):
+            cmd += f"$img.Save('{dst}', [System.Drawing.Imaging.ImageFormat]::Jpeg); "
+        elif out_ext == ".bmp":
+            cmd += f"$img.Save('{dst}', [System.Drawing.Imaging.ImageFormat]::Bmp); "
+        cmd += '$img.Dispose()"'
+
+        result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
+        if result.returncode == 0 and os.path.isfile(dst):
+            src_size = os.path.getsize(src)
+            dst_size = os.path.getsize(dst)
+            print(f"  {GREEN}  [+] Converted: {os.path.basename(dst)}{RST}")
+            print(f"  {DIM}  {src_size:,} bytes → {dst_size:,} bytes{RST}")
+        else:
+            print(f"  {RED}  [!] Conversion failed: {result.stderr.strip()}{RST}")
+    except Exception as e:
+        print(f"  {RED}  [!] Error: {e}{RST}")
 
 
 def show_ghost_demo(ghost_file):
@@ -445,6 +500,8 @@ def run_op(choice):
     elif choice.lower() == "b":
         print(f"\n  {CYAN}[*] Discord Implant — Full Deploy Pipeline{RST}")
         subprocess.run([sys.executable, os.path.join(ROOT, "deploy.py"), "--implant-deploy"])
+    elif choice.lower() == "x":
+        convert_image()
     else:
         return False
 
