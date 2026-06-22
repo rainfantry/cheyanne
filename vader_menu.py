@@ -598,8 +598,30 @@ def run_op(choice):
     elif choice.lower() in ("s", "t", "l", "e", "u", "n") and not HAS_OPS:
         print(f"\n  {RED}[!] cheyanne_ops.py not loaded — OPERATE commands unavailable{RST}")
 
+    # ── TYPED SHORTCUTS (accept words, not just keys) ──
+    elif choice.lower() == "deploy":
+        c2_v2 = os.path.join(ROOT, "shell", "vader_c2_v2.py")
+        if HAS_OPS:
+            from cheyanne_ops import port_ensure
+            if not port_ensure(4443):
+                input(f"\n  {DIM}Press Enter to continue...{RST}")
+                return True
+        print(f"\n  {GREEN}[*] Launching C2 with deploy shortcut ready...{RST}")
+        print(f"  {DIM}  Once connected, type 'deploy' at chey> prompt{RST}")
+        subprocess.run([sys.executable, c2_v2], cwd=ROOT)
+    elif choice.lower() in ("shell", "c2"):
+        c2_v2 = os.path.join(ROOT, "shell", "vader_c2_v2.py")
+        if HAS_OPS:
+            from cheyanne_ops import port_ensure
+            if not port_ensure(4443):
+                input(f"\n  {DIM}Press Enter to continue...{RST}")
+                return True
+        print(f"\n  {GREEN}[*] Launching CHEYANNE C2...{RST}")
+        subprocess.run([sys.executable, c2_v2], cwd=ROOT)
+
     else:
-        return False
+        print(f"\n  {RED}[!] Unknown command: {choice}{RST}")
+        return True
 
     input(f"\n  {DIM}Press Enter to continue...{RST}")
     return True
