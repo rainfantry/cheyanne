@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="docs/cheyanne_header.svg?v=4" width="100%" alt="CHEYANNE Security Research Project"/>
+<img src="docs/cheyanne_header.gif" width="100%" alt="CHEYANNE Security Research Project"/>
 
 <br/>
 
