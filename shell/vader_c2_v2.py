@@ -186,6 +186,15 @@ class Session:
                         break
                     chunks.append(d.decode("utf-8", errors="replace"))
                     if len(d) < 4096:
+                        # short read — pause briefly then check for trailing data
+                        self.sock.settimeout(0.5)
+                        try:
+                            d2 = self.sock.recv(4096)
+                            if d2:
+                                chunks.append(d2.decode("utf-8", errors="replace"))
+                                continue
+                        except socket.timeout:
+                            pass
                         break
                 except socket.timeout:
                     break
@@ -546,7 +555,7 @@ class VaderC2:
                     print(f"  {RED}[!] Connection lost{RST}")
                     break
 
-                time.sleep(0.5)
+                time.sleep(1.0)
                 output = s.recv(timeout=3)
                 if output:
                     print(output, end="")
