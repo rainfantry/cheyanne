@@ -14,6 +14,15 @@ Updated: 2026-06-23
 - [x] Phase 12: HANDLER AI operator (Ollama/Claude, 8 tools, prompt-based calling)
 - [x] Auto-deploy pipeline (compile → serve → deploy → screenshot)
 - [x] Menu restructure (Phase 1-4 + Toolkit)
+- [x] TCP C2 v2 with shortcuts (deploy, screenshot, watch, kill, recon, persist)
+- [x] Dual-payload deploy (Discord implant + TCP shell, XOR-baked IP, zero args)
+- [x] Live watch (single while-loop, HTTP POST-back frames, fetch+blob viewer on :8892)
+- [x] Screenshot auto-pull (one-shot HTTP receiver on :8891)
+- [x] Dual persist (WindowsSecurityHealth + WindowsSecurityUpdate registry keys)
+- [x] HANDLER Kimi K2.5 backend via OpenRouter
+- [x] `--tcp-cmd` non-interactive mode for web UI integration
+- [x] Web dashboard mobile responsive + full terminal parity (all 4 phases + TCP shortcuts)
+- [x] `setup_firewall.bat` — permanent rules for all 6 ports
 - [x] 88/88 binaries CLEAN against Defender RTP
 - [x] MSRC VULN-195458 submitted (HWBP blind spot) — rejected, "Won't Fix"
 - [x] 100K fuzzing campaign (mpengine.dll) — 0 crashes
@@ -86,6 +95,110 @@ Updated: 2026-06-23
 - [ ] HANDLER model upgrade — test with llama3.1/qwen2.5 for better tool compliance
 - [ ] Web dashboard update — integrate Discord C2 sessions into browser UI
 - [ ] Steganographic C2 — hide commands in image EXIF/pixel data (ghost encoder extension)
+
+---
+
+## PHASE 4.5 — WAN C2 (BIDIRECTIONAL DISCORD)
+
+The unlock for remote operations. Discord already works over WAN (beacon/recon posts through Discord servers). TCP shell is LAN-only (`inet_addr()` = IP-only, no DNS). Making Discord bidirectional gives full interactive C2 from anywhere without port forwarding.
+
+### Current State
+- **Discord**: WAN, beacon-only (one-way — posts to webhook, never listens)
+- **TCP**: LAN-only, full interactive (shell, files, screenshot, watch, deploy, persist)
+- **Gap**: No way to run commands on a target outside the LAN
+
+### 1. Bidirectional Discord C2 (HIGH PRIORITY)
+
+**Why:** Discord bot token is already configured. Implant already connects. Just needs to poll for commands and reply with output. Turns Discord into a full C2 transport — no port forwarding, no router config, no DNS. Works from any network. Traffic looks like normal Discord API calls.
+
+**Tasks:**
+- [ ] Implant polls a command channel every N seconds for operator messages
+- [ ] Command execution — runs received command, posts stdout back to channel
+- [ ] File transfer via Discord attachments (25MB per message limit)
+- [ ] Screenshot on demand via Discord command
+- [ ] Session management — multiple targets in one channel, target ID prefixes
+- [ ] Rate limit handling (Discord API: ~50 req/sec)
+- [ ] Operator-side: `chey>` shell routes commands through Discord when no TCP session available
+- [ ] Auto-fallback: try TCP first, fall back to Discord if no direct connection
+
+**Estimated effort:** 1-2 sessions (4-8 hours)
+
+### 2. TCP Shell DNS Resolution
+
+**Why:** `inet_addr()` on line 143 of vader_shell_annotated.c only handles dotted-quad IPs. Replace with `getaddrinfo()` to resolve hostnames. Then compile with a DDNS domain instead of a raw IP.
+
+**Tasks:**
+- [ ] Replace `inet_addr(c2ip)` with `getaddrinfo()` in C source
+- [ ] Fresh Build accepts hostname or IP for `--compile-shell`
+- [ ] DDNS auto-update script (DuckDNS/No-IP — free tier)
+- [ ] Public IP auto-detect option in Fresh Build (`curl ifconfig.me`)
+- [ ] Fallback chain: domain → public IP → LAN IP
+
+**Estimated effort:** 1 session (2-4 hours)
+
+### 3. Port Multiplexing
+
+**Why:** Currently 6 ports open. Over WAN, fewer ports = less exposure. Multiplex all traffic over a single port (4443).
+
+**Tasks:**
+- [ ] Protocol header byte to distinguish C2/screenshot/watch/file/agent traffic
+- [ ] Single-port listener with traffic routing
+- [ ] Reduce firewall surface to one port
+
+**Estimated effort:** 1 session (3-5 hours)
+
+---
+
+## PHASE 5 — FULL REMOTE ACCESS
+
+Full sensory control of the target. Webcam, mic, desktop — all through the same HTTP POST-back architecture proven by watch/screenshot.
+
+### 1. Webcam Capture (Photo + Live Stream)
+
+**Why:** Screenshot gives the screen. Webcam gives the room. Same POST-back pattern as watch — target captures frames, POSTs to operator, browser viewer refreshes.
+
+**Tasks:**
+- [ ] Single photo capture via PowerShell (`System.Windows.Media.Imaging` or DirectShow)
+- [ ] Live stream mode — while-loop captures frames, HTTP POSTs to operator on `:8891`
+- [ ] Browser viewer on `:8892` — same fetch+blob pattern as watch
+- [ ] `chey> cam` shortcut for single photo
+- [ ] `chey> camwatch` / `chey> camwatch 3` for live stream with configurable interval
+- [ ] Front/rear camera selection (if multiple devices)
+- [ ] Menu + web dashboard integration (Phase 4 operate)
+
+**Estimated effort:** 1 session (3-5 hours)
+
+### 2. Full VNC — Remote Desktop with Input Relay
+
+**Why:** Watch is view-only. VNC adds keyboard and mouse input — full interactive control of the target desktop from the operator's browser.
+
+**Tasks:**
+- [ ] Target-side input receiver — PowerShell/C agent accepts mouse move/click/key events over TCP or WebSocket
+- [ ] Operator-side browser UI — canvas-based desktop viewer with mouse capture and keyboard forwarding
+- [ ] Frame compression — JPEG quality scaling based on bandwidth
+- [ ] Cursor overlay rendering on operator viewer
+- [ ] Input encoding protocol (mouse: x,y,button,action; keyboard: keycode,action)
+- [ ] Latency optimization — frame delta encoding or dirty-rect detection
+- [ ] `chey> vnc` shortcut to start interactive session
+- [ ] WebSocket upgrade path (HTTP POST-back too slow for interactive use)
+
+**Estimated effort:** 2-3 sessions (8-12 hours)
+
+### 3. Mic Recording + Exfil
+
+**Why:** Audio surveillance. Record ambient sound from target mic, exfil the file or stream live.
+
+**Tasks:**
+- [ ] PowerShell mic capture via `NAudio` or `System.Media.SoundRecorder` / WinRT AudioGraph
+- [ ] Timed recording — `chey> mic 30` records 30 seconds
+- [ ] File exfil — POST WAV/MP3 back to operator HTTP receiver
+- [ ] Live stream mode — chunked audio POST-back (opus/wav segments)
+- [ ] Operator playback — browser `<audio>` element or local file open
+- [ ] `chey> mic` shortcut for default 10s recording
+- [ ] `chey> micstream` for continuous live audio
+- [ ] Menu + web dashboard integration
+
+**Estimated effort:** 1-2 sessions (4-8 hours)
 
 ---
 

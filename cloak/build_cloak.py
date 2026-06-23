@@ -19,7 +19,11 @@ SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 ROOT_DIR = os.path.dirname(SCRIPT_DIR)
 OUT_DIR = os.path.join(SCRIPT_DIR, "bin")
 
-VCVARS = r"C:\Program Files\Microsoft Visual Studio\18\Community\VC\Auxiliary\Build\vcvars64.bat"
+try:
+    import sys; sys.path.insert(0, os.path.dirname(SCRIPT_DIR))
+    from cheyanne_config import VCVARS
+except ImportError:
+    VCVARS = r"C:\Program Files\Microsoft Visual Studio\18\Community\VC\Auxiliary\Build\vcvars64.bat"
 
 DLL_SOURCES = [
     "hook_engine.c",

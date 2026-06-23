@@ -46,7 +46,10 @@ for p in sorted(glob.glob(r"C:\ProgramData\Microsoft\Windows Defender\Platform\*
     MPCMDRUN = p
     break
 
-VCVARS = r"C:\Program Files\Microsoft Visual Studio\18\Community\VC\Auxiliary\Build\vcvars64.bat"
+try:
+    from cheyanne_config import VCVARS
+except ImportError:
+    VCVARS = r"C:\Program Files\Microsoft Visual Studio\18\Community\VC\Auxiliary\Build\vcvars64.bat"
 
 VECTORS = {
     "V4": {

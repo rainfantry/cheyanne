@@ -32,7 +32,10 @@ ROOT = os.path.dirname(os.path.abspath(__file__))
 PORT = int(sys.argv[1]) if len(sys.argv) > 1 else 8666
 AGENT_PORT = 8667
 
-VCVARS = r"C:\Program Files\Microsoft Visual Studio\18\Community\VC\Auxiliary\Build\vcvars64.bat"
+try:
+    from cheyanne_config import VCVARS
+except ImportError:
+    VCVARS = r"C:\Program Files\Microsoft Visual Studio\18\Community\VC\Auxiliary\Build\vcvars64.bat"
 
 KILL_CHAIN = [
     {"id": "0", "name": "C2 REVERSE SHELL",     "codename": "ALPHA",   "binary": "shell/vader_shell.exe",           "color": "#FF4444"},
