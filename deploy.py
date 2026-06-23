@@ -801,7 +801,7 @@ def deploy_vector(vector_id, profile=None):
 
 def check_canary(canary_path):
     if os.path.exists(canary_path):
-        with open(canary_path, "r") as f:
+        with open(canary_path, "r", encoding="utf-8", errors="replace") as f:
             content = f.read().strip()
         return content
     return None
@@ -895,7 +895,7 @@ def collect_evidence(vector_id, canary_content, profile=None):
     }
 
     report_path = os.path.join(evidence_dir, "engagement_report.json")
-    with open(report_path, "w") as f:
+    with open(report_path, "w", encoding="utf-8") as f:
         json.dump(report, f, indent=2)
     log_ok(f"Report: {report_path}")
 
@@ -905,7 +905,7 @@ def collect_evidence(vector_id, canary_content, profile=None):
         log_ok(f"Canary copy: {canary_copy}")
 
     log_copy = os.path.join(evidence_dir, "deploy.log")
-    with open(log_copy, "w") as f:
+    with open(log_copy, "w", encoding="utf-8") as f:
         f.write("\n".join(LOG_LINES))
     log_ok(f"Deploy log: {log_copy}")
 
@@ -1100,21 +1100,21 @@ def implant_token_sync():
 
     # read hermes token (source of truth — it's the live bot)
     if os.path.exists(HERMES_ENV):
-        with open(HERMES_ENV) as f:
+        with open(HERMES_ENV, encoding="utf-8", errors="replace") as f:
             for line in f:
                 if line.strip().startswith("DISCORD_BOT_TOKEN="):
                     tokens["hermes"] = line.strip().split("=", 1)[1]
 
     # read cheyanne .env token
     if os.path.exists(CHEYANNE_ENV):
-        with open(CHEYANNE_ENV) as f:
+        with open(CHEYANNE_ENV, encoding="utf-8", errors="replace") as f:
             for line in f:
                 if line.strip().startswith("DISCORD_BOT_TOKEN="):
                     tokens["cheyanne_env"] = line.strip().split("=", 1)[1]
 
     # read implant source token
     if os.path.exists(IMPLANT_SRC):
-        with open(IMPLANT_SRC) as f:
+        with open(IMPLANT_SRC, encoding="utf-8", errors="replace") as f:
             for line in f:
                 if "BOT_TOKEN" in line and "=" in line and not line.strip().startswith("#"):
                     val = line.split("=", 1)[1].strip().strip('"').strip("'")
@@ -1146,9 +1146,9 @@ def implant_token_sync():
     # auto-fix cheyanne .env
     if "cheyanne_env" in mismatches:
         lines = []
-        with open(CHEYANNE_ENV) as f:
+        with open(CHEYANNE_ENV, encoding="utf-8", errors="replace") as f:
             lines = f.readlines()
-        with open(CHEYANNE_ENV, "w") as f:
+        with open(CHEYANNE_ENV, "w", encoding="utf-8") as f:
             for line in lines:
                 if line.strip().startswith("DISCORD_BOT_TOKEN="):
                     f.write(f"DISCORD_BOT_TOKEN={hermes_token}\n")
@@ -1159,10 +1159,10 @@ def implant_token_sync():
     # auto-fix implant source
     if "implant_src" in mismatches:
         old_token = tokens["implant_src"]
-        with open(IMPLANT_SRC) as f:
+        with open(IMPLANT_SRC, encoding="utf-8", errors="replace") as f:
             src = f.read()
         src = src.replace(old_token, hermes_token)
-        with open(IMPLANT_SRC, "w") as f:
+        with open(IMPLANT_SRC, "w", encoding="utf-8") as f:
             f.write(src)
         log_ok("Fixed: implant source updated")
 
