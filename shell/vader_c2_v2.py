@@ -242,15 +242,54 @@ class VaderC2:
             except Exception:
                 pass
 
-    def find_session(self, sid_prefix=""):
+    def find_session(self, sid_prefix="", prompt_if_ambiguous=True):
         if sid_prefix:
             matches = [s for s in self.sessions if s.startswith(sid_prefix)]
+            if not matches:
+                print(f"  {RED}[!] No session matching '{sid_prefix}'{RST}")
+                return None
+            if len(matches) == 1:
+                return self.sessions[matches[0]]
+            # multiple matches for prefix — fall through to prompt
         else:
             matches = list(self.sessions.keys())
+
+        if not matches:
+            return None
+
+        # single session — just return it
+        if len(matches) == 1:
+            return self.sessions[matches[0]]
+
+        # multiple sessions — if a prefix was given, use best match (TCP first)
+        # if no prefix, prompt the user to pick
         tcp = [s for s in matches if self.sessions[s].channel == "tcp" and self.sessions[s].alive]
+        disc = [s for s in matches if self.sessions[s].channel == "discord"]
+
+        if not sid_prefix and prompt_if_ambiguous and len(matches) > 1:
+            print(f"\n  {CYAN}[?] Multiple sessions — pick one:{RST}")
+            ordered = tcp + [s for s in disc if s not in tcp]
+            for i, sid in enumerate(ordered):
+                s = self.sessions[sid]
+                tag = f"{GREEN}tcp*{RST}" if s.channel == "tcp" and s.alive else f"{MUTED}discord{RST}"
+                print(f"    [{i}] {sid[:8]}  {s.hostname:<20} {tag}")
+            try:
+                choice = input(f"\n  {DIM}Select [0-{len(ordered)-1}] or partial ID: {RST}").strip()
+                if choice.isdigit() and int(choice) < len(ordered):
+                    return self.sessions[ordered[int(choice)]]
+                # treat as prefix
+                pfx = [s for s in ordered if s.startswith(choice)]
+                if pfx:
+                    return self.sessions[pfx[0]]
+                print(f"  {RED}[!] Invalid selection{RST}")
+                return None
+            except (KeyboardInterrupt, EOFError):
+                print()
+                return None
+
+        # prefix given or no prompt — prefer TCP
         if tcp:
             return self.sessions[tcp[0]]
-        disc = [s for s in matches if self.sessions[s].channel == "discord"]
         if disc:
             return self.sessions[disc[0]]
         return None
@@ -1144,7 +1183,7 @@ def run_tcp_cmd(tcp_cmd_str):
 
     time.sleep(2)
 
-    s = c2.find_session("")
+    s = c2.find_session("", prompt_if_ambiguous=False)
     if not s:
         print(f"  {RED}[!] No session found (TCP or Discord). Connect first.{RST}")
         c2.running = False
