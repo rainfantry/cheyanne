@@ -1,0 +1,4 @@
+LIBRARY cloak
+EXPORTS
+    CloakHookProc
+    SetCBTHook

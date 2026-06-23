@@ -1,0 +1,16 @@
+.env
+*.obj
+*.pdb
+*.ilk
+*.exp
+*.lib
+__pycache__/
+*.pyc
+node_modules/
+agent/dist/
+*.exe
+*.dll
+reporting/
+venv/
+.cheyanne/
+screenshots/

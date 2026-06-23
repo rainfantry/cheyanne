@@ -1,0 +1,1354 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OPERATION VADER — Windows Defender Security Research</title>
+
+<!-- SEO Meta Tags -->
+<meta name="description" content="VADER — Windows Defender security research project. Hardware breakpoint bypass findings, MSRC VULN-195458, and remediation recommendations. By George Wu, 22DIV.">
+<meta name="keywords" content="Windows Defender security research, AMSI bypass research, hardware breakpoint, MSRC vulnerability, cybersecurity research, 22DIV, VADER">
+<meta name="author" content="George Wu">
+<meta name="robots" content="index, follow">
+
+<!-- Open Graph -->
+<meta property="og:title" content="OPERATION VADER — Windows Defender Security Research">
+<meta property="og:description" content="Hardware breakpoint blind spot in Windows Defender tamper protection. MSRC VULN-195458. Remediation recommendations for debug register monitoring gaps.">
+<meta property="og:type" content="website">
+
+<!-- Structured Data -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "TechArticle",
+  "headline": "OPERATION VADER — Windows Defender Security Research",
+  "author": {
+    "@type": "Person",
+    "name": "George Wu",
+    "url": "https://github.com/rainfantry"
+  },
+  "description": "Security research investigating hardware breakpoint bypass of Windows Defender tamper protection. Findings reported to Microsoft via MSRC (VULN-195458). Includes CWE-732 privilege escalation discovery and remediation recommendations.",
+  "keywords": "Windows Defender, AMSI, ETW, hardware breakpoint, security research, MSRC, vulnerability disclosure",
+  "proficiencyLevel": "Expert",
+  "datePublished": "2026-06-21",
+  "inLanguage": "en"
+}
+</script>
+
+<style>
+/* ── RESET ── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+/* ── ROOT VARIABLES ── */
+:root {
+  --bg-primary:   #0a0a0a;
+  --bg-secondary: #111111;
+  --bg-card:      #141414;
+  --bg-table-row: #0f0f0f;
+  --border:       #1e1e1e;
+  --border-glow:  #1a3a1a;
+  --green:        #00ff41;
+  --green-dim:    #00cc33;
+  --green-dark:   #004d14;
+  --amber:        #ffb000;
+  --amber-dim:    #cc8c00;
+  --red:          #ff3333;
+  --red-dim:      #cc2929;
+  --cyan:         #00e5ff;
+  --text-primary: #d4d4d4;
+  --text-muted:   #777777;
+  --text-dim:     #555555;
+  --mono:         'Consolas', 'Cascadia Code', 'Source Code Pro', 'Courier New', monospace;
+  --sans:         'Segoe UI', 'Inter', system-ui, -apple-system, sans-serif;
+}
+
+html {
+  scroll-behavior: smooth;
+  scroll-padding-top: 5rem;
+}
+
+body {
+  font-family: var(--sans);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  line-height: 1.6;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* ── SCANLINE OVERLAY ── */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0, 255, 65, 0.015) 2px,
+    rgba(0, 255, 65, 0.015) 4px
+  );
+  pointer-events: none;
+  z-index: 9999;
+}
+
+/* ── STICKY NAV ── */
+nav {
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  background: rgba(10, 10, 10, 0.95);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border);
+  padding: 0;
+}
+
+.nav-inner {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.nav-inner::-webkit-scrollbar { display: none; }
+
+.nav-brand {
+  font-family: var(--mono);
+  font-weight: 700;
+  color: var(--green);
+  padding: 0.75rem 1.25rem;
+  white-space: nowrap;
+  font-size: 0.85rem;
+  letter-spacing: 0.05em;
+  border-right: 1px solid var(--border);
+  text-decoration: none;
+}
+
+.nav-links {
+  display: flex;
+  gap: 0;
+  list-style: none;
+  overflow-x: auto;
+}
+
+.nav-links a {
+  color: var(--text-muted);
+  text-decoration: none;
+  font-size: 0.75rem;
+  font-family: var(--mono);
+  padding: 0.85rem 1rem;
+  white-space: nowrap;
+  transition: color 0.2s, background 0.2s;
+  display: block;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.nav-links a:hover {
+  color: var(--green);
+  background: rgba(0, 255, 65, 0.05);
+}
+
+/* ── HERO / HEADER ── */
+.hero {
+  background: linear-gradient(180deg, #0d120d 0%, var(--bg-primary) 100%);
+  border-bottom: 1px solid var(--border-glow);
+  padding: 4rem 2rem 3rem;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.hero::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 600px;
+  height: 600px;
+  background: radial-gradient(circle, rgba(0, 255, 65, 0.04) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.hero-classification {
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  color: var(--amber);
+  letter-spacing: 0.15em;
+  margin-bottom: 1.5rem;
+  text-transform: uppercase;
+}
+
+.hero h1 {
+  font-family: var(--mono);
+  font-size: clamp(1.8rem, 5vw, 3rem);
+  font-weight: 700;
+  color: var(--green);
+  letter-spacing: 0.08em;
+  margin-bottom: 0.25rem;
+  text-shadow: 0 0 30px rgba(0, 255, 65, 0.15);
+  animation: glowPulse 4s ease-in-out infinite;
+}
+
+@keyframes glowPulse {
+  0%, 100% { text-shadow: 0 0 30px rgba(0, 255, 65, 0.15); }
+  50%      { text-shadow: 0 0 50px rgba(0, 255, 65, 0.25); }
+}
+
+.hero-subtitle {
+  font-family: var(--mono);
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  margin-bottom: 2rem;
+  letter-spacing: 0.05em;
+}
+
+.hero-meta {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+  justify-content: center;
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  color: var(--text-dim);
+}
+
+.hero-meta span {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.hero-meta .label {
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.hero-meta .value {
+  color: var(--text-primary);
+}
+
+/* ── SECTIONS ── */
+.container {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 0 1.5rem;
+}
+
+section {
+  padding: 4rem 0;
+  border-bottom: 1px solid var(--border);
+}
+
+section:last-of-type {
+  border-bottom: none;
+}
+
+.section-header {
+  margin-bottom: 2rem;
+}
+
+.section-number {
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  color: var(--green-dim);
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  margin-bottom: 0.5rem;
+}
+
+.section-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #f0f0f0;
+  letter-spacing: 0.02em;
+}
+
+/* ── CARDS ── */
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 1.75rem;
+  margin-bottom: 1.5rem;
+  transition: border-color 0.3s;
+}
+
+.card:hover {
+  border-color: var(--border-glow);
+}
+
+.card-title {
+  font-family: var(--mono);
+  font-size: 0.85rem;
+  color: var(--amber);
+  margin-bottom: 1rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-weight: 600;
+}
+
+/* ── TABLES ── */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+  margin: 1rem 0;
+}
+
+thead th {
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 0.75rem 1rem;
+  text-align: left;
+  border-bottom: 2px solid var(--border);
+  background: var(--bg-secondary);
+  white-space: nowrap;
+}
+
+tbody td {
+  padding: 0.7rem 1rem;
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+}
+
+tbody tr {
+  background: var(--bg-card);
+  transition: background 0.2s;
+}
+
+tbody tr:nth-child(even) {
+  background: var(--bg-table-row);
+}
+
+tbody tr:hover {
+  background: #191f19;
+}
+
+/* ── STATUS BADGES (inline) ── */
+.badge {
+  display: inline-block;
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 0.15rem 0.5rem;
+  border-radius: 3px;
+  letter-spacing: 0.03em;
+}
+
+.badge-green {
+  background: rgba(0, 255, 65, 0.12);
+  color: var(--green);
+}
+
+.badge-red {
+  background: rgba(255, 51, 51, 0.12);
+  color: var(--red);
+}
+
+.badge-amber {
+  background: rgba(255, 176, 0, 0.12);
+  color: var(--amber);
+}
+
+.badge-cyan {
+  background: rgba(0, 229, 255, 0.1);
+  color: var(--cyan);
+}
+
+.badge-dim {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-dim);
+}
+
+/* ── EVIDENCE BLOCK ── */
+.evidence-block {
+  background: #0c0c0c;
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--green-dark);
+  border-radius: 4px;
+  padding: 1.25rem 1.5rem;
+  font-family: var(--mono);
+  font-size: 0.8rem;
+  line-height: 1.7;
+  color: var(--green-dim);
+  margin: 1rem 0;
+  overflow-x: auto;
+  white-space: pre;
+}
+
+/* ── CVSS BAR ── */
+.cvss-bar {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin: 1rem 0;
+}
+
+.cvss-score {
+  font-family: var(--mono);
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--amber);
+  line-height: 1;
+}
+
+.cvss-label {
+  font-family: var(--mono);
+  font-size: 0.8rem;
+  color: var(--amber-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.cvss-vector {
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  color: var(--text-dim);
+  margin-top: 0.25rem;
+}
+
+/* ── COMPARISON TABLE ── */
+.comparison-header-detected {
+  color: var(--red) !important;
+}
+
+.comparison-header-clean {
+  color: var(--green) !important;
+}
+
+/* ── RESEARCH STEPS ── */
+.attack-steps {
+  counter-reset: step;
+  list-style: none;
+  margin: 1.25rem 0;
+}
+
+.attack-steps li {
+  counter-increment: step;
+  padding: 0.6rem 0 0.6rem 3rem;
+  position: relative;
+  font-size: 0.88rem;
+  border-left: 2px solid var(--border);
+  margin-left: 0.75rem;
+}
+
+.attack-steps li::before {
+  content: counter(step);
+  position: absolute;
+  left: -0.85rem;
+  top: 0.55rem;
+  width: 1.6rem;
+  height: 1.6rem;
+  background: var(--bg-primary);
+  border: 2px solid var(--green-dark);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--green-dim);
+}
+
+.attack-steps li:last-child {
+  border-left-color: transparent;
+}
+
+/* ── REMEDIATION LIST ── */
+.remediation-list {
+  list-style: none;
+  counter-reset: remediation;
+  margin: 1rem 0;
+}
+
+.remediation-list li {
+  counter-increment: remediation;
+  padding: 0.85rem 1rem 0.85rem 3.5rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  margin-bottom: 0.5rem;
+  position: relative;
+  font-size: 0.88rem;
+  transition: border-color 0.2s;
+}
+
+.remediation-list li:hover {
+  border-color: var(--border-glow);
+}
+
+.remediation-list li::before {
+  content: counter(remediation);
+  position: absolute;
+  left: 1rem;
+  top: 50%;
+  transform: translateY(-50%);
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--amber);
+  width: 1.5rem;
+  text-align: center;
+}
+
+/* ── INLINE CODE ── */
+code {
+  font-family: var(--mono);
+  background: rgba(255, 255, 255, 0.06);
+  padding: 0.15rem 0.4rem;
+  border-radius: 3px;
+  font-size: 0.82em;
+  color: var(--green-dim);
+}
+
+/* ── CONTENT TEXT ── */
+.prose {
+  font-size: 0.9rem;
+  line-height: 1.75;
+  color: var(--text-primary);
+}
+
+.prose p {
+  margin-bottom: 1rem;
+}
+
+.prose strong {
+  color: #f0f0f0;
+  font-weight: 600;
+}
+
+.highlight {
+  color: var(--green);
+  font-weight: 600;
+}
+
+.highlight-amber {
+  color: var(--amber);
+  font-weight: 600;
+}
+
+/* ── TWO-COLUMN GRID ── */
+.grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+}
+
+@media (max-width: 768px) {
+  .grid-2 { grid-template-columns: 1fr; }
+  .hero { padding: 3rem 1.5rem 2rem; }
+  nav { position: relative; }
+  .nav-brand { padding: 0.6rem 1rem; font-size: 0.75rem; }
+  .nav-links a { padding: 0.7rem 0.75rem; font-size: 0.65rem; }
+}
+
+/* ── FOOTER ── */
+footer {
+  background: var(--bg-secondary);
+  border-top: 1px solid var(--border);
+  padding: 2.5rem 2rem;
+  text-align: center;
+}
+
+.footer-brand {
+  font-family: var(--mono);
+  font-size: 0.85rem;
+  color: var(--green-dim);
+  letter-spacing: 0.06em;
+  margin-bottom: 0.3rem;
+}
+
+.footer-sub {
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  color: var(--text-dim);
+  letter-spacing: 0.04em;
+  margin-bottom: 0.2rem;
+}
+
+/* ── METHODOLOGY GRID ── */
+.method-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 1rem;
+  margin: 1.5rem 0;
+}
+
+.method-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 1.25rem;
+  transition: border-color 0.3s;
+}
+
+.method-card:hover {
+  border-color: var(--border-glow);
+}
+
+.method-card-title {
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  color: var(--green-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 0.6rem;
+}
+
+.method-card p {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+/* ── HEADING ACCENTS ── */
+h3 {
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: #e0e0e0;
+  margin: 1.75rem 0 0.75rem;
+}
+
+h3 code {
+  color: var(--amber);
+}
+
+/* ── BLINKING CURSOR ── */
+.cursor {
+  display: inline-block;
+  width: 2px;
+  height: 1em;
+  background: var(--green);
+  margin-left: 2px;
+  animation: blink 1s step-end infinite;
+  vertical-align: text-bottom;
+}
+
+@keyframes blink {
+  0%, 50% { opacity: 1; }
+  51%, 100% { opacity: 0; }
+}
+
+/* ── SEPARATOR ── */
+.sep {
+  height: 1px;
+  background: var(--border);
+  margin: 1.5rem 0;
+}
+
+/* ── LABEL-VALUE PAIR ── */
+.lv-grid {
+  display: grid;
+  grid-template-columns: 180px 1fr;
+  gap: 0.4rem 1rem;
+  margin: 1rem 0;
+  font-size: 0.85rem;
+}
+
+.lv-label {
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.lv-value {
+  color: var(--text-primary);
+}
+
+@media (max-width: 500px) {
+  .lv-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ── ETHICS CARDS ── */
+.ethics-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1rem;
+  margin: 1.5rem 0;
+}
+
+.ethics-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-top: 3px solid var(--green-dark);
+  border-radius: 6px;
+  padding: 1.25rem;
+  transition: border-color 0.3s;
+}
+
+.ethics-card:hover {
+  border-color: var(--border-glow);
+}
+
+.ethics-icon {
+  font-size: 1.4rem;
+  margin-bottom: 0.6rem;
+}
+
+.ethics-card h4 {
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  color: var(--green-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 0.5rem;
+}
+
+.ethics-card p {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+</style>
+</head>
+<body>
+
+<!-- ────────────── NAV ────────────── -->
+<nav>
+  <div class="nav-inner">
+    <a href="#top" class="nav-brand">VADER // RESEARCH</a>
+    <ul class="nav-links">
+      <li><a href="#overview">Overview</a></li>
+      <li><a href="#ethics">Ethics</a></li>
+      <li><a href="#methodology">Methodology</a></li>
+      <li><a href="#findings">Findings</a></li>
+      <li><a href="#hwbp">HWBP Discovery</a></li>
+      <li><a href="#cwe732">CWE-732</a></li>
+      <li><a href="#defenses">Defense Analysis</a></li>
+      <li><a href="#remediation">Remediation</a></li>
+      <li><a href="#disclosure">Disclosure</a></li>
+    </ul>
+  </div>
+</nav>
+
+<!-- ────────────── HERO ────────────── -->
+<header class="hero" id="top">
+  <div class="hero-classification">SECURITY RESEARCH // EDUCATIONAL</div>
+  <h1>OPERATION VADER<span class="cursor"></span></h1>
+  <div class="hero-subtitle">Windows Defender Security Research &mdash; Findings &amp; Remediation</div>
+  <div class="hero-meta">
+    <span><span class="label">Researcher</span> <span class="value">George Wu / 22DIV</span></span>
+    <span><span class="label">Target</span> <span class="value">Windows 11 Home 26200 (24H2)</span></span>
+    <span><span class="label">Context</span> <span class="value">Researcher-Owned Hardware</span></span>
+    <span><span class="label">Disclosure</span> <span class="value">MSRC VULN-195458</span></span>
+  </div>
+</header>
+
+<main class="container">
+
+<!-- ════════════ SECTION 1: OVERVIEW ════════════ -->
+<section id="overview">
+  <div class="section-header">
+    <div class="section-number">Section 01</div>
+    <h2 class="section-title">Research Overview</h2>
+  </div>
+
+  <div class="prose">
+    <p>
+      Operation VADER is a security research project investigating Windows Defender's monitoring architecture on a live Windows 11 Home system with full Real-Time Protection enabled. All work was conducted on personally-owned hardware as part of cybersecurity coursework (CSEC &mdash; Tactical Cyber Operations).
+    </p>
+    <p>
+      The research began as a TOCTOU race condition study against Windows Defender's quarantine pipeline (<strong>vader-toctou</strong>, 6 engagements, 30 findings). That campaign was defeated by Microsoft's defense-in-depth &mdash; content re-verification, single-handle architecture, kernel-mode I/O bypass. The defenses held, but the research mapped Defender's internal architecture and informed subsequent investigation.
+    </p>
+    <p>
+      The second phase focused on identifying monitoring blind spots in Defender's tamper protection. This led to the discovery of a <strong>hardware breakpoint technique</strong> that bypasses AMSI and ETW monitoring without modifying target memory &mdash; a finding reported to Microsoft via MSRC as <strong>VULN-195458</strong>. Microsoft's response: <span class="highlight-amber">"Won't Fix"</span> &mdash; classified as not meeting the severity bar for servicing.
+    </p>
+    <p>
+      A separate <strong>CWE-732 privilege escalation</strong> was discovered in a third-party service configuration, enabling Standard User to SYSTEM escalation with no UAC prompt. This was independently documented and reported.
+    </p>
+  </div>
+
+  <div class="card" style="margin-top: 1.5rem;">
+    <div class="card-title">Research Summary</div>
+    <div class="lv-grid">
+      <span class="lv-label">Total Engagements</span>
+      <span class="lv-value">19</span>
+      <span class="lv-label">Total Findings</span>
+      <span class="lv-value">70 documented findings across both phases</span>
+      <span class="lv-label">Key Discovery</span>
+      <span class="lv-value">Hardware breakpoint technique bypasses AMSI/ETW with zero memory modification</span>
+      <span class="lv-label">MSRC Submission</span>
+      <span class="lv-value">VULN-195458 &mdash; Response: "Won't Fix"</span>
+      <span class="lv-label">Privesc Finding</span>
+      <span class="lv-value">CWE-732 &mdash; Standard User &rarr; SYSTEM via misconfigured service ACLs</span>
+      <span class="lv-label">Disclosure</span>
+      <span class="lv-value">Responsible disclosure via MSRC. No tools or exploits distributed.</span>
+    </div>
+  </div>
+</section>
+
+<!-- ════════════ SECTION 2: RESEARCH ETHICS ════════════ -->
+<section id="ethics">
+  <div class="section-header">
+    <div class="section-number">Section 02</div>
+    <h2 class="section-title">Research Ethics &amp; Scope</h2>
+  </div>
+
+  <div class="prose" style="margin-bottom: 1.5rem;">
+    <p>This research was conducted within a strict ethical framework consistent with responsible security research practices and academic requirements.</p>
+  </div>
+
+  <div class="ethics-grid">
+    <div class="ethics-card">
+      <div class="ethics-icon">&#x1F5A5;</div>
+      <h4>Own Hardware Only</h4>
+      <p>All testing was performed exclusively on the researcher's personally-owned Windows 11 machine. No third-party systems were targeted at any point during the research.</p>
+    </div>
+    <div class="ethics-card">
+      <div class="ethics-icon">&#x1F4E8;</div>
+      <h4>MSRC Disclosure</h4>
+      <p>The hardware breakpoint finding was reported to Microsoft Security Response Center under their responsible disclosure framework. Case reference: VULN-195458.</p>
+    </div>
+    <div class="ethics-card">
+      <div class="ethics-icon">&#x1F6AB;</div>
+      <h4>No Distribution</h4>
+      <p>No exploit code, tools, or weaponizable artifacts are distributed. The research repository is private. This page presents findings and recommendations only.</p>
+    </div>
+    <div class="ethics-card">
+      <div class="ethics-icon">&#x1F393;</div>
+      <h4>Academic Context</h4>
+      <p>This work is part of the CSEC (Tactical Cyber Operations) curriculum. Research methodology follows established penetration testing and vulnerability research standards.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ════════════ SECTION 3: METHODOLOGY ════════════ -->
+<section id="methodology">
+  <div class="section-header">
+    <div class="section-number">Section 03</div>
+    <h2 class="section-title">Research Methodology</h2>
+  </div>
+
+  <div class="method-grid">
+    <div class="method-card">
+      <div class="method-card-title">Reconnaissance</div>
+      <p>Automated scanning of the target system to identify services, their privilege levels, binary locations, file permissions, and DLL dependencies. Results scored for potential attack surface.</p>
+    </div>
+    <div class="method-card">
+      <div class="method-card-title">Hypothesis Testing</div>
+      <p>Each potential vulnerability was tested iteratively. When a defense held (e.g., manifest hardening blocked DLL sideloading), the finding was documented and the approach pivoted.</p>
+    </div>
+    <div class="method-card">
+      <div class="method-card-title">Evasion Analysis</div>
+      <p>Defender's detection capabilities were tested against known techniques to map which behaviors trigger alerts and which do not. This identified the hardware breakpoint blind spot.</p>
+    </div>
+    <div class="method-card">
+      <div class="method-card-title">Iterative Documentation</div>
+      <p>Every engagement produced numbered findings, regardless of success or failure. Failed attacks document working defenses. Successful bypasses document gaps for remediation.</p>
+    </div>
+    <div class="method-card">
+      <div class="method-card-title">Prior Art Integration</div>
+      <p>30 findings from the vader-toctou campaign (Defender quarantine TOCTOU research) fed directly into the second phase. Architecture knowledge of Defender's defense-in-depth guided all subsequent testing.</p>
+    </div>
+    <div class="method-card">
+      <div class="method-card-title">Responsible Disclosure</div>
+      <p>Findings meeting severity thresholds were reported to Microsoft via MSRC before any public documentation. The research timeline accommodated Microsoft's review process.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ════════════ SECTION 4: FINDINGS SUMMARY ════════════ -->
+<section id="findings">
+  <div class="section-header">
+    <div class="section-number">Section 04</div>
+    <h2 class="section-title">Key Findings Summary</h2>
+  </div>
+
+  <div class="prose" style="margin-bottom: 1.5rem;">
+    <p>70 findings documented across 19 engagements. Findings 1&ndash;30 from the vader-toctou campaign; findings 31&ndash;70 from the rootkit research phase. The table below shows the categorised findings from the second phase.</p>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Category</th>
+        <th>Count</th>
+        <th>Severity</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Telemetry Bypass</td>
+        <td>7</td>
+        <td><span class="badge badge-red">HIGH</span></td>
+        <td>AMSI and ETW monitoring bypassed via hardware breakpoint technique &mdash; zero memory modification</td>
+      </tr>
+      <tr>
+        <td>Privilege Escalation</td>
+        <td>3</td>
+        <td><span class="badge badge-red">HIGH</span></td>
+        <td>CWE-732 service binary replacement and CWE-427 phantom DLL vectors &mdash; Standard User to SYSTEM</td>
+      </tr>
+      <tr>
+        <td>Static Evasion</td>
+        <td>4</td>
+        <td><span class="badge badge-amber">MEDIUM</span></td>
+        <td>String encoding techniques defeat Defender's static signature engine</td>
+      </tr>
+      <tr>
+        <td>Detection Confirmed</td>
+        <td>3</td>
+        <td><span class="badge badge-green">DEFENSIVE WIN</span></td>
+        <td>Defender successfully detected classic memory patching, ML-flagged proxy patterns, retroactive cloud detection</td>
+      </tr>
+      <tr>
+        <td>Reconnaissance</td>
+        <td>6</td>
+        <td><span class="badge badge-cyan">AUDIT</span></td>
+        <td>Automated scanning, PE import analysis, service ACL auditing, phantom DLL discovery across 47 services</td>
+      </tr>
+      <tr>
+        <td>Process Injection</td>
+        <td>3</td>
+        <td><span class="badge badge-red">HIGH</span></td>
+        <td>DLL injection delivers process-wide monitoring blindness to target processes</td>
+      </tr>
+      <tr>
+        <td>Defense Validation</td>
+        <td>4</td>
+        <td><span class="badge badge-green">DEFENSIVE WIN</span></td>
+        <td>Manifest hardening, KnownDLLs, TOCTOU defense-in-depth &mdash; defenses that held under testing</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="card" style="margin-top: 1.5rem;">
+    <div class="card-title">MSRC Submissions</div>
+    <table>
+      <thead>
+        <tr>
+          <th>Finding</th>
+          <th>CWE / Category</th>
+          <th>MSRC Reference</th>
+          <th>Response</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Hardware Breakpoint Blind Spot</td>
+          <td>Tamper Protection Gap</td>
+          <td>VULN-195458</td>
+          <td><span class="badge badge-amber">WON'T FIX</span></td>
+        </tr>
+        <tr>
+          <td>Phantom DLL PATH Hijack (first-party)</td>
+          <td>CWE-427</td>
+          <td>Documented for submission</td>
+          <td><span class="badge badge-dim">PENDING</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ════════════ SECTION 5: HWBP BLIND SPOT ════════════ -->
+<section id="hwbp">
+  <div class="section-header">
+    <div class="section-number">Section 05</div>
+    <h2 class="section-title">Primary Finding &mdash; Defender HWBP Blind Spot</h2>
+  </div>
+
+  <div class="card">
+    <div class="card-title">MSRC VULN-195458</div>
+    <div class="prose">
+      <p>
+        Windows Defender's tamper protection monitors <strong>memory-level</strong> modifications to security-critical functions (VirtualProtect calls, byte writes to code regions, known patch patterns). However, it does not monitor <strong>CPU debug register manipulation</strong>.
+      </p>
+      <p>
+        Hardware breakpoints, set via the standard Windows API <code>SetThreadContext</code>, can intercept security functions <strong>without modifying a single byte of target memory</strong>. Both <strong>AMSI</strong> (script scanning) and <strong>ETW</strong> (process telemetry) can be simultaneously neutralised using this technique. The result: all user-mode security telemetry goes blind with zero memory modification.
+      </p>
+      <p>
+        This was reported to Microsoft via MSRC as <strong>VULN-195458</strong>. Microsoft's response classified it as not meeting the severity bar for servicing &mdash; <span class="highlight-amber">"Won't Fix"</span>.
+      </p>
+    </div>
+  </div>
+
+  <h3>Why This Matters</h3>
+  <div class="prose">
+    <p>
+      Classic AMSI/ETW bypass techniques modify target function memory (e.g., patching the function prologue). Defender detects these via tamper protection and terminates the process. The hardware breakpoint approach avoids this entirely &mdash; the target code remains byte-identical, no VirtualProtect call is made, and no behavioral rule fires.
+    </p>
+  </div>
+
+  <h3>Detection Gap</h3>
+  <table>
+    <thead>
+      <tr>
+        <th>Attribute</th>
+        <th class="comparison-header-detected">Classic Patch</th>
+        <th class="comparison-header-clean">Hardware Breakpoint</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>VirtualProtect called</td>
+        <td>Yes</td>
+        <td>No</td>
+      </tr>
+      <tr>
+        <td>Target memory modified</td>
+        <td>Yes &mdash; bytes patched</td>
+        <td>Zero bytes modified</td>
+      </tr>
+      <tr>
+        <td>Defender detection</td>
+        <td><span class="badge badge-red">DETECTED &amp; TERMINATED</span></td>
+        <td><span class="badge badge-green">NOT DETECTED</span></td>
+      </tr>
+      <tr>
+        <td>Binary quarantined</td>
+        <td>Yes (retroactive ML flag)</td>
+        <td>No (persists on disk)</td>
+      </tr>
+      <tr>
+        <td>Underlying mechanism</td>
+        <td>Code modification (user-mode)</td>
+        <td>CPU debug registers (kernel state)</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>Architectural Root Cause</h3>
+  <div class="card">
+    <div class="prose">
+      <p>
+        <code>SetThreadContext</code> is a standard Windows API. Setting debug registers on your own threads is a legitimate debugging operation. No behavioral rule currently exists for debug register manipulation targeting security-critical functions.
+      </p>
+      <p>
+        The kernel ETW-Ti provider exposes an event (<code>EtwTiLogSetContextThread</code>) that <em>should</em> fire when <code>SetThreadContext</code> modifies debug registers. If it fires but Defender ignores it, that is a <span class="highlight-amber">consumer gap</span>. If it does not fire for same-thread operations, that is a <span class="highlight-amber">provider gap</span>. Either way, the bypass works on current Windows 11 with full Defender RTP.
+      </p>
+    </div>
+  </div>
+</section>
+
+<!-- ════════════ SECTION 6: CWE-732 ════════════ -->
+<section id="cwe732">
+  <div class="section-header">
+    <div class="section-number">Section 06</div>
+    <h2 class="section-title">Privilege Escalation &mdash; CWE-732</h2>
+  </div>
+
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-title">Vulnerability</div>
+      <div class="prose">
+        <p>A third-party service was discovered running as <code>LocalSystem</code> (highest privilege) with <code>Auto</code> start mode, but its binary resides in a per-user directory with overly permissive ACLs granting all users full control over the executable.</p>
+        <p>A standard user can replace the service binary. On next service restart or system reboot, the Service Control Manager loads the replacement with <code>NT AUTHORITY\SYSTEM</code> privileges. No admin credentials are entered and no UAC prompt is triggered.</p>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">CVSS Assessment</div>
+      <div class="cvss-bar">
+        <div>
+          <div class="cvss-score">7.8</div>
+          <div class="cvss-label">High Severity</div>
+        </div>
+      </div>
+      <div class="cvss-vector" style="margin-bottom: 0.75rem;">CVSS:3.1/AV:L/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H</div>
+      <div class="lv-grid" style="grid-template-columns: 140px 1fr;">
+        <span class="lv-label">CWE</span>
+        <span class="lv-value">CWE-732 &mdash; Incorrect Permission Assignment for Critical Resource</span>
+        <span class="lv-label">Attack Vector</span>
+        <span class="lv-value">Local</span>
+        <span class="lv-label">Complexity</span>
+        <span class="lv-value">Low</span>
+        <span class="lv-label">Privileges</span>
+        <span class="lv-value">Low (standard user)</span>
+        <span class="lv-label">User Interaction</span>
+        <span class="lv-value">None</span>
+      </div>
+    </div>
+  </div>
+
+  <h3>Discovery Process</h3>
+  <ol class="attack-steps">
+    <li>Automated reconnaissance identified SYSTEM-level services with insecure file ACLs via PE import parsing and permission auditing</li>
+    <li>A service was found with its binary in a user-writable directory &mdash; ACLs granted all standard users full control</li>
+    <li>The vulnerability was verified: binary replacement succeeded without elevation, and the service loaded the replacement as SYSTEM on restart</li>
+    <li>Finding documented with canary evidence (execution proof logging privilege level and context)</li>
+  </ol>
+
+  <h3>Defense Layer Analysis</h3>
+  <table>
+    <thead>
+      <tr>
+        <th>Defense Layer</th>
+        <th>Status</th>
+        <th>Analysis</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>File ACL</td>
+        <td><span class="badge badge-amber">FINDING REPORTED</span></td>
+        <td>All users granted full control on service binary &mdash; insufficient restriction for SYSTEM-level service</td>
+      </tr>
+      <tr>
+        <td>Directory ACL</td>
+        <td><span class="badge badge-amber">FINDING REPORTED</span></td>
+        <td>Inherited full control permissions on parent directory</td>
+      </tr>
+      <tr>
+        <td>UAC</td>
+        <td><span class="badge badge-dim">NOT TRIGGERED</span></td>
+        <td>Target path is user-owned AppData, not a UAC-protected system path</td>
+      </tr>
+      <tr>
+        <td>Code Signing</td>
+        <td><span class="badge badge-dim">NOT ENFORCED</span></td>
+        <td>Service Control Manager does not verify digital signatures on service binaries</td>
+      </tr>
+      <tr>
+        <td>Defender Static</td>
+        <td><span class="badge badge-green">FUNCTIONING</span></td>
+        <td>Defender static analysis operates correctly &mdash; replacement binary is a legitimate PE structure</td>
+      </tr>
+      <tr>
+        <td>KnownDLLs</td>
+        <td><span class="badge badge-dim">NOT APPLICABLE</span></td>
+        <td>This is a binary replacement vector, not a DLL hijacking vector</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="card" style="margin-top: 1.5rem;">
+    <div class="card-title">Cross-User Limitation</div>
+    <div class="prose">
+      <p>
+        On multi-user systems, NTFS ACLs prevent cross-user access to per-user AppData directories. CWE-732 requires the vulnerable service binary to be under the attacker's own user profile or a world-writable location. This was confirmed as a mitigating factor on shared machines.
+      </p>
+    </div>
+  </div>
+</section>
+
+<!-- ════════════ SECTION 7: DEFENSE ANALYSIS ════════════ -->
+<section id="defenses">
+  <div class="section-header">
+    <div class="section-number">Section 07</div>
+    <h2 class="section-title">Defense Analysis Summary</h2>
+  </div>
+
+  <div class="prose" style="margin-bottom: 1.5rem;">
+    <p>Every defense layer encountered during the research, its assessed status, and the corresponding finding number.</p>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Defense Layer</th>
+        <th>Status</th>
+        <th>Finding</th>
+        <th>Notes</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>AMSI (Script Scanning)</td>
+        <td><span class="badge badge-amber">GAP FOUND</span></td>
+        <td>#33</td>
+        <td>Hardware breakpoint technique neutralises script scanning without memory modification</td>
+      </tr>
+      <tr>
+        <td>ETW (Process Telemetry)</td>
+        <td><span class="badge badge-amber">GAP FOUND</span></td>
+        <td>#35</td>
+        <td>Hardware breakpoint technique neutralises event tracing without memory modification</td>
+      </tr>
+      <tr>
+        <td>Defender Static Analysis</td>
+        <td><span class="badge badge-amber">FINDING REPORTED</span></td>
+        <td>#32</td>
+        <td>String encoding techniques evade static signature engine</td>
+      </tr>
+      <tr>
+        <td>Defender Behavioral</td>
+        <td><span class="badge badge-green">EFFECTIVE</span></td>
+        <td>#31, #34</td>
+        <td>Successfully detects classic memory patching techniques (VirtualProtect-based approaches)</td>
+      </tr>
+      <tr>
+        <td>Service ACL</td>
+        <td><span class="badge badge-amber">FINDING REPORTED</span></td>
+        <td>#42</td>
+        <td>Third-party service binary with excessive permissions for SYSTEM-level service</td>
+      </tr>
+      <tr>
+        <td>Manifest Hardening</td>
+        <td><span class="badge badge-green">EFFECTIVE</span></td>
+        <td>#40</td>
+        <td>Embedded manifest blocked DLL sideloading &mdash; defense held under testing</td>
+      </tr>
+      <tr>
+        <td>UAC</td>
+        <td><span class="badge badge-dim">SCOPE LIMITATION</span></td>
+        <td>#42</td>
+        <td>UAC does not cover writes to user-owned directories (by design)</td>
+      </tr>
+      <tr>
+        <td>Defender Cloud/ML</td>
+        <td><span class="badge badge-green">EFFECTIVE (DELAYED)</span></td>
+        <td>#39</td>
+        <td>Retroactive cloud detection flagged suspicious patterns after approximately 15 minutes</td>
+      </tr>
+      <tr>
+        <td>TOCTOU Quarantine</td>
+        <td><span class="badge badge-green">EFFECTIVE</span></td>
+        <td>#1&ndash;#30</td>
+        <td>Defense-in-depth held across 6 engagements &mdash; 30 findings documented, no bypass achieved</td>
+      </tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ════════════ SECTION 8: REMEDIATION ════════════ -->
+<section id="remediation">
+  <div class="section-header">
+    <div class="section-number">Section 08</div>
+    <h2 class="section-title">Remediation Recommendations</h2>
+  </div>
+
+  <div class="prose" style="margin-bottom: 1rem;">
+    <p>The following recommendations address the gaps identified during this research. Items 1&ndash;3 address the CWE-732 privilege escalation vector. Items 4&ndash;5 address the hardware breakpoint monitoring gap (VULN-195458).</p>
+  </div>
+
+  <ol class="remediation-list">
+    <li><strong>Restrictive ACLs on all SYSTEM service directories and binaries.</strong> Service executables and their parent directories should be writable only by <code>SYSTEM</code> and <code>BUILTIN\Administrators</code>. No user-writable SYSTEM services.</li>
+    <li><strong>Service binaries must not reside in per-user AppData paths.</strong> <code>%ProgramFiles%</code> or <code>%SystemRoot%</code> enforce proper ACL inheritance by default. AppData directories inherit permissive user ACLs.</li>
+    <li><strong>Digital signature verification on service binaries at SCM level.</strong> The Service Control Manager should optionally verify Authenticode signatures before loading service executables, similar to driver signature enforcement.</li>
+    <li><strong>Behavioral rules for SetThreadContext targeting security DLLs.</strong> Defender should detect <code>SetThreadContext</code> calls that set debug registers to addresses within security-critical modules such as <code>amsi.dll</code> and <code>ntdll.dll</code>.</li>
+    <li><strong>Hardware breakpoint monitoring via EtwTiLogSetContextThread.</strong> The kernel ETW-Ti provider already exposes <code>EtwTiLogSetContextThread</code>. Defender (or a dedicated consumer) should subscribe to this event and alert when debug registers target security function addresses.</li>
+  </ol>
+</section>
+
+<!-- ════════════ SECTION 9: DISCLOSURE ════════════ -->
+<section id="disclosure">
+  <div class="section-header">
+    <div class="section-number">Section 09</div>
+    <h2 class="section-title">Responsible Disclosure &amp; Contact</h2>
+  </div>
+
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-title">Disclosure Timeline</div>
+      <div class="lv-grid" style="grid-template-columns: 140px 1fr;">
+        <span class="lv-label">Discovery</span>
+        <span class="lv-value">June 2026 &mdash; Hardware breakpoint blind spot identified</span>
+        <span class="lv-label">MSRC Report</span>
+        <span class="lv-value">VULN-195458 submitted via MSRC portal</span>
+        <span class="lv-label">Response</span>
+        <span class="lv-value">"Won't Fix" &mdash; does not meet severity bar for servicing</span>
+        <span class="lv-label">Public Docs</span>
+        <span class="lv-value">Sanitized research summary (this page) &mdash; no exploit code distributed</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Contact</div>
+      <div class="lv-grid" style="grid-template-columns: 140px 1fr;">
+        <span class="lv-label">Researcher</span>
+        <span class="lv-value">George Wu</span>
+        <span class="lv-label">Callsign</span>
+        <span class="lv-value">22DIV</span>
+        <span class="lv-label">GitHub</span>
+        <span class="lv-value"><a href="https://github.com/rainfantry" style="color: var(--green-dim);">rainfantry</a></span>
+        <span class="lv-label">MSRC Case</span>
+        <span class="lv-value">VULN-195458</span>
+        <span class="lv-label">Framework</span>
+        <span class="lv-value">Responsible disclosure via Microsoft Security Response Center</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top: 1rem;">
+    <div class="card-title">Research Scope Statement</div>
+    <div class="prose">
+      <p>
+        All research was conducted on the researcher's personally-owned Windows 11 machine. No third-party systems, networks, or infrastructure were targeted. The research repository is private &mdash; no exploit code, tooling, or weaponizable artifacts are publicly available. This page presents findings, analysis, and remediation recommendations for educational and portfolio purposes only.
+      </p>
+      <p>
+        This work was completed as part of the CSEC (Tactical Cyber Operations) curriculum. Methodology follows established penetration testing and vulnerability research standards including responsible disclosure.
+      </p>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<!-- ────────────── FOOTER ────────────── -->
+<footer>
+  <div class="footer-brand">George Wu / 22DIV</div>
+  <div class="footer-sub">CSEC &mdash; Tactical Cyber Operations</div>
+  <div class="footer-sub" style="margin-top: 0.4rem; color: var(--text-dim);">Responsible Disclosure via MSRC &mdash; VULN-195458</div>
+  <div class="footer-sub" style="margin-top: 0.3rem; color: var(--text-dim);">
+    <a href="https://github.com/rainfantry" style="color: var(--text-dim); text-decoration: none;">github.com/rainfantry</a>
+  </div>
+</footer>
+
+<!-- ────────────── SMOOTH SCROLL + NAV HIGHLIGHT ────────────── -->
+<script>
+(function() {
+  // Active nav link highlighting on scroll
+  const sections = document.querySelectorAll('section[id]');
+  const navLinks = document.querySelectorAll('.nav-links a');
+
+  function highlightNav() {
+    let scrollPos = window.scrollY + 120;
+    sections.forEach(function(section) {
+      let top = section.offsetTop;
+      let bottom = top + section.offsetHeight;
+      let id = section.getAttribute('id');
+      navLinks.forEach(function(link) {
+        if (link.getAttribute('href') === '#' + id) {
+          if (scrollPos >= top && scrollPos < bottom) {
+            link.style.color = '#00ff41';
+          } else {
+            link.style.color = '';
+          }
+        }
+      });
+    });
+  }
+
+  window.addEventListener('scroll', highlightNav, { passive: true });
+  highlightNav();
+
+  // Typing effect on hero title
+  var title = document.querySelector('.hero h1');
+  var cursor = title.querySelector('.cursor');
+  var text = 'OPERATION VADER';
+  title.textContent = '';
+  var i = 0;
+
+  function typeChar() {
+    if (i < text.length) {
+      title.textContent += text.charAt(i);
+      title.appendChild(cursor);
+      i++;
+      setTimeout(typeChar, 80 + Math.random() * 40);
+    }
+  }
+
+  // Start typing after a brief delay
+  setTimeout(typeChar, 400);
+})();
+</script>
+
+</body>
+</html>
