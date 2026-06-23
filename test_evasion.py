@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+import sys
+sys.stdout.reconfigure(encoding='utf-8', errors='replace')
 """
 test_evasion.py — Kaspersky / RTP Evasion Test Harness
 22DIV / george wu — CSEC research, own hardware only
@@ -264,15 +266,26 @@ def kas_scan(kavs, filepath):
         )
         out = (r.stdout + r.stderr).strip()
         rc  = r.returncode
-        lo  = out.lower()
-        if rc == 0 and ("detected" not in lo) and ("threat" not in lo):
-            return "CLEAN", out[:120]
-        if "detected" in lo or "threat" in lo or "virus" in lo or rc in (1, 2, 3, 4, 5):
-            # extract threat name if possible
+        import re
+        m = re.search(r';\s*Total detected:\s*(\d+)', out, re.IGNORECASE)
+        if m:
+            total = int(m.group(1))
+            if total == 0:
+                return "CLEAN", f"Total detected: 0  rc={rc}"
             for line in out.splitlines():
-                if "detected" in line.lower() or "threat" in line.lower():
+                lo = line.lower()
+                if any(k in lo for k in ("detected","threat","virus","malware")) \
+                        and "total detected" not in lo and "stat" not in lo:
                     return "DETECTED", line.strip()[:120]
-            return "DETECTED", f"rc={rc}"
+            return "DETECTED", f"Total detected: {total}  rc={rc}"
+        # Fallback: rc=0 = clean
+        if rc == 0:
+            return "CLEAN", f"rc=0"
+        for line in out.splitlines():
+            lo = line.lower()
+            if any(k in lo for k in ("detected","threat","virus","malware")) \
+                    and "total detected" not in lo:
+                return "DETECTED", line.strip()[:120]
         return "ERROR", f"rc={rc} {out[:80]}"
     except subprocess.TimeoutExpired:
         return "ERROR", "scan timeout"

