@@ -275,6 +275,23 @@ Flags:     /O1 /GS- /utf-8
 Linker:    ws2_32.lib (shell), ntdll.lib (ETW/AMSI patches)
 ```
 
+### Network Setup
+
+Run `setup_firewall.bat` as Administrator (one-time, persists across reboots):
+
+```
+Port   Name              Purpose
+────   ────              ───────
+4443   CHEYANNE-C2       C2 TCP listener (reverse shell callback)
+8666   CHEYANNE-UI       Web dashboard (phone accessible)
+8667   CHEYANNE-AGENT    Agent listener (binary agent protocol)
+8890   CHEYANNE-SERVE    HTTP file server (deploy/implant delivery)
+8891   CHEYANNE-RECV     Screenshot/watch receiver (target POST-back)
+8892   CHEYANNE-WATCH    Watch live viewer (browser auto-refresh)
+```
+
+Phone access: `http://<LAN_IP>:8666` (dashboard), `http://<LAN_IP>:8892` (live watch)
+
 ### Rules of Engagement
 
 1. All testing on own hardware only
