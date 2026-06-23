@@ -25,6 +25,7 @@ HARDWARE:        Own systems only.
 11. [CHEYANNE — Discord C2 Infrastructure](#11-cheyanne--discord-c2-infrastructure)
 12. [HANDLER — AI-Powered C2 Operator](#12-handler--ai-powered-c2-operator)
 13. [C2 Shortcuts + Live Watch](#13-c2-shortcuts--live-watch)
+14. [Bidirectional Discord C2](#14-bidirectional-discord-c2)
 
 ---
 
@@ -1438,3 +1439,65 @@ The `CHEYANNE >` menu accepts both key letters and typed words:
 - `shell` or `c2` or `D` → opens C2 shell
 - `screenshot`, `watch`, `kill`, `recon`, `persist` → TCP shortcuts
 - Any unknown command shows error (no silent ignore)
+
+## 14. Bidirectional Discord C2
+
+### The Problem
+
+Discord sessions were "beacon-only" — implant posts recon/heartbeat to webhook, operator can't send commands back. TCP shell gives full interactive access but is LAN-only (`inet_addr()` = IP addresses only, no DNS).
+
+### The Solution
+
+The implant (`agent/discord_implant.py`) **already had command polling** (lines 318-341). It polls the channel every 5 seconds for `{"type": "cmd", "session": "<id>", "command": "<cmd>"}` messages, executes them, posts output back as `{"type": "output", ...}`.
+
+The operator side (`shell/vader_c2_v2.py`) was blocking it with a hardcoded "beacon-only" message. Fixed by adding:
+
+| Method | Purpose |
+|--------|---------|
+| `send_discord_cmd(session_id, command)` | POST JSON command to channel via bot token |
+| `poll_discord_output(session_id, timeout)` | Poll channel for output messages from implant |
+| `_discord_interact(session)` | Full interactive loop (like `_tcp_interact` but via Discord API) |
+| `find_session(sid_prefix)` | Unified finder — prefers TCP, falls back to Discord |
+| `send_to_session(session, cmd)` | Routes through TCP socket or Discord API automatically |
+
+### How It Works
+
+```
+OPERATOR                    DISCORD                     TARGET
+   |                           |                           |
+   |-- send_discord_cmd() ---> |                           |
+   |   POST {"type":"cmd",...} |                           |
+   |                           |--- implant polls -------> |
+   |                           |   get_messages(limit=5)   |
+   |                           |                           |-- execute cmd
+   |                           |<-- post_json(output) -----|
+   |                           |   {"type":"output",...}    |
+   |<-- poll_discord_output()  |                           |
+   |   read channel for output |                           |
+```
+
+### Latency
+
+- Implant polls every 5 seconds (`POLL_INTERVAL`)
+- Operator polls every 2 seconds for responses
+- Total round-trip: **5-15 seconds** per command
+- Heartbeat: every 60 seconds
+
+### What Works Over Discord
+
+All shortcuts (deploy, screenshot, kill, recon, persist) now auto-route through Discord when no TCP session is available. `find_session()` prefers TCP (instant) but falls back to Discord (5-15s latency).
+
+**Exception:** `watch` (live screen stream) requires TCP — continuous frame streaming can't route through Discord's rate-limited API.
+
+### Persist Safety Check
+
+`persist` warns if `deploy` hasn't been run in the current session — the registry key assumes vader_shell.exe has C2 IP baked in via Fresh Build. An old binary without baked IP won't auto-connect on reboot.
+
+### Correct Deploy → Persist Flow
+
+```
+1. Fresh Build          compile with baked IP (XOR-encoded)
+2. deploy               push fresh binary to target
+3. persist              set registry keys (no args, binary has IP)
+4. Reboot               exe auto-runs → decodes IP → connects
+```

