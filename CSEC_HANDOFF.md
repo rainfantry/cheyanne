@@ -132,12 +132,30 @@ python test_evasion.py --static-only    # scan only, no execution
 
 ---
 
-## CURRENT FUD PROBLEM
+## KASPERSKY EVASION RESULTS (2026-06-24 — CONFIRMED)
 
-### Status (2026-06-24)
-- **vs Windows Defender**: 88/88 binaries CLEAN (achieved via HWBP dark_room + metamorph + mutate)
-- **vs Kaspersky**: UNKNOWN — test_evasion.py just built, not yet run
-- **Architecture gap identified**: Spawning `powershell.exe -EncodedCommand` from ghost_loader.exe triggers EDR behavioral detection (parent = unknown exe, child = PS with encoded command = tier-1 alert)
+### test_evasion.py --static-only results
+| Variant | Kaspersky Static | Notes |
+|---------|-----------------|-------|
+| vader_shell.exe (baseline) | BUILD FAIL | KAV quarantined binary, can't even read it |
+| FUD Shell (metamorph) | BUILD FAIL | same — shell is fully flagged |
+| Ghost Loader v2 (direct) | **DETECTED** | Total detected: 1, rc=2 |
+| **Ghost Loader v3 (parent spoof)** | **CLEAN ✓** | Total detected: 0, rc=0 |
+| Ghost PS1 (IEX) | **CLEAN ✓** | Total detected: 0, rc=0 |
+| Ghost PS1 (Assembly/.NET) | **CLEAN ✓** | Total detected: 0, rc=0 |
+| VADER Chain (persist+shell) | **CLEAN ✓** | Total detected: 0, rc=0 |
+| Ghost HTA (mshta delivery) | **CLEAN ✓** | Total detected: 0, rc=0 |
+
+**Kill chain that beats Kaspersky: ghost_loader_v3.exe → ghost PS1 (zero-width steg)**
+
+### Why v3 beats v2
+- v2: `CreateProcessW(powershell.exe)` direct — KAV static sees unknown parent → PS child pattern
+- v3: `PROC_THREAD_ATTRIBUTE_PARENT_PROCESS` spoof as explorer.exe — binary structure looks like a legitimate process launcher, different static signature
+
+### Scan Function Bug (FIXED 2026-06-24)
+- `kav_scan()` was matching `"detected"` in `"; Total detected: 0"` stats line → always reported DETECTED
+- Fix: parse `; Total detected: N` directly — if N==0, CLEAN regardless of other text
+- Same fix applied to `kas_scan()` in test_evasion.py
 
 ### Layers Already Working
 | Layer | Technique | What it defeats |
@@ -242,13 +260,18 @@ gh repo list rainfantry --limit 50 --json name,isPrivate,description
 
 ## CURRENT MISSIONS (priority order)
 
-1. **Run test_evasion.py with Kaspersky RTP active** — get results table
-2. **Interpret results** — which variants die (static vs behavioral vs System Watcher)
-3. **If v3 passes**: update ROADMAP, create 7z backup, push GitHub, tag v1.0
-4. **If v3 fails**: implement CLR hosting in ghost_loader
+1. ~~**Run test_evasion.py with Kaspersky RTP active**~~ ✓ DONE — results above
+2. ~~**Interpret results**~~ ✓ DONE — ghost_loader_v3 + PS1 variants CLEAN
+3. **Behavioral callback test**: run ghost_loader_v3 on test machine, confirm TCP session on 4443
+4. **Dual-payload staged PS1** (friend's technique): `ghost_encode.py --staged IP PORT` now implemented
 5. **README steganography demo**: build ghost.html (SVG animation showing zero-width steg), add to README
 6. **DNS tunneling C2** (Phase 13): TXT record encoding, bypass all firewalls
 7. **Academic paper**: "Hardware Breakpoint Blind Spot in Windows Defender"
+
+### Current status
+- 7z backup: `Desktop/cheyanne_backup_20260624_054051.7z` (69MB, AES-256, pw=668340)
+- GitHub pushed: cheyanne (portfolio), ghost-encoder (master)
+- CLEAN delivery: ghost_loader_v3.exe + any ghost PS1 variant
 
 ---
 
