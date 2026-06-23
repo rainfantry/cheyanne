@@ -122,7 +122,7 @@ def build(ip, port):
     gen_name = os.path.basename(OUTPUT_C)
     cmd = (f'"{VCVARS}" && cd /d "{SHELL_DIR}" && '
            f'cl.exe "{gen_name}" /Fe:"{OUTPUT_EXE}" /O1 /GS- /utf-8 '
-           f'/link /SUBSYSTEM:WINDOWS')
+           f'/link /SUBSYSTEM:WINDOWS crypt32.lib')
     result = subprocess.run(
         cmd, shell=True, cwd=SHELL_DIR,
         capture_output=True, text=True,
