@@ -28,6 +28,20 @@ Updated: 2026-06-23
 - [x] 100K fuzzing campaign (mpengine.dll) — 0 crashes
 - [x] Full documentation (README, BUILD_FROM_ASHES, CODE_WALKTHROUGH, VADER_MANUAL)
 - [x] Encrypted backup (7z, password 668340)
+- [x] Bidirectional Discord C2 (operator sends commands, implant polls + responds)
+- [x] VCVARS auto-detection via cheyanne_config.py (no manual path editing)
+- [x] Persist safety check (warns if deploy not run first)
+- [x] Manual audit: 8 inaccuracies fixed in BUILD_FROM_ASHES
+- [x] Bootstrap recovery procedure documented (first deploy must be TCP)
+- [x] Watch cleanup: kill PowerShell on target after Ctrl+C
+- [x] Interactive shell recv fix: trailing read catches split packets
+- [x] Multi-session: prompt to select target when multiple sessions online
+
+## NEEDS HUMAN TESTING (code pushed, not yet verified live)
+- [ ] Multi-session picker (prompt when no SID given, multiple sessions online)
+- [ ] Watch → Ctrl+C → interact flow (PowerShell kill + cmd.exe recovery)
+- [ ] Interactive shell output (recv trailing read — should return ghaleb not echo)
+- [ ] Discord bidirectional commands (requires fresh svchost_update.exe deployed via TCP first)
 
 ---
 
