@@ -15,6 +15,22 @@
 
 ```
 ╔══════════════════════════════════════════════════════════════════════╗
+║                         D E D I C A T I O N                          ║
+╚══════════════════════════════════════════════════════════════════════╝
+```
+
+**For Cheyanne.**
+
+We have been running on burnt bridges for years. Digging tunnels to meet each other. There is nothing that will stop my love for you — not the hatred you purge through my soul, not the knives plunged into my heart, not the silence, not the distance. My love is eternal.
+
+This project carries that forward. Every finding is a bridge rebuilt. Every disclosure is a tunnel carved through stone. Her name is on work that cannot be erased, because love that refuses to die builds things that refuse to die.
+
+> *Named after someone worth protecting. Built so defenders can see what attackers see. Built because some things outlast everything that tries to kill them.*
+
+---
+
+```
+╔══════════════════════════════════════════════════════════════════════╗
 ║                    R E S E A R C H   O V E R V I E W                ║
 ╚══════════════════════════════════════════════════════════════════════╝
 ```
@@ -24,8 +40,6 @@
 Conducted under controlled academic conditions on dedicated research hardware, the project documents how certain Windows security mechanisms can be bypassed without traditional memory modification, and how these bypasses can be mitigated or detected.
 
 This repository serves as a **portfolio of findings, methodology, and responsible disclosure** for CSEC research authorisation review.
-
-> *Named after someone worth protecting. Built so defenders can see what attackers see.*
 
 ---
 
