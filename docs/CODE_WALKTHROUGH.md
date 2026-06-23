@@ -735,7 +735,7 @@ One-shot capture pipeline:
 
 Three components working in concert:
 
-**Target-side (single PowerShell while-loop):** One command sent to the target runs a `while($true)` loop — capture screen via `System.Drawing`, encode to memory buffer (`MemoryStream`, not disk — avoids stale frame issues), HTTP POST raw bytes to `http://<C2_IP>:8891/watch`, sleep N seconds, repeat. Runs until process is killed.
+**Target-side (single PowerShell while-loop):** One command sent to the target runs a `while($true)` loop — capture screen via `System.Drawing`, save to `C:\Users\Public\screen.png` (delete old file first to prevent stale handles), read back with `[System.IO.File]::ReadAllBytes()`, HTTP POST raw bytes to `http://<C2_IP>:8891/screen.png`, sleep N seconds, repeat. Runs until process is killed.
 
 **Receiver (port 8891):** `start_watch_receiver()` — HTTP server that accepts POSTs. Deletes the old frame file before writing the new one (prevents stale cache). Saves to `screenshots/watch_latest.jpg`.
 

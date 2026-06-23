@@ -100,25 +100,28 @@ Updated: 2026-06-23
 
 ## PHASE 4.5 — WAN C2 (BIDIRECTIONAL DISCORD)
 
-The unlock for remote operations. Discord already works over WAN (beacon/recon posts through Discord servers). TCP shell is LAN-only (`inet_addr()` = IP-only, no DNS). Making Discord bidirectional gives full interactive C2 from anywhere without port forwarding.
+WAN C2 via Discord. TCP shell remains LAN-only (`inet_addr()` = IP-only, no DNS). Bidirectional Discord gives full interactive C2 from anywhere without port forwarding.
 
 ### Current State
-- **Discord**: WAN, beacon-only (one-way — posts to webhook, never listens)
+- **Discord**: WAN, **bidirectional** — operator sends commands via bot API, implant polls and responds
 - **TCP**: LAN-only, full interactive (shell, files, screenshot, watch, deploy, persist)
-- **Gap**: No way to run commands on a target outside the LAN
+- **Gap**: TCP DNS resolution needed for hostname-based WAN. File transfer via Discord limited to 25MB.
 
-### 1. Bidirectional Discord C2 (HIGH PRIORITY)
+### 1. Bidirectional Discord C2 — DONE
 
-**Why:** Discord bot token is already configured. Implant already connects. Just needs to poll for commands and reply with output. Turns Discord into a full C2 transport — no port forwarding, no router config, no DNS. Works from any network. Traffic looks like normal Discord API calls.
+Operator-side implemented in `vader_c2_v2.py`. Implant already had polling. All shortcuts route through Discord when no TCP session.
 
-**Tasks:**
-- [ ] Implant polls a command channel every N seconds for operator messages
-- [ ] Command execution — runs received command, posts stdout back to channel
+**Completed:**
+- [x] Implant polls a command channel every N seconds for operator messages
+- [x] Command execution — runs received command, posts stdout back to channel
+- [x] Screenshot on demand via Discord command
+- [x] Session management — multiple targets in one channel, target ID prefixes
+- [x] Operator-side: `chey>` shell routes commands through Discord when no TCP session available
+- [x] Auto-fallback: try TCP first, fall back to Discord if no direct connection
+
+**Remaining:**
 - [ ] File transfer via Discord attachments (25MB per message limit)
-- [ ] Screenshot on demand via Discord command
-- [ ] Session management — multiple targets in one channel, target ID prefixes
 - [ ] Rate limit handling (Discord API: ~50 req/sec)
-- [ ] Operator-side: `chey>` shell routes commands through Discord when no TCP session available
 - [ ] Auto-fallback: try TCP first, fall back to Discord if no direct connection
 
 **Estimated effort:** 1-2 sessions (4-8 hours)

