@@ -104,7 +104,7 @@ Updated: 2026-06-23
 
 - [ ] Kernel-mode DKOM — hide from `tasklist`/`netstat` (currently GUI-only via cloak)
 - [ ] Anti-analysis — sandbox detection, debugger detection, VM evasion
-- [ ] Internet payload (WAN) — port forward or ngrok, compile with public IP
+- [~] Internet payload (WAN) — **IN TEST 2026-06-24**: ngrok tcp tunnel (0.tcp.au.ngrok.io), ghost_loader.exe (steg PS1 in exe, 0 disk writes), testing on owned LAN PC via ngrok WAN path
 - [ ] Role reversal — Radon as C2 operator, George's machine as target
 - [ ] HANDLER model upgrade — test with llama3.1/qwen2.5 for better tool compliance
 - [ ] Web dashboard update — integrate Discord C2 sessions into browser UI
@@ -119,7 +119,7 @@ WAN C2 via Discord. TCP shell remains LAN-only (`inet_addr()` = IP-only, no DNS)
 ### Current State
 - **Discord**: WAN, **bidirectional** — operator sends commands via bot API, implant polls and responds
 - **TCP**: LAN-only, full interactive (shell, files, screenshot, watch, deploy, persist)
-- **Gap**: TCP DNS resolution needed for hostname-based WAN. File transfer via Discord limited to 25MB.
+- **Gap**: ~~TCP DNS resolution needed for hostname-based WAN~~ — **FIXED 2026-06-24**: replaced `inet_addr()` with `getaddrinfo()` in vader_shell_annotated.c + live.c. Shell now resolves DDNS hostnames. File transfer via Discord limited to 25MB.
 
 ### 1. Bidirectional Discord C2 — DONE
 
