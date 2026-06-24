@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>CHEYANNE — Operational Status 2026-06-24</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0a0a0f;color:#ccc;font-family:'Courier New',monospace;font-size:13px;padding:20px;max-width:1100px}
+.logo{color:#00ff41;font-size:11px;line-height:1.2;margin-bottom:16px;letter-spacing:1px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:12px}
+.card{background:#111118;border:1px solid #222;padding:14px;border-radius:4px}
+.card-title{color:#555;font-size:10px;letter-spacing:2px;text-transform:uppercase;margin-bottom:10px;border-bottom:1px solid #1a1a22;padding-bottom:6px}
+.green{color:#00ff41}.red{color:#ff4444}.amber{color:#ffb000}.cyan{color:#00e5ff}.pink{color:#ff2d8a}.dim{color:#444}
+.chain{display:flex;align-items:center;gap:0;flex-wrap:nowrap;margin-top:8px;overflow-x:auto}
+.chain-node{background:#0d1a0d;border:1px solid #00ff4133;color:#00ff41;padding:6px 10px;font-size:11px;white-space:nowrap;border-radius:3px}
+.chain-arrow{color:#00ff4166;padding:0 4px;font-size:14px}
+.chain-node.red-node{background:#1a0d0d;border-color:#ff444433;color:#ff4444}
+.chain-node.cyan-node{background:#0d1a1a;border-color:#00e5ff33;color:#00e5ff}
+.tbl{width:100%;border-collapse:collapse;margin-top:6px}
+.tbl td,.tbl th{padding:5px 8px;border-bottom:1px solid #1a1a22;font-size:11px}
+.tbl th{color:#444;font-weight:normal;text-align:left}
+.tbl tr:last-child td{border-bottom:none}
+.badge-clean{background:#00ff4122;color:#00ff41;border:1px solid #00ff4133;padding:2px 8px;border-radius:2px;font-size:10px}
+.badge-det{background:#ff444422;color:#ff4444;border:1px solid #ff444433;padding:2px 8px;border-radius:2px;font-size:10px}
+.stat-row{display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid #1a1a22}
+.stat-row:last-child{border-bottom:none}
+.stat-label{color:#555;font-size:11px}
+.stat-val{font-size:12px}
+.checklist li{list-style:none;padding:5px 0;font-size:11px;border-bottom:1px solid #1a1a22;display:flex;align-items:flex-start;gap:8px}
+.checklist li:last-child{border-bottom:none}
+.chk{color:#00ff41;min-width:16px}.chk-num{color:#555;min-width:16px}
+.warn-bar{background:#ffb00011;border:1px solid #ffb00033;color:#ffb000;padding:8px 12px;border-radius:3px;font-size:11px;margin-bottom:12px}
+.msrc{background:#00ff4111;border:1px solid #00ff4133;padding:6px 10px;border-radius:3px;font-size:10px;color:#00ff4188;margin-top:8px}
+</style>
+</head>
+<body>
+<div class="logo">
+  ██████╗██╗  ██╗███████╗██╗   ██╗ █████╗ ███╗   ██╗███╗   ██╗███████╗<br>
+  22DIV — OFFENSIVE SECURITY RESEARCH — CHEYANNE v2.1 — 2026-06-24
+</div>
+<div class="warn-bar">⚠ CSEC RESEARCH — OWN HARDWARE ONLY (192.168.1.x + RADON authorized) — NO UNAUTHORIZED TARGETS</div>
+<div class="card" style="margin-bottom:12px">
+  <div class="card-title">Kill Chain</div>
+  <div class="chain">
+    <div class="chain-node cyan-node">ghost_loader_v3.exe<br><span style="font-size:9px;color:#555">delivery — CLEAN vs KAV</span></div>
+    <div class="chain-arrow">→</div>
+    <div class="chain-node">ghost PS1<br><span style="font-size:9px;color:#555">zero-width steg</span></div>
+    <div class="chain-arrow">→</div>
+    <div class="chain-node">dark_room.dll<br><span style="font-size:9px;color:#555">AMSI+ETW blind</span></div>
+    <div class="chain-arrow">→</div>
+    <div class="chain-node">TCP C2 :4443<br><span style="font-size:9px;color:#555">vader_c2_v2.py</span></div>
+    <div class="chain-arrow">→</div>
+    <div class="chain-node">ngrok WAN<br><span style="font-size:9px;color:#555">0.tcp.au.ngrok.io:23256</span></div>
+  </div>
+</div>
+<div class="grid">
+  <div class="card">
+    <div class="card-title">Kaspersky RTP — Static Results (confirmed 2026-06-24)</div>
+    <table class="tbl">
+      <tr><th>Variant</th><th>Result</th></tr>
+      <tr><td>ghost_loader_v3.exe</td><td><span class="badge-clean">CLEAN</span></td></tr>
+      <tr><td>Ghost PS1 (IEX)</td><td><span class="badge-clean">CLEAN</span></td></tr>
+      <tr><td>Ghost PS1 (Assembly)</td><td><span class="badge-clean">CLEAN</span></td></tr>
+      <tr><td>VADER Chain PS1</td><td><span class="badge-clean">CLEAN</span></td></tr>
+      <tr><td>Ghost HTA delivery</td><td><span class="badge-clean">CLEAN</span></td></tr>
+      <tr><td>ghost_loader_v2.exe</td><td><span class="badge-det">DETECTED</span></td></tr>
+      <tr><td>vader_shell.exe (raw)</td><td><span class="badge-det">QUARANTINED</span></td></tr>
+    </table>
+    <div class="msrc">v3 fix: PROC_THREAD_ATTRIBUTE_PARENT_PROCESS → explorer.exe spoof<br>MSRC: VULN-195458 (HWBP blind spot in Defender) — won't fix</div>
+  </div>
+  <div class="card">
+    <div class="card-title">Human Test Checklist — Tonight</div>
+    <ul class="checklist">
+      <li><span class="chk-num">1.</span><span>python vader_menu.py → verify menu loads clean</span></li>
+      <li><span class="chk-num">2.</span><span>[G]→[6] build ghost_loader v3 → confirm CLEAN scan</span></li>
+      <li><span class="chk-num">3.</span><span>[D] start C2 listener → confirm "[+] Listening on :4443"</span></li>
+      <li><span class="chk-num">4.</span><span>Run ghost_loader.exe locally → confirm TCP session appears</span></li>
+      <li><span class="chk-num">5.</span><span>Type "whoami" in C2 → confirm response</span></li>
+      <li><span class="chk-num">6.</span><span>Type "watch 3" → open :8892 in browser → confirm live screenshot</span></li>
+      <li><span class="chk-num">7.</span><span>Radon: copy ghost_loader.exe to Raed's machine → run → C2 session</span></li>
+      <li><span class="chk-num">8.</span><span>--staged PS1: ghost_encode.py --staged IP PORT → confirm stage1→stage2 flow</span></li>
+    </ul>
+  </div>
+</div>
+<div style="color:#333;font-size:10px;text-align:center;margin-top:12px;border-top:1px solid #1a1a22;padding-top:8px">
+  CHEYANNE v2.1 — 22DIV — George Wu — rainfantry.github.io
+</div>
+</body>
+</html>
