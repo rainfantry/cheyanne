@@ -607,11 +607,14 @@ def _phase0_launch():
     print()
 
     c2_v2 = os.path.join(ROOT, "shell", "vader_c2_v2.py")
-    # Launch in a new console window so input() in interact works properly
+    # Launch in a new console window (CREATE_NEW_CONSOLE) so input() in interact works
     subprocess.Popen(
-        ["start", "cmd", "/K", sys.executable, c2_v2],
-        cwd=ROOT, shell=True
+        [sys.executable, c2_v2],
+        cwd=ROOT,
+        creationflags=subprocess.CREATE_NEW_CONSOLE,
     )
+    print(f"\n  {GREEN}[OK]{RST} C2launched in new window — switch to it now{RST}")
+    input(f"\n  {DIM}  Press Enter to return to menu...{RST}")
 
 
 def _tcp_reconnect_via_discord():
