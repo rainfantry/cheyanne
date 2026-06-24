@@ -1,0 +1,9 @@
+*.ps1
+*.exe
+*.dll
+*.zip
+__pycache__/
+*.pyc
+ghost_proof_*.txt
+.claude/
+ghost_selftest_screenshot.jpg

