@@ -1,0 +1,20 @@
+﻿[
+    {
+        "Path":  "C:\\Users\\gwu07\\Desktop\\vader-rootkit\\amsi\\amsi_bypass_hwbp_annotated.c",
+        "SHA256":  "71BA6A4EBC1EF88402BBE48401266EE0D73D9F59F5271E9A9AB8DEF3AA822362",
+        "File":  "amsi_bypass_hwbp_annotated.c",
+        "Size":  21940
+    },
+    {
+        "Path":  "C:\\Users\\gwu07\\Desktop\\vader-rootkit\\etw\\etw_hwbp_annotated.c",
+        "SHA256":  "BD6F3EBBCB59AB338183792787FF8DA7766B4B0E9EA4B4BAEFA357923E9E86F2",
+        "File":  "etw_hwbp_annotated.c",
+        "Size":  14554
+    },
+    {
+        "Path":  "C:\\Users\\gwu07\\Desktop\\vader-rootkit\\dark_room\\dark_room_annotated.c",
+        "SHA256":  "62EBD6213A3A0C2754C62E8BA531E78D8433CA08DB36CA4427D840F26D83CC64",
+        "File":  "dark_room_annotated.c",
+        "Size":  14598
+    }
+]

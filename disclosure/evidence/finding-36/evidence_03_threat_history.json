@@ -1,0 +1,229 @@
+﻿[
+    {
+        "ThreatID":  2147969368,
+        "ThreatStatusID":  3,
+        "InitialDetectionTime":  "\/Date(1781514042118)\/",
+        "LastThreatStatusChangeTime":  "\/Date(1781514055241)\/",
+        "ProcessName":  "C:\\Program Files\\Google\\Drive File Stream\\126.0.5.0\\GoogleDriveFS.exe",
+        "DomainUser":  "LAPTOP-R32M8MLI\\gwu07",
+        "Resources":  [
+                          "file:_C:\\Users\\gwu07\\Desktop\\CSEC\\Semester 2\\MiniPlasma-main\\MiniPlasma-main\\PoC_AbortHydration_ArbitraryRegKey_EoP\\bin\\Release\\app.publish\\PoC_AbortHydration_ArbitraryRegKey_EoP.exe",
+                          "file:_C:\\Users\\gwu07\\Desktop\\CSEC\\Semester 2\\MiniPlasma-main\\MiniPlasma-main\\PoC_AbortHydration_ArbitraryRegKey_EoP\\bin\\Release\\PoC_AbortHydration_ArbitraryRegKey_EoP.exe"
+                      ]
+    },
+    {
+        "ThreatID":  2147969368,
+        "ThreatStatusID":  3,
+        "InitialDetectionTime":  "\/Date(1781514024440)\/",
+        "LastThreatStatusChangeTime":  "\/Date(1781514055179)\/",
+        "ProcessName":  "C:\\Program Files\\Google\\Drive File Stream\\126.0.5.0\\GoogleDriveFS.exe",
+        "DomainUser":  "LAPTOP-R32M8MLI\\gwu07",
+        "Resources":  [
+                          "file:_C:\\Users\\gwu07\\Desktop\\CSEC\\Semester 2\\MiniPlasma-main\\MiniPlasma-main\\PoC_AbortHydration_ArbitraryRegKey_EoP\\bin\\Release\\app.publish\\PoC_AbortHydration_ArbitraryRegKey_EoP.exe",
+                          "file:_C:\\Users\\gwu07\\Desktop\\CSEC\\Semester 2\\MiniPlasma-main\\MiniPlasma-main\\PoC_AbortHydration_ArbitraryRegKey_EoP\\bin\\Release\\PoC_AbortHydration_ArbitraryRegKey_EoP.exe",
+                          "file:_C:\\Users\\gwu07\\Desktop\\CSEC\\Semester 2\\MiniPlasma-main\\MiniPlasma-main\\PoC_AbortHydration_ArbitraryRegKey_EoP\\obj\\Release\\PoC_AbortHydration_ArbitraryRegKey_EoP.exe"
+                      ]
+    },
+    {
+        "ThreatID":  2147969368,
+        "ThreatStatusID":  3,
+        "InitialDetectionTime":  "\/Date(1781514014374)\/",
+        "LastThreatStatusChangeTime":  "\/Date(1781514040473)\/",
+        "ProcessName":  "C:\\Program Files\\Google\\Drive File Stream\\126.0.5.0\\GoogleDriveFS.exe",
+        "DomainUser":  "LAPTOP-R32M8MLI\\gwu07",
+        "Resources":  [
+                          "file:_C:\\Users\\gwu07\\Desktop\\CSEC\\Semester 2\\MiniPlasma-main\\MiniPlasma-main\\PoC_AbortHydration_ArbitraryRegKey_EoP\\obj\\Release\\PoC_AbortHydration_ArbitraryRegKey_EoP.exe"
+                      ]
+    },
+    {
+        "ThreatID":  2147723625,
+        "ThreatStatusID":  3,
+        "InitialDetectionTime":  "\/Date(1781506528379)\/",
+        "LastThreatStatusChangeTime":  "\/Date(1781506569534)\/",
+        "ProcessName":  "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
+        "DomainUser":  "LAPTOP-R32M8MLI\\gwu07",
+        "Resources":  [
+                          "file:_C:\\Program Files\\MAGNET\\Office\\Tools\\mfutils_1.dll",
+                          "file:_C:\\Program Files\\MAGNET\\Office\\Tools\\mfutils_2.dll"
+                      ]
+    },
+    {
+        "ThreatID":  2147723626,
+        "ThreatStatusID":  3,
+        "InitialDetectionTime":  "\/Date(1781506525600)\/",
+        "LastThreatStatusChangeTime":  "\/Date(1781506548776)\/",
+        "ProcessName":  "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
+        "DomainUser":  "LAPTOP-R32M8MLI\\gwu07",
+        "Resources":  [
+                          "file:_C:\\Program Files\\MAGNET\\Office\\Tools\\Exchange.dll",
+                          "file:_C:\\Program Files\\MAGNET\\Office\\Tools\\Framework.dll"
+                      ]
+    },
+    {
+        "ThreatID":  2147749377,
+        "ThreatStatusID":  3,
+        "InitialDetectionTime":  "\/Date(1781500311674)\/",
+        "LastThreatStatusChangeTime":  "\/Date(1781500328141)\/",
+        "ProcessName":  "Unknown",
+        "DomainUser":  "NT AUTHORITY\\SYSTEM",
+        "Resources":  [
+                          "file:_C:\\Users\\gwu07\\Desktop\\vader-rootkit\\dark_room\\dark_room.exe"
+                      ]
+    },
+    {
+        "ThreatID":  251873,
+        "ThreatStatusID":  3,
+        "InitialDetectionTime":  "\/Date(1781495994738)\/",
+        "LastThreatStatusChangeTime":  "\/Date(1781496012041)\/",
+        "ProcessName":  "C:\\Program Files (x86)\\Kaspersky Lab\\Kaspersky 21.25\\avp.exe",
+        "DomainUser":  "NT AUTHORITY\\SYSTEM",
+        "Resources":  [
+                          "file:_C:\\Users\\gwu07\\Desktop\\vader-rootkit\\sideload\\VERSION.dll"
+                      ]
+    },
+    {
+        "ThreatID":  2147971505,
+        "ThreatStatusID":  3,
+        "InitialDetectionTime":  "\/Date(1781460374635)\/",
+        "LastThreatStatusChangeTime":  "\/Date(1781460417044)\/",
+        "ProcessName":  "C:\\Users\\gwu07\\AppData\\Roaming\\Claude\\claude-code\\2.1.170\\claude.exe",
+        "DomainUser":  "LAPTOP-R32M8MLI\\gwu07",
+        "Resources":  [
+                          "file:_C:\\Users\\gwu07\\Desktop\\1_OFFSEC_VADER_REPORT\\HISTORICAL\\GreatXML\\unattend.xml"
+                      ]
+    },
+    {
+        "ThreatID":  2147971505,
+        "ThreatStatusID":  3,
+        "InitialDetectionTime":  "\/Date(1781460354648)\/",
+        "LastThreatStatusChangeTime":  "\/Date(1781460402480)\/",
+        "ProcessName":  "C:\\Users\\gwu07\\AppData\\Roaming\\Claude\\claude-code\\2.1.170\\claude.exe",
+        "DomainUser":  "LAPTOP-R32M8MLI\\gwu07",
+        "Resources":  [
+                          "file:_C:\\Users\\gwu07\\.claude\\projects\\C--Users-gwu07\\84736cb2-c93e-410e-9f59-eca1425a046d\\tool-results\\b34lsenvl.txt",
+                          "file:_C:\\Users\\gwu07\\.claude\\projects\\C--Users-gwu07\\84736cb2-c93e-410e-9f59-eca1425a046d\\tool-results\\bb3yocdvu.txt"
+                      ]
+    },
+    {
+        "ThreatID":  251873,
+        "ThreatStatusID":  3,
+        "InitialDetectionTime":  "\/Date(1781457015870)\/",
+        "LastThreatStatusChangeTime":  "\/Date(1781457037957)\/",
+        "ProcessName":  "C:\\Users\\gwu07\\Desktop\\vader-rootkit\\sideload\\test_proxy.exe",
+        "DomainUser":  "LAPTOP-R32M8MLI\\gwu07",
+        "Resources":  [
+                          "file:_C:\\Users\\gwu07\\Desktop\\vader-rootkit\\sideload\\VERSION.dll"
+                      ]
+    },
+    {
+        "ThreatID":  251873,
+        "ThreatStatusID":  3,
+        "InitialDetectionTime":  "\/Date(1781456426096)\/",
+        "LastThreatStatusChangeTime":  "\/Date(1781456440554)\/",
+        "ProcessName":  "C:\\Windows\\System32\\cmd.exe",
+        "DomainUser":  "LAPTOP-R32M8MLI\\gwu07",
+        "Resources":  [
+                          "file:_C:\\Users\\gwu07\\Desktop\\vader-rootkit\\sideload\\version.dll"
+                      ]
+    },
+    {
+        "ThreatID":  251873,
+        "ThreatStatusID":  3,
+        "InitialDetectionTime":  "\/Date(1781455806108)\/",
+        "LastThreatStatusChangeTime":  "\/Date(1781455825749)\/",
+        "ProcessName":  "C:\\Windows\\System32\\cmd.exe",
+        "DomainUser":  "LAPTOP-R32M8MLI\\gwu07",
+        "Resources":  [
+                          "file:_C:\\Users\\gwu07\\Desktop\\vader-rootkit\\sideload\\version.dll"
+                      ]
+    },
+    {
+        "ThreatID":  251873,
+        "ThreatStatusID":  3,
+        "InitialDetectionTime":  "\/Date(1781455472468)\/",
+        "LastThreatStatusChangeTime":  "\/Date(1781455490855)\/",
+        "ProcessName":  "C:\\Windows\\System32\\cmd.exe",
+        "DomainUser":  "LAPTOP-R32M8MLI\\gwu07",
+        "Resources":  [
+                          "file:_C:\\Users\\gwu07\\Desktop\\vader-rootkit\\sideload\\version.dll"
+                      ]
+    },
+    {
+        "ThreatID":  2147731849,
+        "ThreatStatusID":  3,
+        "InitialDetectionTime":  "\/Date(1781453077888)\/",
+        "LastThreatStatusChangeTime":  "\/Date(1781453186429)\/",
+        "ProcessName":  "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
+        "DomainUser":  "LAPTOP-R32M8MLI\\gwu07",
+        "Resources":  [
+                          "file:_C:\\Users\\gwu07\\Desktop\\vader-rootkit\\etw\\etw_patch.exe"
+                      ]
+    },
+    {
+        "ThreatID":  2147731849,
+        "ThreatStatusID":  3,
+        "InitialDetectionTime":  "\/Date(1781453064324)\/",
+        "LastThreatStatusChangeTime":  "\/Date(1781453185317)\/",
+        "ProcessName":  "Unknown",
+        "DomainUser":  "NT AUTHORITY\\SYSTEM",
+        "Resources":  [
+                          "file:_C:\\Users\\gwu07\\Desktop\\vader-rootkit\\etw\\etw_patch.exe"
+                      ]
+    },
+    {
+        "ThreatID":  2147731849,
+        "ThreatStatusID":  3,
+        "InitialDetectionTime":  "\/Date(1781452029092)\/",
+        "LastThreatStatusChangeTime":  "\/Date(1781452095954)\/",
+        "ProcessName":  "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
+        "DomainUser":  "LAPTOP-R32M8MLI\\gwu07",
+        "Resources":  [
+                          "file:_C:\\Users\\gwu07\\Desktop\\vader-rootkit\\amsi\\amsi_bypass.exe"
+                      ]
+    },
+    {
+        "ThreatID":  2147915805,
+        "ThreatStatusID":  4,
+        "InitialDetectionTime":  "\/Date(1781451959778)\/",
+        "LastThreatStatusChangeTime":  "\/Date(1781451962490)\/",
+        "ProcessName":  "C:\\Users\\gwu07\\Desktop\\vader-rootkit\\amsi\\amsi_bypass.exe",
+        "DomainUser":  "",
+        "Resources":  [
+                          "behavior:_process: C:\\Users\\gwu07\\Desktop\\vader-rootkit\\amsi\\amsi_bypass.exe, pid:43956:1206935659933107",
+                          "process:_pid:43956,ProcessStart:134259255582117624"
+                      ]
+    },
+    {
+        "ThreatID":  2147731849,
+        "ThreatStatusID":  3,
+        "InitialDetectionTime":  "\/Date(1781451959680)\/",
+        "LastThreatStatusChangeTime":  "\/Date(1781452095160)\/",
+        "ProcessName":  "Unknown",
+        "DomainUser":  "NT AUTHORITY\\SYSTEM",
+        "Resources":  [
+                          "file:_C:\\Users\\gwu07\\Desktop\\vader-rootkit\\amsi\\amsi_bypass.exe"
+                      ]
+    },
+    {
+        "ThreatID":  2147519003,
+        "ThreatStatusID":  4,
+        "InitialDetectionTime":  "\/Date(1781448703702)\/",
+        "LastThreatStatusChangeTime":  "\/Date(1781448709346)\/",
+        "ProcessName":  "C:\\Users\\gwu07\\Desktop\\vader-toctou\\BUILDING_BLOCKS\\vader_v16.exe",
+        "DomainUser":  "LAPTOP-R32M8MLI\\gwu07",
+        "Resources":  [
+                          "file:_C:\\Users\\gwu07\\AppData\\Local\\Temp\\vd_eicar_99832\\document.pdf"
+                      ]
+    },
+    {
+        "ThreatID":  2147519003,
+        "ThreatStatusID":  103,
+        "InitialDetectionTime":  "\/Date(1781448564314)\/",
+        "LastThreatStatusChangeTime":  "\/Date(1781448672506)\/",
+        "ProcessName":  "Unknown",
+        "DomainUser":  "LAPTOP-R32M8MLI\\gwu07",
+        "Resources":  [
+                          "file:_C:\\Users\\gwu07\\AppData\\Local\\Temp\\vd_staging_99832\\document.pdf"
+                      ]
+    }
+]

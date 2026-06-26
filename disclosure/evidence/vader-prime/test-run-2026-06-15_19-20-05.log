@@ -1,0 +1,27 @@
+﻿[19:20:05] [INFO] VADER-PRIME Automated Test Harness
+[19:20:05] [INFO] Timestamp: 2026-06-15_19-20-05
+[19:20:05] [INFO] Mode: all
+[19:20:05] [INFO] Evidence: C:\Users\gwu07\Desktop\vader-rootkit\disclosure\evidence\vader-prime
+[19:20:05] [INFO] System: LAPTOP-R32M8MLI
+[19:20:05] [INFO] User: gwu07
+[19:20:05] [INFO] OS Build: 26200
+[19:20:05] [INFO] ============================================================
+[19:20:05] [INFO] PRE-FLIGHT CHECKS
+[19:20:05] [INFO] ============================================================
+[19:20:05] [PASS] cldflt.sys: RUNNING
+[19:20:05] [PASS] Running as standard user (correct)
+[19:20:05] [INFO] VaderPrime.exe: FOUND
+[19:20:05] [INFO] vaderproc.dll: FOUND
+[19:20:05] [INFO] NtApiDotNet.dll: FOUND
+[19:20:06] [INFO] Defender RTP: ENABLED (correct)
+[19:20:06] [INFO] Print Spooler: Running
+[19:20:06] [INFO] ============================================================
+[19:20:06] [INFO] REGISTRY BASELINE (BEFORE)
+[19:20:06] [INFO] ============================================================
+[19:20:06] [INFO] Print Processors: winprint
+[19:20:06] [INFO] Cannot read .DEFAULT\Volatile Environment
+[19:20:06] [INFO] ============================================================
+[19:20:06] [INFO] PRE-FLIGHT COMPLETE
+[19:20:06] [INFO] ============================================================
+[19:20:06] [INFO] All checks done. No exploit executed.
+[19:20:06] [INFO] Log: C:\Users\gwu07\Desktop\vader-rootkit\disclosure\evidence\vader-prime\test-run-2026-06-15_19-20-05.log

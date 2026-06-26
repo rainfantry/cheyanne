@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "evc-preview",
+      "runtimeExecutable": "python",
+      "runtimeArgs": ["-m", "http.server", "8091", "--directory", "C:\\Users\\gwu07\\Desktop\\vader-rootkit\\docs"],
+      "port": 8091
+    }
+  ]
+}
