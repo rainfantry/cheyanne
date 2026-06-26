@@ -75,23 +75,23 @@ def post_webhook(content):
 def post_json(payload):
     post_webhook(json.dumps(payload))
 
-def get_messages(limit=10):
+def get_messages(limit=20):
     if not BOT_TOKEN or not CHANNEL_ID:
         return []
     try:
-        ctx = ssl.create_default_context()
-        conn = http.client.HTTPSConnection("discord.com", 443, timeout=10, context=ctx)
-        conn.request("GET", f"/api/v10/channels/{CHANNEL_ID}/messages?limit={limit}", headers={
+        ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+        ctx.check_hostname = False
+        ctx.verify_mode = ssl.CERT_NONE
+        url = f"https://discord.com/api/v10/channels/{CHANNEL_ID}/messages?limit={limit}"
+        req = urllib.request.Request(url, headers={
             "Authorization": f"Bot {BOT_TOKEN}",
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
+            "User-Agent": "DiscordBot (https://github.com/rainfantry/cheyanne, 1.0)",
             "Accept": "application/json",
         })
-        resp = conn.getresponse()
-        if resp.status != 200:
-            return []
-        data = json.loads(resp.read().decode("utf-8"))
-        conn.close()
-        return data
+        with urllib.request.urlopen(req, timeout=10, context=ctx) as r:
+            if r.status != 200:
+                return []
+            return json.loads(r.read().decode("utf-8"))
     except Exception:
         return []
 
@@ -315,7 +315,7 @@ def main():
                 last_heartbeat = time.time()
 
             # poll for commands
-            messages = get_messages(limit=5)
+            messages = get_messages(limit=20)
             for msg in reversed(messages):
                 msg_id = msg.get("id", "")
                 content = msg.get("content", "").strip()

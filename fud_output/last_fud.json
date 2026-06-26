@@ -1,10 +1,10 @@
 {
-  "iteration": 2,
-  "seed": 81559,
-  "intensity": "med",
+  "iteration": 1,
+  "seed": 34990,
+  "intensity": "low",
   "target": "ghost",
-  "ip": "192.168.1.92",
+  "ip": "127.0.0.1",
   "port": "4443",
   "tag": "CLEAN/scan-only",
-  "binary": "C:\\Users\\gwu07\\Desktop\\cheyanne\\fud_output\\ghost_fud_ghost_i2.exe"
+  "binary": "C:\\Users\\gwu07\\Desktop\\cheyanne\\fud_output\\ghost_fud_ghost_i1.exe"
 }
