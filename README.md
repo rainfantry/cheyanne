@@ -321,13 +321,13 @@ Phase 3 — CHEYANNE WATCH / VNC
 
 ![IRON-DOME v4.0.0 demo](iron_dome_demo.gif)
 
-**MCP Computer-Use Live Run — 2026-06-26 (this session) — BUILD COMPLETE proof:**
+**MCP Computer-Use Live Run — 2026-06-26 (this session) — FULL PROOF:**
 
-| Build (AUTO-SCREENSHOT · Kaspersky LIVE) | Kill Chain 10/10 PASS | CHEYANNE WATCH LIVE |
-|:----------------------------------------:|:---------------------:|:-------------------:|
-| ![MCP live build proof](showcase/iron_dome_v4_build_mcp_proof.jpg) | `VERDICT: PASS (10/10)` · TCP callback · whoami=gwu07 · 3-VECTOR persist | `http://127.0.0.1:8892` · LIVE · FRAME 338 · Connected=True · TARGET 127.0.0.1:4444 |
+| Build (AUTO-SCREENSHOT · Kaspersky LIVE) | VNC Phase Terminal | CHEYANNE WATCH Live Stream |
+|:----------------------------------------:|:------------------:|:--------------------------:|
+| ![build proof](showcase/iron_dome_v4_build_mcp_proof.jpg) | ![VNC terminal](showcase/iron_dome_v4_vnc_terminal.png) | ![VNC live](showcase/iron_dome_v4_vnc_live_stream.png) |
 
-*Build screenshot auto-captured by `_screenshot()` during the `--full` run, Kaspersky Premium active and not alerting.*
+*Build auto-captured by `_screenshot()`, Kaspersky active. VNC terminal + live stream screenshots captured manually — stream was actively serving the desktop at FRAME: 107, 15:51:46.*
 
 ---
 
