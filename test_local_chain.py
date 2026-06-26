@@ -178,7 +178,26 @@ def run_ps1_via_encodedcommand(ps1_path):
 def kill_old():
     for name in ["ghost_fud.exe", "ghost_loader.exe"]:
         subprocess.run(["taskkill", "/F", "/IM", name], capture_output=True)
-    time.sleep(0.3)
+    # Kill any stale process holding C2_PORT — prevents prior test cycles from
+    # squatting the socket and intercepting the new PS1 callback
+    try:
+        result = subprocess.run(
+            ["netstat", "-ano"],
+            capture_output=True, text=True, timeout=5
+        )
+        killed = set()
+        for line in result.stdout.splitlines():
+            if f":{C2_PORT}" in line:
+                parts = line.split()
+                if parts:
+                    pid = parts[-1]
+                    if pid.isdigit() and pid not in killed:
+                        subprocess.run(["taskkill", "/F", "/PID", pid],
+                                       capture_output=True)
+                        killed.add(pid)
+    except Exception:
+        pass
+    time.sleep(0.5)
 
 
 # ── single run ────────────────────────────────────────────────────────────────
