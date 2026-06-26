@@ -760,22 +760,38 @@ class VaderC2:
 """)
 
     def banner(self):
+        _IDF = "\033[38;2;0;56;184m"
+        _GD  = "\033[38;2;255;215;0m"
+        _WH  = "\033[38;2;255;255;255m"
+        W = 66; C = W // 2
+        rows = []
+        for r in range(15):
+            h = int(round(C * (14 - r) / 14))
+            if h == 0:
+                ln = [' '] * W; ln[C] = '✡'; rows.append(''.join(ln)); break
+            ln = [' '] * W
+            for i in range(17):
+                p = int(round(C + (-1.0 + i * 0.125) * h))
+                p = max(0, min(W - 1, p))
+                ln[p] = '│' if abs(p - C) <= 1 else ('╲' if p < C else '╱')
+            rows.append(''.join(ln))
         print()
-        _BL = "\033[38;2;0;56;184m"
-        _GD = "\033[38;2;255;215;0m"
-        print(f"  {CYAN}╔══════════════════════════════════════════════════════╗")
-        print(f"  ║{_BL}▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓{CYAN}║")
-        print(f"  ║{_GD}╲ ╲  ╲  │ ╲ │ ╲ │  │ ╱ │ ╱ │  ╱  ╱ ╱{RST}             {CYAN}║")
-        print(f"  ║ {_GD}╲  ╲──╲──╲──╲─╲─│─╱─╱──╱──╱──╱  ╱{RST}               {CYAN}║")
-        print(f"  ║{_BL}━━━━━━━━━━━━━━━━━━━━{WHITE}✡{_BL}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━{CYAN}║")
-        print(f"  ║   {WHITE}THE  IRON-SUN  ·  AUSTRALIAN  ARMY{RST}              {CYAN}║")
-        print(f"  ║{_BL}▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓{CYAN}║")
-        print(f"  ╚══════════════════════════════════════════════════════╝{RST}")
+        print(f"  {CYAN}╔{'═'*W}╗")
+        print(f"  ║{_IDF}{'▓'*W}{CYAN}║")
+        print(f"  ║{_IDF}{'▓'*W}{CYAN}║")
+        for row in rows:
+            print(f"  ║{_GD}{row.ljust(W)[:W]}{CYAN}║")
+        print(f"  ║{_IDF}{'▓'*W}{CYAN}║")
+        print(f"  ║{_WH}{'T H E   I R O N - S U N'.center(W)}{CYAN}║")
+        print(f"  ║{_WH}{'A U S T R A L I A N   A R M Y   ·   2 2 D I V'.center(W)}{CYAN}║")
+        print(f"  ║{_IDF}{'▓'*W}{CYAN}║")
+        print(f"  ║{_IDF}{'▓'*W}{CYAN}║")
+        print(f"  ╚{'═'*W}╝{RST}")
         print(f"  {CYAN}│{RST}  TCP Listener:  0.0.0.0:{self.port}")
         print(f"  {CYAN}│{RST}  Discord:       {'OK' if self.webhook_url else 'DISABLED'}")
         print(f"  {CYAN}│{RST}  Log:           {self.log_path}")
         print(f"  {CYAN}│{RST}  Started:       {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-        print(f"  {CYAN}╘══════════════════════════════════════════════════════{RST}")
+        print(f"  {CYAN}╘{'═'*W}{RST}")
         print()
 
     def run(self):

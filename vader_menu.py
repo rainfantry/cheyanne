@@ -34,15 +34,31 @@ RST    = "\033[0m"
 _IDF  = "\033[38;2;0;56;184m"
 _GOLD = "\033[38;2;255;215;0m"
 
-CHEYANNE_LOGO = f"""
-{_IDF}  ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓{RST}
-{_GOLD}╲  ╲  ╲  │ ╲ │ ╲ │ ╲ │  │  │ ╱ │ ╱ │ ╱ │  ╱  ╱  ╱{RST}
-{_GOLD} ╲  ╲  ╲ │  ╲│  ╲│  ╲│  │  │╱  │╱  │╱  │ ╱  ╱  ╱{RST}
-{_GOLD}  ╲  ╲──╲╲──╲╲──╲╲──╲│  │  │╱──╱╱──╱╱──╱╱──╱  ╱{RST}
-{_IDF}  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━{WHITE}✡{_IDF}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━{RST}
-{WHITE}         T H E   I R O N - S U N   ·   A U S T R A L I A N   A R M Y{RST}
-{_IDF}  ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓{RST}
-"""
+def _build_iron_sun_logo():
+    _WH = "\033[38;2;255;255;255m"
+    W = 71; C = W // 2
+    lines = [f"{_IDF}  {'▓'*W}{RST}", f"{_IDF}  {'▓'*W}{RST}"]
+    for r in range(15):
+        h = int(round(C * (14 - r) / 14))
+        if h == 0:
+            ln = [' '] * W; ln[C] = '✡'
+            lines.append(f"  {_GOLD}{''.join(ln)}{RST}"); break
+        ln = [' '] * W
+        for i in range(17):
+            p = int(round(C + (-1.0 + i * 0.125) * h))
+            p = max(0, min(W - 1, p))
+            ln[p] = '│' if abs(p - C) <= 1 else ('╲' if p < C else '╱')
+        lines.append(f"  {_GOLD}{''.join(ln)}{RST}")
+    lines += [
+        f"{_IDF}  {'▓'*W}{RST}",
+        f"{_IDF}  {'▓'*W}{RST}",
+        f"{_WH}{'T H E   I R O N - S U N'.center(W + 4)}{RST}",
+        f"{_WH}{'A U S T R A L I A N   A R M Y   ·   2 2 D I V'.center(W + 4)}{RST}",
+        f"{_IDF}  {'▓'*W}{RST}",
+    ]
+    return '\n'.join(lines) + '\n'
+
+CHEYANNE_LOGO = _build_iron_sun_logo()
 
 HELMET = f"""{DIM}           .          .
         .  |\\        /|  .

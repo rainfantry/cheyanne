@@ -102,20 +102,35 @@ def get_local_ips():
 
 
 def banner():
-    CY = "\033[36m"
-    BL = "\033[38;2;0;56;184m"
-    GD = "\033[38;2;255;215;0m"
-    WH = "\033[38;2;255;255;255m"
-    RS = "\033[0m"
+    _IDF = "\033[38;2;0;56;184m"
+    _GD  = "\033[38;2;255;215;0m"
+    _WH  = "\033[38;2;255;255;255m"
+    _CY  = "\033[38;2;0;229;255m"
+    _RS  = "\033[0m"
+    W = 66; C = W // 2
+    rows = []
+    for r in range(15):
+        h = int(round(C * (14 - r) / 14))
+        if h == 0:
+            ln = [' '] * W; ln[C] = '✡'; rows.append(''.join(ln)); break
+        ln = [' '] * W
+        for i in range(17):
+            p = int(round(C + (-1.0 + i * 0.125) * h))
+            p = max(0, min(W - 1, p))
+            ln[p] = '│' if abs(p - C) <= 1 else ('╲' if p < C else '╱')
+        rows.append(''.join(ln))
     print()
-    print(f"  {CY}╔══════════════════════════════════════════════════════╗")
-    print(f"  ║{BL}▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓{CY}║")
-    print(f"  ║{GD}╲ ╲  ╲  │ ╲ │ ╲ │  │ ╱ │ ╱ │  ╱  ╱ ╱{RS}             {CY}║")
-    print(f"  ║ {GD}╲  ╲──╲──╲──╲─╲─│─╱─╱──╱──╱──╱  ╱{RS}               {CY}║")
-    print(f"  ║{BL}━━━━━━━━━━━━━━━━━━━━{WH}✡{BL}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━{CY}║")
-    print(f"  ║   {WH}THE  IRON-SUN  ·  AUSTRALIAN  ARMY{RS}              {CY}║")
-    print(f"  ║{BL}▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓{CY}║")
-    print(f"  ╚══════════════════════════════════════════════════════╝{RS}")
+    print(f"  {_CY}╔{'═'*W}╗")
+    print(f"  ║{_IDF}{'▓'*W}{_CY}║")
+    print(f"  ║{_IDF}{'▓'*W}{_CY}║")
+    for row in rows:
+        print(f"  ║{_GD}{row.ljust(W)[:W]}{_CY}║")
+    print(f"  ║{_IDF}{'▓'*W}{_CY}║")
+    print(f"  ║{_WH}{'T H E   I R O N - S U N'.center(W)}{_CY}║")
+    print(f"  ║{_WH}{'A U S T R A L I A N   A R M Y   ·   2 2 D I V'.center(W)}{_CY}║")
+    print(f"  ║{_IDF}{'▓'*W}{_CY}║")
+    print(f"  ║{_IDF}{'▓'*W}{_CY}║")
+    print(f"  ╚{'═'*W}╝{_RS}")
     print()
 
 

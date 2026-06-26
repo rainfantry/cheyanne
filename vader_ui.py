@@ -1406,15 +1406,36 @@ def main():
     W = "\033[38;2;255;255;255m"
     R = "\033[0m"
 
-    BL = "\033[38;2;0;56;184m"
-    GD = "\033[38;2;255;215;0m"
+    _IDF = "\033[38;2;0;56;184m"
+    _GD  = "\033[38;2;255;215;0m"
+    _WH  = "\033[38;2;255;255;255m"
+    _CY  = "\033[38;2;0;229;255m"
+    BW = 66; BC = BW // 2
+    brows = []
+    for _r in range(15):
+        _h = int(round(BC * (14 - _r) / 14))
+        if _h == 0:
+            _ln = [' '] * BW; _ln[BC] = '✡'; brows.append(''.join(_ln)); break
+        _ln = [' '] * BW
+        for _i in range(17):
+            _p = int(round(BC + (-1.0 + _i * 0.125) * _h))
+            _p = max(0, min(BW - 1, _p))
+            _ln[_p] = '│' if abs(_p - BC) <= 1 else ('╲' if _p < BC else '╱')
+        brows.append(''.join(_ln))
+    banner_lines = [
+        f"  {_CY}╔{'═'*BW}╗{R}",
+        f"  {_CY}║{_IDF}{'▓'*BW}{_CY}║{R}",
+        f"  {_CY}║{_IDF}{'▓'*BW}{_CY}║{R}",
+    ] + [f"  {_CY}║{_GD}{row.ljust(BW)[:BW]}{_CY}║{R}" for row in brows] + [
+        f"  {_CY}║{_IDF}{'▓'*BW}{_CY}║{R}",
+        f"  {_CY}║{_WH}{'T H E   I R O N - S U N'.center(BW)}{_CY}║{R}",
+        f"  {_CY}║{_WH}{'A U S T R A L I A N   A R M Y   ·   2 2 D I V'.center(BW)}{_CY}║{R}",
+        f"  {_CY}║{_IDF}{'▓'*BW}{_CY}║{R}",
+        f"  {_CY}║{_IDF}{'▓'*BW}{_CY}║{R}",
+        f"  {_CY}╚{'═'*BW}╝{R}",
+    ]
+    print('\n'.join(banner_lines))
     print(f"""
-{BL}  ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓{R}
-{GD}╲ ╲  ╲  │ ╲ │ ╲ │  │ ╱ │ ╱ │  ╱  ╱ ╱{R}
-{GD} ╲  ╲──╲──╲──╲─╲─│─╱─╱──╱──╱──╱  ╱{R}
-{BL}━━━━━━━━━━━━━━━━━━━━{W}✡{BL}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━{R}
-{W}   THE  IRON-SUN  ·  AUSTRALIAN  ARMY{R}
-{BL}  ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓{R}
 {D}  ──────────────────────────────────────────{R}
 {D}  22DIV{D} // {W}george wu{D} // {G}Web Dashboard{R}
 {D}  ──────────────────────────────────────────{R}
