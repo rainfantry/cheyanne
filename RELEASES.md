@@ -32,4 +32,17 @@ NEVER delete entries. Dead ops stay in the log.
 
 ---
 
+## PROOF — RADON LIVE TEST — 2026-06-26 11:43
+
+- **Screenshot**: `docs/PROOF_iron_sun_radon_20260626.png`
+- **Machine**: RADON (GIGABYTE G7 GD, Ghaleb Jomma, Win11 26200)
+- **Python**: 3.14.6 via Scoop (no admin)
+- **Banner**: Rising Sun + ✡ (IDF Star of David) — gold/blue ANSI, CONFIRMED RENDERING
+- **Callsign generated**: `hermon-bushranger` (RADON fingerprint 2026-06-26 11:xx)
+- **Build state**: vader_shell.c → gcc 15.2 → 319KB → Defender CLEAN
+- **SSH push**: rainfantry/iron-sun — OK
+- **Tag**: v1.0.0
+
+---
+
 *Forks created by `python designate.py --create` are appended below this line.*
