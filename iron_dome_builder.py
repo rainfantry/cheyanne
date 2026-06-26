@@ -210,7 +210,7 @@ def build_pe(src_path: str, out_path: str) -> bool:
             if r.returncode == 0 and os.path.exists(out_path):
                 return True
 
-    # Fallback: MSVC cl.exe via vcvarsall
+    # Fallback: MSVC cl.exe via temp .bat (avoids subprocess quoting hell with spaces in path)
     vcvars_roots = [
         r"C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Auxiliary\Build\vcvarsall.bat",
         r"C:\Program Files\Microsoft Visual Studio\2022\BuildTools\VC\Auxiliary\Build\vcvarsall.bat",
@@ -218,18 +218,18 @@ def build_pe(src_path: str, out_path: str) -> bool:
     ]
     for vcvars in vcvars_roots:
         if os.path.exists(vcvars):
-            out_dir  = os.path.dirname(out_path)
-            out_name = os.path.basename(out_path)
-            cl_cmd = (
-                f'call "{vcvars}" x64 >nul 2>&1 && '
-                f'cl.exe /nologo /O1 /W0 /MT '
-                f'"{src_path}" ws2_32.lib '
-                f'/link /SUBSYSTEM:WINDOWS /LTCG '
-                f'/OUT:"{out_path}" '
-                f'/PDB:nul >nul 2>&1'
-            )
-            r = subprocess.run(["cmd.exe", "/c", cl_cmd],
-                               cwd=out_dir, capture_output=True, text=True)
+            import tempfile
+            out_dir = os.path.dirname(out_path)
+            bat = tempfile.NamedTemporaryFile(suffix=".bat", delete=False, mode="w",
+                                              dir=out_dir, prefix="_idbuild_")
+            bat.write(f'@echo off\r\n')
+            bat.write(f'call "{vcvars}" x64 >nul 2>&1\r\n')
+            bat.write(f'cl.exe /nologo /O1 /W0 /MT "{src_path}" ws2_32.lib User32.lib '
+                      f'/link /SUBSYSTEM:CONSOLE /ENTRY:mainCRTStartup /OUT:"{out_path}" >nul 2>&1\r\n')
+            bat_path = bat.name
+            bat.close()
+            subprocess.run([bat_path], capture_output=True, text=True)
+            os.unlink(bat_path)
             if os.path.exists(out_path):
                 return True
 
