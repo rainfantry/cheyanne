@@ -1,0 +1,50 @@
+[
+  {
+    "variant": "Baseline Shell",
+    "static": "BUILD FAIL",
+    "dynamic": "N/A",
+    "notes": "build error"
+  },
+  {
+    "variant": "FUD Shell (metamorph)",
+    "static": "BUILD FAIL",
+    "dynamic": "N/A",
+    "notes": "build error"
+  },
+  {
+    "variant": "Ghost Loader v2 (direct)",
+    "static": "DETECTED",
+    "dynamic": "SKIPPED",
+    "notes": "Total detected: 1  rc=2"
+  },
+  {
+    "variant": "Ghost Loader v3 (parent spoof)",
+    "static": "CLEAN",
+    "dynamic": "SKIPPED",
+    "notes": "Total detected: 0  rc=0"
+  },
+  {
+    "variant": "Ghost PS1 (IEX)",
+    "static": "CLEAN",
+    "dynamic": "SKIPPED",
+    "notes": "Total detected: 0  rc=0"
+  },
+  {
+    "variant": "Ghost PS1 (Assembly/.NET)",
+    "static": "CLEAN",
+    "dynamic": "SKIPPED",
+    "notes": "Total detected: 0  rc=0"
+  },
+  {
+    "variant": "VADER Chain (persist+shell)",
+    "static": "CLEAN",
+    "dynamic": "SKIPPED",
+    "notes": "Total detected: 0  rc=0"
+  },
+  {
+    "variant": "Ghost HTA (mshta delivery)",
+    "static": "CLEAN",
+    "dynamic": "SKIPPED",
+    "notes": "Total detected: 0  rc=0"
+  }
+]
