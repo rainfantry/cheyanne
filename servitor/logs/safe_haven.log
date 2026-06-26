@@ -1,0 +1,6 @@
+[2026-06-26 13:42:43] BUILD                     | START      | Compiling iron_sun.exe in safe haven
+[2026-06-26 13:42:44] BUILD                     | SUCCESS    | SHA256: f567c8c4988b5954ba2cdb71... Size: 60411 bytes
+[2026-06-26 13:42:44] TEST                      | START      | Verifying: iron_sun.exe
+[2026-06-26 13:42:44] TEST                      | VALID_PE   | SHA256: f567c8c4988b5954ba2cdb71...
+[2026-06-26 13:42:44] DISCLOSURE                | DOCUMENTED | DISCLOSURE_2026-06-26_13-42-44.md
+[2026-06-26 13:42:44] HAVEN                     | COMPLETE   | Binary: iron_sun.exe, Doc: DISCLOSURE_2026-06-26_13-42-44.md
