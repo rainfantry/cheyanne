@@ -193,6 +193,12 @@ class VaderC2(discord.Client):
         if content.startswith("{"):
             try:
                 data = json.loads(content)
+                # silently delete heartbeat noise before processing
+                if data.get("type") == "heartbeat":
+                    try:
+                        await message.delete()
+                    except Exception:
+                        pass
                 await self.handle_implant_message(data)
                 return
             except json.JSONDecodeError:
@@ -205,6 +211,11 @@ class VaderC2(discord.Client):
                 if json_str.startswith("json"):
                     json_str = json_str[4:]
                 data = json.loads(json_str.strip())
+                if data.get("type") == "heartbeat":
+                    try:
+                        await message.delete()
+                    except Exception:
+                        pass
                 await self.handle_implant_message(data)
                 return
             except (json.JSONDecodeError, IndexError):
