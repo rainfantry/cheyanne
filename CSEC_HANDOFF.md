@@ -260,13 +260,65 @@ gh repo list rainfantry --limit 50 --json name,isPrivate,description
 
 ## CURRENT MISSIONS (priority order)
 
-1. ~~**Run test_evasion.py with Kaspersky RTP active**~~ ✓ DONE — results above
-2. ~~**Interpret results**~~ ✓ DONE — ghost_loader_v3 + PS1 variants CLEAN
-3. **Behavioral callback test**: run ghost_loader_v3 on test machine, confirm TCP session on 4443
-4. **Dual-payload staged PS1** (friend's technique): `ghost_encode.py --staged IP PORT` now implemented
-5. **README steganography demo**: build ghost.html (SVG animation showing zero-width steg), add to README
-6. **DNS tunneling C2** (Phase 13): TXT record encoding, bypass all firewalls
-7. **Academic paper**: "Hardware Breakpoint Blind Spot in Windows Defender"
+### PRIMARY MISSION — PHASE 11: UEFI DXE FIRMWARE IMPLANT (ACTIVE 2026-07-11)
+
+**Vision:** UEFI DXE driver baked into firmware → runs at Ring -1, before Windows, before Defender, before PatchGuard → drops Cheyanne ghost payload → reverse shell phones home to VPS → VNC live stream → multi-target C2 panel. Survives OS reinstall. The motherboard is the implant.
+
+**Kill chain (full):**
+```
+UEFI DXE driver (firmware-baked)
+    → DriverEntry fires during DXE phase (all drivers alive)
+    → bootkit stub (loader.efi) replaces bootmgfw.efi on ESP
+        → NTFS write via ntfs_x64.efi (UEFI NTFS driver)
+            → ghost_fud.exe dropped to C:\Windows\Temp\
+            → HKCU\Run\WindowsSecurityUpdate registry key written
+        → chain-loads real bootmgfw_real.efi → Windows boots
+    → Run key fires → ghost_fud.exe executes
+        → AMSI bypass (zero-width steg + EncodedCommand)
+        → TCP reverse shell → listener.py on VPS (port 443)
+        → VNC stream → watch_stream.py → browser :8892
+```
+
+**Survives reinstall:** UEFI re-drops ghost on every boot. Format C:, reinstall Windows, first boot — agent is already running before setup wizard completes.
+
+**Milestones:**
+- [x] M1: QEMU UEFI Shell live (2026-07-10)
+- [x] M2: EDK2 build environment on Windows VS2022 (2026-07-11)
+- [x] M3: DriverEntry file write confirmed — ghost.txt 43 bytes to FS0: (2026-07-11)
+- [ ] M4: Embed ghost_fud.exe as UINT8 byte array in DXE driver, write to ESP on boot
+- [ ] M5: Bootkit stub (loader.efi) — NTFS write + HKCU Run key + chain-load bootmgfw
+- [ ] M6: Full reinstall test — wipe Windows VM, reboot, confirm ghost phones home
+
+**Repos:**
+- UEFI implant: `rainfantry/ring-stack` | `C:\Users\gwu07\Desktop\hacking_quickstart\phase11_uefi\`
+- Payload: `rainfantry/cheyanne` | `C:\Users\gwu07\Desktop\cheyanne\`
+
+**C2 Infrastructure (for WAN):**
+- VPS with public IP → listener.py on port 443 → ghost hardcodes VPS IP:443
+- Operator SSHes into VPS → C2 panel → all targets visible
+- Port 443 = bypasses every corporate/home firewall (outbound HTTPS = always allowed)
+
+---
+
+### SECONDARY — LOCAL KILL CHAIN STATUS (2026-07-11)
+
+**test_local_chain.py --skip-build: 8/8 PASS**
+- ghost_fud.exe (seed=1734): FUD vs Windows Defender (Get-MpThreatDetection = 0 detections)
+- TCP callback: WORKING (127.0.0.1:53436, banner: `OK>`)
+- AMSI bypass: CONFIRMED (zero-width steg + EncodedCommand)
+- whoami: `laptop-r32m8mli\gwu07`
+- Persistence: `HKCU\Run\WindowsSecurityUpdate` SET + VERIFIED
+- KAV Application Control blocks EXE on operator machine (avp PID 5152) — expected, not a FUD failure
+- Cross-machine FUD test pending: Win10 QEMU VM (Defender only, no KAV App Control)
+
+---
+
+### ARCHIVED MISSIONS (completed / superseded)
+1. ~~Run test_evasion.py with Kaspersky RTP active~~ ✓ DONE
+2. ~~Interpret results~~ ✓ DONE — ghost_loader_v3 + PS1 variants CLEAN
+3. Dual-payload staged PS1 — implemented (`ghost_encode.py --staged`)
+4. DNS tunneling C2 — deferred (Phase 13)
+5. Academic paper — deferred
 
 ### Current status
 - 7z backup: `Desktop/cheyanne_backup_20260624_054051.7z` (69MB, AES-256, pw=668340)
