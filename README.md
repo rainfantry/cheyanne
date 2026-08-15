@@ -1,5 +1,5 @@
 <div align="center">
-
+IN agent/discord_implant.py put your bot token and discord webhook if you need discord alerts
 <img src="docs/cheyanne_header.gif" width="100%" alt="CHEYANNE Security Research Project"/>
 
 <br/>
