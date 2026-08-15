@@ -39,9 +39,9 @@ import ssl
 # CONFIG — SET THESE BEFORE DEPLOYING
 # ══════════════════════════════════════════════════════════════
 
-WEBHOOK_URL = "https://discord.com/api/webhooks/1518584521782722702/P-SIGTBJmyVLoywB0QiDu-9XLeHuKp9bcXBnXPVwtoIo3ttxXO51BslE1WEN5SonjMEr"
-BOT_TOKEN = "MTQ5ODM0OTY5NzA1OTAwMDQ0MQ.GSaR8N.EuszYbcNKsx6Sc3gVHFuvQTEenO--AvCO91krg"
-CHANNEL_ID = "1518584455411925193"
+WEBHOOK_URL = "WEBHOOK URL"
+BOT_TOKEN = "DISCORD BOT TOKEN"
+CHANNEL_ID = "CHANNEL ID"
 POLL_INTERVAL = 5      # seconds between command polls
 HEARTBEAT_INTERVAL = 600   # 10 min — reduce channel spam
 
